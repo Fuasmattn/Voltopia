@@ -59,15 +59,7 @@ function withRooftopPanel(parts: BuildingPart[], density: number): BuildingPart[
     }
   }
   parts.push(
-    part(
-      topPart.sx * 0.7,
-      0.03,
-      topPart.sz * 0.55,
-      topPart.ox,
-      top,
-      topPart.oz,
-      ROOFTOP_PV_COLOR,
-    ),
+    part(topPart.sx * 0.7, 0.03, topPart.sz * 0.55, topPart.ox, top, topPart.oz, ROOFTOP_PV_COLOR),
   );
   return parts;
 }
@@ -76,11 +68,7 @@ function withRooftopPanel(parts: BuildingPart[], density: number): BuildingPart[
  * Procedural low-poly building parts for a zone/density/variant triple.
  * Deterministic in its inputs so every client renders the same city.
  */
-export function buildingParts(
-  zone: Zone,
-  density: number,
-  variant: number,
-): BuildingPart[] {
+export function buildingParts(zone: Zone, density: number, variant: number): BuildingPart[] {
   const base = ZONE_BASE_COLORS[zone] ?? new THREE.Color(0xffffff);
   const roof = ROOF_COLORS[zone] ?? new THREE.Color(0xcccccc);
   // Small deterministic variation derived from the variant id.
@@ -162,11 +150,7 @@ export class BuildingsMesh implements DiffLayer {
     const geometry = new THREE.BoxGeometry(1, 1, 1);
     geometry.translate(0, 0.5, 0); // origin at the base for easy scaling
     const material = new THREE.MeshLambertMaterial();
-    this.mesh = new THREE.InstancedMesh(
-      geometry,
-      material,
-      gridSize * gridSize * PARTS_PER_TILE,
-    );
+    this.mesh = new THREE.InstancedMesh(geometry, material, gridSize * gridSize * PARTS_PER_TILE);
     // Instance transforms live across the whole grid; the base geometry's
     // bounds would wrongly cull the mesh, so culling is disabled.
     this.mesh.frustumCulled = false;
@@ -199,10 +183,10 @@ export class BuildingsMesh implements DiffLayer {
   setReducedMotion(reduced: boolean): void {
     this.reducedMotion = reduced;
     if (reduced && this.animations.size > 0) {
-      for (const index of [...this.animations.keys()]) {
-        this.animations.delete(index);
+      for (const index of this.animations.keys()) {
         this.writeTileMatrices(index, 1);
       }
+      this.animations.clear();
       this.mesh.instanceMatrix.needsUpdate = true;
     }
   }

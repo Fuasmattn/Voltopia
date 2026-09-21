@@ -99,11 +99,7 @@ export class OverlaysMesh implements DiffLayer {
           if (tile.tileType === TileType.Empty && tile.zone !== Zone.None) {
             const demand = this.demandFor(tile.zone);
             // Hue from red (negative demand) over yellow to green (high).
-            this.color.setHSL(
-              THREE.MathUtils.clamp((0.33 * (demand + 1)) / 2, 0, 0.33),
-              0.85,
-              0.5,
-            );
+            this.color.setHSL(THREE.MathUtils.clamp((0.33 * (demand + 1)) / 2, 0, 0.33), 0.85, 0.5);
             colorHex = this.color.getHex();
           }
         }

@@ -91,8 +91,7 @@ export class GameRenderer {
   private panPointer: { x: number; y: number } | null = null;
   /** All currently pressed pointers (for two-finger touch gestures). */
   private readonly activePointers = new Map<number, { x: number; y: number }>();
-  private pinchState: { distance: number; centerX: number; centerY: number } | null =
-    null;
+  private pinchState: { distance: number; centerX: number; centerY: number } | null = null;
   private animationFrame = 0;
   private lastFrameTime = 0;
   private frameListeners: Array<(deltaSeconds: number, nowSeconds: number) => void> = [];
@@ -208,11 +207,7 @@ export class GameRenderer {
     };
 
     // Sun travels east -> west across the grid during the day.
-    const dayPhase = THREE.MathUtils.clamp(
-      (stats.timeOfDay - SUNRISE) / (SUNSET - SUNRISE),
-      0,
-      1,
-    );
+    const dayPhase = THREE.MathUtils.clamp((stats.timeOfDay - SUNRISE) / (SUNSET - SUNRISE), 0, 1);
     const azimuth = Math.PI * (1 - dayPhase);
     const elevation = 0.25 + 0.9 * Math.sin(Math.PI * dayPhase);
     const center = this.gridSize / 2;
@@ -273,9 +268,7 @@ export class GameRenderer {
     this.scene.traverse((object) => {
       const mesh = object as THREE.Mesh;
       if (mesh.material) {
-        const materials = Array.isArray(mesh.material)
-          ? mesh.material
-          : [mesh.material];
+        const materials = Array.isArray(mesh.material) ? mesh.material : [mesh.material];
         for (const material of materials) material.needsUpdate = true;
       }
     });

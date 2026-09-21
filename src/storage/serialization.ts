@@ -102,8 +102,7 @@ export function saveFromJson(text: string): SaveGame {
     money: parsed.money,
     taxRate: typeof parsed.taxRate === 'number' ? parsed.taxRate : 0.1,
     smartCharging: parsed.smartCharging === true,
-    storedEnergy:
-      typeof parsed.storedEnergy === 'number' ? parsed.storedEnergy : 0,
+    storedEnergy: typeof parsed.storedEnergy === 'number' ? parsed.storedEnergy : 0,
     ...(Array.isArray(parsed.goals)
       ? { goals: parsed.goals.filter((g): g is string => typeof g === 'string') }
       : {}),

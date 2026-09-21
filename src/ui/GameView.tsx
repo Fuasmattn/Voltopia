@@ -38,9 +38,7 @@ export function GameView({
     rendererRef.current = renderer;
 
     const unsubscribeDiffs = bridge.onDiffs((diffs) => renderer.applyDiffs(diffs));
-    const unsubscribeVehicles = bridge.onVehicles((vehicles) =>
-      renderer.setVehicles(vehicles),
-    );
+    const unsubscribeVehicles = bridge.onVehicles((vehicles) => renderer.setVehicles(vehicles));
 
     return () => {
       unsubscribeDiffs();

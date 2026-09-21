@@ -39,9 +39,7 @@ describe('vehiclesStep', () => {
     vehiclesStep(small);
     vehiclesStep(large);
     expect(large.vehicles.length).toBeGreaterThan(small.vehicles.length);
-    expect(small.vehicles.length).toBe(
-      Math.floor(40 / BALANCE.vehicles.citizensPerVehicle),
-    );
+    expect(small.vehicles.length).toBe(Math.floor(40 / BALANCE.vehicles.citizensPerVehicle));
   });
 
   it('no vehicles without roads', () => {
@@ -127,17 +125,13 @@ describe('chargingDemand', () => {
     vehiclesStep(state);
     state.smartCharging = true;
     setHour(state, 19);
-    const fullLoad =
-      state.vehicles.length * BALANCE.vehicles.chargingEnergyPerVehicle;
+    const fullLoad = state.vehicles.length * BALANCE.vehicles.chargingEnergyPerVehicle;
 
     // No surplus: only the baseline remains.
     state.lastEnergy.solar = 0;
     state.lastEnergy.wind = 0;
     state.lastEnergy.buildingConsumption = 50;
-    expect(chargingDemand(state)).toBeCloseTo(
-      fullLoad * BALANCE.vehicles.smartChargingBaseline,
-      5,
-    );
+    expect(chargingDemand(state)).toBeCloseTo(fullLoad * BALANCE.vehicles.smartChargingBaseline, 5);
 
     // Large surplus: charging ramps up, capped at the full load.
     state.lastEnergy.solar = 500;

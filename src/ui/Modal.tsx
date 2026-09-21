@@ -24,12 +24,7 @@ export function Modal({
       >
         <header className="modal-header">
           <h2>{title}</h2>
-          <button
-            type="button"
-            className="modal-close"
-            title={t('modal.close')}
-            onClick={onClose}
-          >
+          <button type="button" className="modal-close" title={t('modal.close')} onClick={onClose}>
             ×
           </button>
         </header>

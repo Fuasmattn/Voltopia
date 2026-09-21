@@ -39,9 +39,7 @@ export class ZoneTilesMesh implements DiffLayer {
     let changed = false;
     for (const diff of diffs) {
       const showTint =
-        diff.tileType === TileType.Empty &&
-        diff.zone !== Zone.None &&
-        diff.density === 0;
+        diff.tileType === TileType.Empty && diff.zone !== Zone.None && diff.density === 0;
       if (showTint) {
         if (this.zones.get(diff.index) !== diff.zone) {
           this.zones.set(diff.index, diff.zone);

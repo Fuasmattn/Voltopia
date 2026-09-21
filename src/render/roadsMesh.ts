@@ -45,11 +45,7 @@ export class RoadsMesh implements DiffLayer {
     const poleGeometry = new THREE.BoxGeometry(0.035, 0.3, 0.035);
     poleGeometry.translate(0, 0.15, 0);
     const poleMaterial = new THREE.MeshLambertMaterial({ color: 0x3a4048 });
-    this.lampPoles = new THREE.InstancedMesh(
-      poleGeometry,
-      poleMaterial,
-      gridSize * gridSize,
-    );
+    this.lampPoles = new THREE.InstancedMesh(poleGeometry, poleMaterial, gridSize * gridSize);
     // Instance transforms live across the whole grid; the base geometry's
     // bounds would wrongly cull the mesh, so culling is disabled.
     this.lampPoles.frustumCulled = false;
@@ -77,9 +73,7 @@ export class RoadsMesh implements DiffLayer {
   /** Streetlamps glow warmly at night. */
   setEnvironment(environment: RenderEnvironment): void {
     this.lampHeadMaterial.opacity = 0.25 + 0.75 * environment.nightFactor;
-    this.lampHeadMaterial.color.setHex(
-      environment.nightFactor > 0.4 ? 0xffcf6e : 0xffe3a1,
-    );
+    this.lampHeadMaterial.color.setHex(environment.nightFactor > 0.4 ? 0xffcf6e : 0xffe3a1);
   }
 
   applyDiffs(diffs: TileDiff[]): void {
@@ -143,13 +137,7 @@ export class RoadsMesh implements DiffLayer {
     this.lampHeads.instanceMatrix.needsUpdate = true;
   }
 
-  private setInstance(
-    slot: number,
-    x: number,
-    z: number,
-    sizeX: number,
-    sizeZ: number,
-  ): void {
+  private setInstance(slot: number, x: number, z: number, sizeX: number, sizeZ: number): void {
     this.matrix.makeScale(sizeX, ROAD_HEIGHT, sizeZ);
     this.matrix.setPosition(x, ROAD_HEIGHT / 2, z);
     this.mesh.setMatrixAt(slot, this.matrix);

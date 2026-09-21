@@ -11,12 +11,16 @@ pnpm test         # unit tests (vitest) — MUST pass before every commit
 pnpm coverage     # tests + coverage gate (>=90% on src/sim + src/shared)
 pnpm e2e          # Playwright end-to-end tests
 pnpm typecheck    # tsc -b
+pnpm lint         # oxlint
+pnpm format       # oxfmt (writes); format:check verifies
 pnpm build        # production build (includes typecheck)
 ```
 
 A pre-commit hook (simple-git-hooks, installed via `pnpm install`) runs
-`pnpm typecheck && pnpm test` automatically. Never commit with failing
-tests; never bypass the hook with `--no-verify` unless the user asks.
+`pnpm typecheck && pnpm lint && pnpm format:check && pnpm test`
+automatically. Never commit with failing checks; never bypass the hook
+with `--no-verify` unless the user asks. Run `pnpm format` after edits —
+formatting is enforced (oxfmt, single quotes, config in `.oxfmtrc.json`).
 
 ## Architecture (strict boundaries)
 

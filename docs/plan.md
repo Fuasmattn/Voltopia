@@ -85,20 +85,25 @@ type SimEvent =
   | { type: 'ready' }
   | { type: 'tick'; diffs: TileDiff[]; stats: GlobalStats; vehicles: VehicleState[] }
   | { type: 'saveData'; save: SaveGame }
-  | { type: 'rejected'; reason: string };  // e.g. not enough money
+  | { type: 'rejected'; reason: string }; // e.g. not enough money
 
 interface GlobalStats {
-  tick: number; money: number; population: number; jobs: number;
-  happiness: number;            // 0..1
+  tick: number;
+  money: number;
+  population: number;
+  jobs: number;
+  happiness: number; // 0..1
   demand: { residential: number; commercial: number; retail: number }; // -1..1
-  timeOfDay: number;            // 0..1 (0 = midnight)
+  timeOfDay: number; // 0..1 (0 = midnight)
   weather: { cloudCover: number; windSpeed: number }; // 0..1
   energy: {
     generation: { solar: number; wind: number; biogas: number };
     consumption: { buildings: number; charging: number };
-    batterySoC: number; batteryCapacity: number;
-    curtailment: number; deficit: number;   // MW-ish abstract units
-    history: EnergyHistoryPoint[];          // last 24 in-game hours, ring buffer
+    batterySoC: number;
+    batteryCapacity: number;
+    curtailment: number;
+    deficit: number; // MW-ish abstract units
+    history: EnergyHistoryPoint[]; // last 24 in-game hours, ring buffer
   };
   taxRate: number;
 }
@@ -113,6 +118,7 @@ Layers in `SimState` (all `Uint8Array`/`Float32Array` of length size²): `tileTy
 Milestone numbering follows `docs/idea.md` (Way of Working). Each milestone ends runnable (`pnpm dev`), tested (`pnpm test`), committed, and is followed by a short summary of what's done and what comes next.
 
 ### M1 — Project setup + grid + camera
+
 - [x] Scaffold Vite + React 19 + TS strict + pnpm; add three.js, vitest, coverage
 - [x] `shared/`: constants/balancing config, grid helpers, RNG, message protocol (tests: rng determinism, grid math)
 - [x] `sim/state.ts` + `sim/worker.ts`: init, fixed 4/s tick with speed 0/1/3, posts tick events (tests: tick advance, speed changes, determinism)
@@ -121,34 +127,40 @@ Milestone numbering follows `docs/idea.md` (Way of Working). Each milestone ends
 - [x] Deliverable: empty grid, camera navigation, running tick counter. Commit.
 
 ### M2 — Road building
+
 - [x] `sim/roads.ts`: place road tiles, recompute 4-neighbor bitmask; cost per tile deducted; reject if broke (tests: bitmask for straights/curves/T/cross/dead-end, cost, rejection)
 - [x] Drag-to-draw road lines (L-shaped preview), `render/roadsMesh.ts` instanced variants from bitmask
 - [x] Undo for last build action (history in worker, tests); bulldozer for roads
 - [x] Deliverable: draw roads with auto intersections. Commit + summary.
 
 ### M3 — Zones + worker simulation + growth
+
 - [x] `sim/zones.ts`: paint residential/commercial/retail on empty tiles (tests)
 - [x] `sim/growth.ts`: demand model (res needs jobs, jobs need residents, retail needs both), building spawn only on zoned + road-adjacent tiles, 3 density levels, seeded variation; population/jobs derived per density (tests: demand math, growth conditions, determinism)
 - [x] `render/buildingsMesh.ts`: procedural low-poly buildings (box compositions per zone/density/variant), scale-in animation
 - [x] Demand bars + population in HUD. Deliverable: paint zones, city grows. Commit + summary.
 
 ### M4 — Day/night + weather + lighting
+
 - [x] `sim/weather.ts`: day/night clock (1 in-game day ≈ 4 min real time), smooth seeded cloud cover & wind speed (tests: bounds, smoothness, determinism)
 - [x] `render/`: sun position/dusk lighting, warm window lights and streetlamps at night
 - [x] HUD: time-of-day + weather display. Commit + summary.
 
 ### M5 — Generation, storage, energy balance + economy + HUD
+
 - [x] `sim/energy.ts`: plants placeable (solar farm, wind turbine, battery, biogas); generation = f(sun, clouds) / f(wind); load profiles per zone by time of day; balance order: surplus → charge battery → curtail; deficit → discharge battery → biogas → undersupply; supply-radius connection; undersupplied buildings flagged, flicker/dark, happiness drops, growth stops (tests: balance matrix, SoC limits, curtailment accounting, radius)
 - [x] `sim/economy.ts`: starting funds, construction costs, per-tick tax income, upkeep incl. plant operating costs, tax slider affects happiness (tests)
 - [x] `render/`: plant meshes, wind rotors spinning ∝ output, battery SoC indicator
 - [x] `ui/EnergyPanel.tsx`: per-source generation, consumption, SoC, surplus/deficit/curtailment, 24h mini history graph; HUD money/happiness; TaxSlider. Commit + summary.
 
 ### M6 — Electric vehicles + charging load + charging hubs
+
 - [x] `sim/vehicles.ts`: EV count scales with population+jobs; random walk along road tiles (tests: stay on roads, count scaling, determinism); evening charging peak in residential; charging hubs shift load to daytime; smart-charging upgrade follows generation surplus (tests: load shapes)
 - [x] `render/vehiclesMesh.ts`: instanced low-poly cars, smooth interpolation, headlights at night
 - [x] Charging hub buildable; smart-charging toggle in UI. Commit + summary.
 
 ### M7 — Overlays + save/load + PWA
+
 - [x] Supply overlay (supplied/undersupplied/not connected) + demand overlay; overlay toggle UI
 - [x] `storage/`: `SaveStorage` interface; IndexedDB impl; serialize SimState (typed arrays → ArrayBuffers); autosave every 30s; load on boot; new-game button (tests: round-trip serialization)
 - [x] PWA via vite-plugin-pwa (offline playable)

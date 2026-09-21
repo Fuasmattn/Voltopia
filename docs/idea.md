@@ -1,6 +1,7 @@
 # Project: Voltopia – a modern, simplified city builder for the browser
 
 ## Goal
+
 Build a city-building game as a web app, inspired by the classics of the genre
 but deliberately its own thing: streamlined, approachable, with a modern
 low-poly 3D look (in the spirit of Townscaper / Islanders / Mini Motorways).
@@ -9,6 +10,7 @@ Balancing fluctuating generation against consumption is a core game mechanic.
 Do not use trademarks, assets, or code from existing games.
 
 ## Design Principles
+
 - Few, clear key metrics: money, population, happiness, energy balance
 - Feedback directly in the world (icons above buildings, toggleable color
   overlays, lighting) instead of statistics dashboards
@@ -17,6 +19,7 @@ Do not use trademarks, assets, or code from existing games.
 - The energy transition as a playful challenge, not a lecture
 
 ## Tech Stack
+
 - React, Vite, TypeScript (strict), pnpm
 - three.js with an orthographic camera (isometric perspective, rotatable in
   90° steps, zoomable, pannable)
@@ -28,6 +31,7 @@ Do not use trademarks, assets, or code from existing games.
 - use React v19 best practices
 
 ## Architecture
+
 - Strict separation: `sim/` (pure logic, no DOM/three.js dependencies),
   `render/`, `ui/`, `shared/` (types, message protocol)
 - Simulation state stored in typed arrays per layer (tile type, zone, density,
@@ -41,6 +45,7 @@ Do not use trademarks, assets, or code from existing games.
 - Rendering with InstancedMesh (buildings, vehicles) so large cities stay smooth
 
 ## MVP Scope
+
 1. Terrain: flat grid with a subtle grid overlay while building
 2. Roads: drawn by dragging, automatic intersections/curves/dead ends
 3. Zones: residential, commercial (jobs), and retail painted by dragging (only
@@ -61,17 +66,20 @@ Do not use trademarks, assets, or code from existing games.
 11. Save/load via IndexedDB, autosave
 
 ## Energy & Mobility
+
 The city is powered exclusively by renewable energy. There are no fossil-fuel
 power plants. The challenge is keeping fluctuating generation and consumption
 in balance.
 
 ### Day/Night & Weather
+
 - Day-night cycle (one in-game day ≈ a few minutes real time) with visible
   lighting: sun position, dusk, lit windows and streets at night
 - Simple weather system: cloud cover (affects PV) and wind speed (affects wind
   power), varying smoothly, shown in the HUD
 
 ### Generation & Storage
+
 - Solar farm (ground-mounted PV): output depends on sun position and cloud cover
 - Wind turbine: output depends on wind speed, visibly spinning rotors (speed
   proportional to output)
@@ -82,6 +90,7 @@ in balance.
 - Optional later: rooftop PV that grows automatically with increasing density
 
 ### Grid & Balance
+
 - Connection via the supply radius of plants (no power lines)
 - Global energy balance per tick: generation vs. consumption
 - Surplus: charge storage first, then curtail (curtailed energy is displayed)
@@ -91,6 +100,7 @@ in balance.
   the day, retail from daytime into the evening
 
 ### E-Mobility
+
 - All vehicles are electric
 - In the MVP, vehicles are visual: low-poly cars drive along road tiles using a
   simple random walk (no pathfinding), count scales with population and jobs,
@@ -103,6 +113,7 @@ in balance.
   surplus
 
 ### HUD & Overlays
+
 - Energy panel: current generation per source, consumption, storage SoC,
   surplus/deficit, mini history graph of the last 24 in-game hours
 - "Supply" overlay: supplied / undersupplied / not connected
@@ -110,6 +121,7 @@ in balance.
   consumption, state of charge, curtailment, peak load)
 
 ## Visual Style
+
 - Reduced, harmonious color palette, soft shadows, gentle lighting
 - Day-night lighting as a key stylistic element: warm window lights, streetlamps,
   vehicle headlights
@@ -117,12 +129,14 @@ in balance.
 - Clean, modern UI with highly readable typography
 
 ## Out of Scope for the MVP
+
 Real pathfinding/traffic simulation, power lines, water, police/fire services,
 disasters, seasons, terrain elevation, sound, multiplayer, electricity
 market/import/export. Design the architecture so that additional layers,
 building types, and energy sources can easily be added later.
 
 ## Way of Working
+
 - Start with a short architecture and implementation plan and wait for my
   approval
 - Then work in small milestones, each runnable at the end:

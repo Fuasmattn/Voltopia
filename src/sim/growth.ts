@@ -73,9 +73,7 @@ function demandFor(demand: DemandStats, zone: Zone): number {
 
 function hasRoadAccess(state: SimState, index: number): boolean {
   const { tileType } = state.layers;
-  return neighbors4(index, state.size).some(
-    (neighbor) => tileType[neighbor] === TileType.Road,
-  );
+  return neighbors4(index, state.size).some((neighbor) => tileType[neighbor] === TileType.Road);
 }
 
 /**

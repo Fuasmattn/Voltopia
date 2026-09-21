@@ -10,8 +10,7 @@ function polyline(values: number[], maxValue: number): string {
   const stepX = GRAPH_WIDTH / (values.length - 1);
   return values
     .map((value, i) => {
-      const y =
-        GRAPH_HEIGHT - (Math.min(value, maxValue) / maxValue) * (GRAPH_HEIGHT - 4) - 2;
+      const y = GRAPH_HEIGHT - (Math.min(value, maxValue) / maxValue) * (GRAPH_HEIGHT - 4) - 2;
       return `${(i * stepX).toFixed(1)},${y.toFixed(1)}`;
     })
     .join(' ');
@@ -32,8 +31,7 @@ export function EnergyPanel({ energy }: { energy: EnergyStats }) {
     energy.generation.wind +
     energy.generation.biogas +
     energy.generation.rooftop;
-  const totalConsumption =
-    energy.consumption.buildings + energy.consumption.charging;
+  const totalConsumption = energy.consumption.buildings + energy.consumption.charging;
   const balance = totalGeneration - totalConsumption;
   const stateOfCharge =
     energy.storageCapacity > 0 ? energy.storedEnergy / energy.storageCapacity : 0;
@@ -102,11 +100,7 @@ export function EnergyPanel({ energy }: { energy: EnergyStats }) {
       <div className="soc-block" data-testid="energy-soc">
         <div className="soc-label">
           <span>{t('energy.storage')}</span>
-          <span>
-            {energy.storageCapacity > 0
-              ? `${Math.round(stateOfCharge * 100)}%`
-              : '—'}
-          </span>
+          <span>{energy.storageCapacity > 0 ? `${Math.round(stateOfCharge * 100)}%` : '—'}</span>
         </div>
         <div className="soc-track">
           <div className="soc-fill" style={{ width: `${stateOfCharge * 100}%` }} />

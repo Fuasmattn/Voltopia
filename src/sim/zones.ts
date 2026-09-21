@@ -7,11 +7,7 @@ import { markDirty, TileType, type SimState, type UndoEntry } from './state.ts';
  * Paint a zone onto empty tiles. Tiles that already carry a building,
  * a road or a plant are skipped; repainting the same zone is free.
  */
-export function paintZones(
-  state: SimState,
-  tiles: number[],
-  zone: Zone,
-): BuildResult {
+export function paintZones(state: SimState, tiles: number[], zone: Zone): BuildResult {
   const { layers } = state;
   const paintable = tiles.filter(
     (index) =>

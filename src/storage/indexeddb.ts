@@ -33,9 +33,7 @@ export class IndexedDbStorage implements SaveStorage {
       const db = await openDatabase();
       const transaction = db.transaction(STORE_NAME, 'readonly');
       const result = await requestToPromise(
-        transaction.objectStore(STORE_NAME).get(slot) as IDBRequest<
-          SaveGame | undefined
-        >,
+        transaction.objectStore(STORE_NAME).get(slot) as IDBRequest<SaveGame | undefined>,
       );
       db.close();
       if (!result || result.version !== SAVE_VERSION) return null;
@@ -52,8 +50,7 @@ export class IndexedDbStorage implements SaveStorage {
     transaction.objectStore(STORE_NAME).put(game, slot);
     await new Promise<void>((resolve, reject) => {
       transaction.oncomplete = () => resolve();
-      transaction.onerror = () =>
-        reject(transaction.error ?? new Error('IndexedDB write failed'));
+      transaction.onerror = () => reject(transaction.error ?? new Error('IndexedDB write failed'));
     });
     db.close();
   }
@@ -64,8 +61,7 @@ export class IndexedDbStorage implements SaveStorage {
     transaction.objectStore(STORE_NAME).delete(slot);
     await new Promise<void>((resolve, reject) => {
       transaction.oncomplete = () => resolve();
-      transaction.onerror = () =>
-        reject(transaction.error ?? new Error('IndexedDB delete failed'));
+      transaction.onerror = () => reject(transaction.error ?? new Error('IndexedDB delete failed'));
     });
     db.close();
   }

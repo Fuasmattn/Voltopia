@@ -38,10 +38,9 @@ describe('grid math', () => {
   it('finds 4-neighbors inside the grid', () => {
     const size = 4;
     // corner tile (0,0): only east and south neighbors
-    expect(neighbors4(tileIndex(0, 0, size), size).sort((a, b) => a - b)).toEqual([
-      tileIndex(1, 0, size),
-      tileIndex(0, 1, size),
-    ].sort((a, b) => a - b));
+    expect(neighbors4(tileIndex(0, 0, size), size).sort((a, b) => a - b)).toEqual(
+      [tileIndex(1, 0, size), tileIndex(0, 1, size)].sort((a, b) => a - b),
+    );
     // center tile: all four
     expect(neighbors4(tileIndex(1, 1, size), size)).toHaveLength(4);
   });

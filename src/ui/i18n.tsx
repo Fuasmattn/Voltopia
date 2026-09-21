@@ -1,18 +1,10 @@
-import {
-  createContext,
-  useCallback,
-  useContext,
-  useMemo,
-  useState,
-  type ReactNode,
-} from 'react';
+import { createContext, useCallback, useContext, useMemo, useState, type ReactNode } from 'react';
 
 export type Locale = 'en' | 'de';
 
 const en = {
   'boot.loading': 'Voltopia is loading…',
-  'webgl.fallback':
-    '3D view unavailable (WebGL not supported here) — simulation keeps running.',
+  'webgl.fallback': '3D view unavailable (WebGL not supported here) — simulation keeps running.',
 
   'hud.funds': 'funds',
   'hud.residents': 'residents',
@@ -60,8 +52,7 @@ const en = {
 
   'tax.label': 'Tax rate',
   'smartCharging.label': '⚡ Smart charging',
-  'smartCharging.title':
-    'EV charging automatically follows the generation surplus',
+  'smartCharging.title': 'EV charging automatically follows the generation surplus',
   'newCity.label': 'New city',
   'newCity.confirm': 'Start a new city? The current one will be erased.',
 
@@ -161,8 +152,7 @@ const en = {
   'goal.population500.title': 'Town',
   'goal.population500.body': 'Reach 500 residents.',
   'goal.cleanDay.title': 'Self-sufficient',
-  'goal.cleanDay.body':
-    'A full day without deficits or grid imports (50+ residents).',
+  'goal.cleanDay.body': 'A full day without deficits or grid imports (50+ residents).',
   'goal.evFleet.title': 'Electric avenue',
   'goal.evFleet.body': '30 electric vehicles on your roads.',
   'goal.exporter.title': 'Power exporter',
@@ -222,11 +212,9 @@ const de: Record<TranslationKey, string> = {
 
   'tax.label': 'Steuersatz',
   'smartCharging.label': '⚡ Smart Charging',
-  'smartCharging.title':
-    'E-Auto-Laden folgt automatisch dem Erzeugungsüberschuss',
+  'smartCharging.title': 'E-Auto-Laden folgt automatisch dem Erzeugungsüberschuss',
   'newCity.label': 'Neue Stadt',
-  'newCity.confirm':
-    'Eine neue Stadt beginnen? Die aktuelle Stadt wird gelöscht.',
+  'newCity.confirm': 'Eine neue Stadt beginnen? Die aktuelle Stadt wird gelöscht.',
 
   'overlay.label': 'Overlay',
   'overlay.off': 'Aus',
@@ -235,16 +223,14 @@ const de: Record<TranslationKey, string> = {
   'overlay.off.title': 'Kein Overlay',
   'overlay.supply.title':
     'Versorgungsstatus: grün = versorgt, orange = unterversorgt, rot = nicht angeschlossen',
-  'overlay.demand.title':
-    'Wachstumsnachfrage pro Zone: rot = keine, grün = hoch',
+  'overlay.demand.title': 'Wachstumsnachfrage pro Zone: rot = keine, grün = hoch',
 
   'rejection.notEnoughMoney': 'Nicht genug Geld',
   'rejection.tileOccupied': 'Dieses Feld ist bereits belegt',
   'rejection.nothingToUndo': 'Nichts rückgängig zu machen',
   'rejection.noPlantSelected': 'Keine Anlage ausgewählt',
 
-  'footer.hint':
-    'rechte Maustaste ziehen: bewegen · Mausrad: zoomen · Q/E: drehen',
+  'footer.hint': 'rechte Maustaste ziehen: bewegen · Mausrad: zoomen · Q/E: drehen',
   'footer.help': 'Hilfe',
   'footer.imprint': 'Impressum',
 
@@ -326,8 +312,7 @@ const de: Record<TranslationKey, string> = {
   'goal.population500.title': 'Stadt',
   'goal.population500.body': 'Erreiche 500 Einwohner.',
   'goal.cleanDay.title': 'Autark',
-  'goal.cleanDay.body':
-    'Ein ganzer Tag ohne Defizit und Netzbezug (ab 50 Einwohnern).',
+  'goal.cleanDay.body': 'Ein ganzer Tag ohne Defizit und Netzbezug (ab 50 Einwohnern).',
   'goal.evFleet.title': 'Unter Strom',
   'goal.evFleet.body': '30 Elektroautos auf deinen Straßen.',
   'goal.exporter.title': 'Stromexporteur',

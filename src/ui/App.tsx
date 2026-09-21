@@ -86,9 +86,7 @@ function Game({ save }: { save: SaveGame | null }) {
   const [page, setPage] = useState<'help' | 'imprint' | 'settings' | null>(null);
   const [settings, setSettings] = useState<AppSettings>(loadSettings);
   // The tutorial runs for brand-new cities only (no autosave existed).
-  const [showTutorial, setShowTutorial] = useState(
-    () => save === null && !isTutorialDone(),
-  );
+  const [showTutorial, setShowTutorial] = useState(() => save === null && !isTutorialDone());
 
   const stats = bridge.stats;
 
@@ -105,10 +103,7 @@ function Game({ save }: { save: SaveGame | null }) {
     const unsubscribe = onSaveData((save) => {
       storage.save(save).catch((error) => console.warn('Autosave failed', error));
     });
-    const timer = setInterval(
-      () => send({ type: 'requestSave' }),
-      AUTOSAVE_INTERVAL_MS,
-    );
+    const timer = setInterval(() => send({ type: 'requestSave' }), AUTOSAVE_INTERVAL_MS);
     // Quick-save on "s" (autosave covers the rest).
     const onKeyDown = (e: KeyboardEvent): void => {
       if (e.key === 's' || e.key === 'S') send({ type: 'requestSave' });
@@ -199,11 +194,7 @@ function Game({ save }: { save: SaveGame | null }) {
             </div>
             <DemandBars demand={stats.demand} />
             <Clock timeOfDay={stats.timeOfDay} day={stats.day} />
-            <div
-              className="hud-weather"
-              data-testid="weather"
-              title={t('hud.weather.title')}
-            >
+            <div className="hud-weather" data-testid="weather" title={t('hud.weather.title')}>
               <span>☁️ {Math.round(stats.weather.cloudCover * 100)}%</span>
               <span>💨 {Math.round(stats.weather.windSpeed * 100)}%</span>
             </div>
@@ -240,9 +231,7 @@ function Game({ save }: { save: SaveGame | null }) {
             <input
               type="checkbox"
               checked={stats.smartCharging}
-              onChange={(e) =>
-                bridge.send({ type: 'setSmartCharging', enabled: e.target.checked })
-              }
+              onChange={(e) => bridge.send({ type: 'setSmartCharging', enabled: e.target.checked })}
             />
             <span>{t('smartCharging.label')}</span>
           </label>
@@ -266,37 +255,20 @@ function Game({ save }: { save: SaveGame | null }) {
           {costPreview.tiles} ▦ · {costPreview.cost.toLocaleString('en-US')} ⌁
         </div>
       )}
-      {stats && (
-        <GoalsPanel
-          goals={stats.goals}
-          onAchievement={() => sound.play('achievement')}
-        />
-      )}
+      {stats && <GoalsPanel goals={stats.goals} onAchievement={() => sound.play('achievement')} />}
       {showTutorial && stats && (
         <Tutorial stats={stats} onFinished={() => setShowTutorial(false)} />
       )}
       <OverlayToggle mode={overlay} onChange={setOverlay} />
       <footer className="hud-footer">
         <span className="hud-footer-hint">{t('footer.hint')}</span>
-        <button
-          type="button"
-          data-testid="open-help"
-          onClick={() => setPage('help')}
-        >
+        <button type="button" data-testid="open-help" onClick={() => setPage('help')}>
           {t('footer.help')}
         </button>
-        <button
-          type="button"
-          data-testid="open-imprint"
-          onClick={() => setPage('imprint')}
-        >
+        <button type="button" data-testid="open-imprint" onClick={() => setPage('imprint')}>
           {t('footer.imprint')}
         </button>
-        <button
-          type="button"
-          data-testid="open-settings"
-          onClick={() => setPage('settings')}
-        >
+        <button type="button" data-testid="open-settings" onClick={() => setPage('settings')}>
           {t('footer.settings')}
         </button>
         <LanguageSwitch />

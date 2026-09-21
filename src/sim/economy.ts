@@ -16,17 +16,11 @@ export interface EconomyBreakdown {
  * upkeep for roads and plants (biogas additionally pays per energy unit
  * generated — dispatchable but expensive).
  */
-export function economyStep(
-  state: SimState,
-  population: number,
-  jobs: number,
-): EconomyBreakdown {
+export function economyStep(state: SimState, population: number, jobs: number): EconomyBreakdown {
   const { tileType, plantType } = state.layers;
 
   const taxIncome =
-    state.taxRate *
-    (population * BALANCE.tax.incomePerResident +
-      jobs * BALANCE.tax.incomePerJob);
+    state.taxRate * (population * BALANCE.tax.incomePerResident + jobs * BALANCE.tax.incomePerJob);
 
   let roadTiles = 0;
   let plantUpkeep = 0;
@@ -39,18 +33,11 @@ export function economyStep(
   const roadUpkeep = roadTiles * BALANCE.upkeepPerTick.roadPerTile;
   const biogasFuelCost =
     state.lastEnergy.biogas * BALANCE.upkeepPerTick.biogasFuelCostPerEnergyUnit;
-  const gridImportCost =
-    state.lastEnergy.gridImport * BALANCE.market.importCostPerEnergyUnit;
-  const gridExportRevenue =
-    state.lastEnergy.gridExport * BALANCE.market.exportRevenuePerEnergyUnit;
+  const gridImportCost = state.lastEnergy.gridImport * BALANCE.market.importCostPerEnergyUnit;
+  const gridExportRevenue = state.lastEnergy.gridExport * BALANCE.market.exportRevenuePerEnergyUnit;
 
   state.money +=
-    taxIncome +
-    gridExportRevenue -
-    roadUpkeep -
-    plantUpkeep -
-    biogasFuelCost -
-    gridImportCost;
+    taxIncome + gridExportRevenue - roadUpkeep - plantUpkeep - biogasFuelCost - gridImportCost;
   return {
     taxIncome,
     roadUpkeep,

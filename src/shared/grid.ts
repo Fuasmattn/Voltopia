@@ -72,13 +72,7 @@ export function lShapedPath(
 }
 
 /** All tiles in the axis-aligned rectangle spanned by two corners. */
-export function rectTiles(
-  ax: number,
-  ay: number,
-  bx: number,
-  by: number,
-  size: number,
-): number[] {
+export function rectTiles(ax: number, ay: number, bx: number, by: number, size: number): number[] {
   const tiles: number[] = [];
   const minX = Math.min(ax, bx);
   const maxX = Math.max(ax, bx);

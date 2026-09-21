@@ -64,11 +64,7 @@ function driveVehicle(state: SimState, vehicle: Vehicle, step: number): void {
   const { tileType } = state.layers;
   // Target got bulldozed: hop to the nearest road tile under the vehicle.
   if (tileType[vehicle.targetTile] !== TileType.Road) {
-    const current = tileIndex(
-      Math.floor(vehicle.x),
-      Math.floor(vehicle.y),
-      state.size,
-    );
+    const current = tileIndex(Math.floor(vehicle.x), Math.floor(vehicle.y), state.size);
     vehicle.targetTile = tileType[current] === TileType.Road ? current : -1;
     if (vehicle.targetTile < 0) return; // parked until roads come back
   }
@@ -118,18 +114,13 @@ export function chargingDemand(state: SimState): number {
     const baseline = fullLoad * BALANCE.vehicles.smartChargingBaseline;
     const lastSurplus = Math.max(
       0,
-      state.lastEnergy.solar +
-        state.lastEnergy.wind -
-        state.lastEnergy.buildingConsumption,
+      state.lastEnergy.solar + state.lastEnergy.wind - state.lastEnergy.buildingConsumption,
     );
     return Math.min(fullLoad, baseline + lastSurplus);
   }
 
   const hubs = censusPlants(state).chargingHubs;
-  const hubShare = Math.min(
-    1,
-    (hubs * BALANCE.vehicles.vehiclesPerHub) / vehicles,
-  );
+  const hubShare = Math.min(1, (hubs * BALANCE.vehicles.vehiclesPerHub) / vehicles);
   const home = profileFactor(BALANCE.vehicles.homeChargingProfile, time);
   const hub = profileFactor(BALANCE.vehicles.hubChargingProfile, time);
   return fullLoad * ((1 - hubShare) * home + hubShare * hub);

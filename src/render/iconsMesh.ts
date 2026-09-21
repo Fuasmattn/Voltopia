@@ -68,11 +68,7 @@ export class IconsMesh implements DiffLayer {
       depthWrite: false,
       side: THREE.DoubleSide,
     });
-    this.mesh = new THREE.InstancedMesh(
-      new THREE.PlaneGeometry(1, 1),
-      material,
-      MAX_ICONS,
-    );
+    this.mesh = new THREE.InstancedMesh(new THREE.PlaneGeometry(1, 1), material, MAX_ICONS);
     this.mesh.frustumCulled = false;
     this.mesh.renderOrder = 3;
     this.mesh.count = 0;
@@ -121,9 +117,7 @@ export class IconsMesh implements DiffLayer {
         continue;
       }
       if (slot >= MAX_ICONS) break;
-      const bob = this.reducedMotion
-        ? 0
-        : Math.sin(nowSeconds * 3 + index * 0.7) * 0.07;
+      const bob = this.reducedMotion ? 0 : Math.sin(nowSeconds * 3 + index * 0.7) * 0.07;
       this.position.set(
         (index % this.gridSize) + 0.5,
         ICON_HEIGHT + bob,
@@ -133,9 +127,7 @@ export class IconsMesh implements DiffLayer {
       this.mesh.setMatrixAt(slot, this.matrix);
       this.mesh.setColorAt(
         slot,
-        entry.status === SupplyStatus.NotConnected
-          ? COLOR_NOT_CONNECTED
-          : COLOR_UNDERSUPPLIED,
+        entry.status === SupplyStatus.NotConnected ? COLOR_NOT_CONNECTED : COLOR_UNDERSUPPLIED,
       );
       slot++;
     }

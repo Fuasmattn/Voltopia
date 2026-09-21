@@ -45,12 +45,12 @@ The game saves automatically (IndexedDB) and is playable offline as a PWA.
 
 ## Controls
 
-| Input | Action |
-| --- | --- |
-| Left mouse | Use the selected tool (drag to draw roads/zones) |
-| Right/middle mouse drag | Pan the camera |
-| Mouse wheel | Zoom |
-| `Q` / `E` | Rotate the view in 90° steps |
+| Input                   | Action                                           |
+| ----------------------- | ------------------------------------------------ |
+| Left mouse              | Use the selected tool (drag to draw roads/zones) |
+| Right/middle mouse drag | Pan the camera                                   |
+| Mouse wheel             | Zoom                                             |
+| `Q` / `E`               | Rotate the view in 90° steps                     |
 
 ## Development
 

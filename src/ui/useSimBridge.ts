@@ -1,12 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { GRID_SIZE } from '../shared/constants.ts';
 import type { SimCommand, SimEvent } from '../shared/messages.ts';
-import type {
-  GlobalStats,
-  SaveGame,
-  TileDiff,
-  VehicleState,
-} from '../shared/types.ts';
+import type { GlobalStats, SaveGame, TileDiff, VehicleState } from '../shared/types.ts';
 
 export interface SimBridge {
   /** Latest global stats from the worker (null until the first tick). */
@@ -65,10 +60,7 @@ export function useSimBridge(options: SimBridgeOptions): SimBridge {
         case 'rejected':
           setRejection(event.reason);
           if (rejectionTimer.current) clearTimeout(rejectionTimer.current);
-          rejectionTimer.current = setTimeout(
-            () => setRejection(null),
-            REJECTION_DISPLAY_MS,
-          );
+          rejectionTimer.current = setTimeout(() => setRejection(null), REJECTION_DISPLAY_MS);
           break;
         case 'ready':
           break;
@@ -100,13 +92,10 @@ export function useSimBridge(options: SimBridgeOptions): SimBridge {
     return () => diffListeners.current.delete(listener);
   }, []);
 
-  const onVehicles = useCallback(
-    (listener: (vehicles: VehicleState[]) => void) => {
-      vehicleListeners.current.add(listener);
-      return () => vehicleListeners.current.delete(listener);
-    },
-    [],
-  );
+  const onVehicles = useCallback((listener: (vehicles: VehicleState[]) => void) => {
+    vehicleListeners.current.add(listener);
+    return () => vehicleListeners.current.delete(listener);
+  }, []);
 
   const onSaveData = useCallback((listener: (save: SaveGame) => void) => {
     saveListeners.current.add(listener);

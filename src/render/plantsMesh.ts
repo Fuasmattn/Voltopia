@@ -80,9 +80,7 @@ function plantBoxParts(plant: PlantType): BoxPart[] {
         { sx: 0.62, sy: 0.06, sz: 0.46, ox: 0, oy: 0.5, oz: 0, color: COLORS.batteryFrame },
       ];
     case PlantType.BiogasPlant:
-      return [
-        { sx: 0.34, sy: 0.34, sz: 0.34, ox: 0.22, oy: 0, oz: 0.2, color: COLORS.biogasTank },
-      ];
+      return [{ sx: 0.34, sy: 0.34, sz: 0.34, ox: 0.22, oy: 0, oz: 0.2, color: COLORS.biogasTank }];
     case PlantType.ChargingHub:
       return [
         { sx: 0.08, sy: 0.45, sz: 0.08, ox: -0.3, oy: 0, oz: -0.3, color: COLORS.hubPillar },
@@ -191,8 +189,7 @@ export class PlantsMesh implements DiffLayer {
   applyDiffs(diffs: TileDiff[]): void {
     let changed = false;
     for (const diff of diffs) {
-      const plant =
-        diff.tileType === TileType.Plant ? diff.plantType : PlantType.None;
+      const plant = diff.tileType === TileType.Plant ? diff.plantType : PlantType.None;
       const existing = this.plants.get(diff.index) ?? PlantType.None;
       if (plant !== existing) {
         if (plant === PlantType.None) this.plants.delete(diff.index);
@@ -215,9 +212,7 @@ export class PlantsMesh implements DiffLayer {
     if (this.rotorPositions.length === 0) return;
     // Rotor speed is proportional to wind output (cut-in below ~10%).
     const speed =
-      this.rotorSpeedFactor > 0.05
-        ? ROTOR_MAX_SPEED_RAD_PER_S * this.rotorSpeedFactor
-        : 0;
+      this.rotorSpeedFactor > 0.05 ? ROTOR_MAX_SPEED_RAD_PER_S * this.rotorSpeedFactor : 0;
     if (speed === 0) return;
     this.rotorAngle = (this.rotorAngle + speed * deltaSeconds) % (2 * Math.PI);
     this.writeRotors();

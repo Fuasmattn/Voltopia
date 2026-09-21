@@ -1,13 +1,7 @@
 import { BALANCE } from '../shared/constants.ts';
 import { useI18n } from './i18n.tsx';
 
-export function TaxSlider({
-  rate,
-  onChange,
-}: {
-  rate: number;
-  onChange: (rate: number) => void;
-}) {
+export function TaxSlider({ rate, onChange }: { rate: number; onChange: (rate: number) => void }) {
   const { t } = useI18n();
   return (
     <label className="tax-slider" data-testid="tax-slider">

@@ -60,11 +60,7 @@ export class VehiclesMesh {
       transparent: true,
       opacity: 0,
     });
-    this.headlights = new THREE.InstancedMesh(
-      lightGeometry,
-      this.headlightMaterial,
-      MAX_VEHICLES,
-    );
+    this.headlights = new THREE.InstancedMesh(lightGeometry, this.headlightMaterial, MAX_VEHICLES);
     // Instance transforms live across the whole grid; the base geometry's
     // bounds would wrongly cull the mesh, so culling is disabled.
     this.headlights.frustumCulled = false;
@@ -86,10 +82,7 @@ export class VehiclesMesh {
   }
 
   setEnvironment(environment: RenderEnvironment): void {
-    this.headlightMaterial.opacity = Math.max(
-      0,
-      (environment.nightFactor - 0.3) / 0.7,
-    );
+    this.headlightMaterial.opacity = Math.max(0, (environment.nightFactor - 0.3) / 0.7);
   }
 
   /** Interpolate between the last two sim updates. */

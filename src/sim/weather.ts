@@ -30,10 +30,7 @@ export function windFactor(windSpeed: number): number {
  * save games reproduce the same fronts. When a high-cloud front meets a
  * low-wind front, the city faces a genuine Dunkelflaute.
  */
-export function frontMeans(
-  seed: number,
-  tick: number,
-): { cloudMean: number; windMean: number } {
+export function frontMeans(seed: number, tick: number): { cloudMean: number; windMean: number } {
   const { cloud, wind } = BALANCE.weather.fronts;
   return {
     cloudMean: frontValue(seed, tick, cloud, 0),
@@ -54,8 +51,7 @@ function frontValue(
   let value = config.base;
   for (let i = 0; i < config.periodsDays.length; i++) {
     // Seed-derived phase per wave so every city gets its own fronts.
-    const phase =
-      (((seed >>> (channel * 8 + i * 4)) & 0xff) / 255) * 2 * Math.PI;
+    const phase = (((seed >>> (channel * 8 + i * 4)) & 0xff) / 255) * 2 * Math.PI;
     const period = config.periodsDays[i] * TICKS_PER_DAY;
     value += config.amplitudes[i] * Math.sin((2 * Math.PI * tick) / period + phase);
   }
@@ -75,12 +71,7 @@ export function updateWeather(state: SimState): void {
   w.windSpeed = drift(w.windSpeed, state.rng.next(), windDrift, windMean);
 }
 
-function drift(
-  value: number,
-  random: number,
-  step: number,
-  mean: number,
-): number {
+function drift(value: number, random: number, step: number, mean: number): number {
   const reversion = (mean - value) * step * 2;
   const noise = (random - 0.5) * 2 * step * 8;
   return Math.min(1, Math.max(0, value + reversion + noise));

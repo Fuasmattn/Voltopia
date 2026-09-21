@@ -15,9 +15,7 @@ describe('save game JSON export/import', () => {
     expect(restored.tick).toBe(save.tick);
     expect(restored.money).toBe(save.money);
     expect(restored.goals).toEqual(['firstPower']);
-    expect(new Uint8Array(restored.layers.tileType)).toEqual(
-      new Uint8Array(save.layers.tileType),
-    );
+    expect(new Uint8Array(restored.layers.tileType)).toEqual(new Uint8Array(save.layers.tileType));
   });
 
   it('rejects malformed input', () => {

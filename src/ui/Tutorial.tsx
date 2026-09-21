@@ -61,13 +61,7 @@ const STEPS: TutorialStep[] = [
  * A guided first city: each step waits for the described action to
  * actually happen in the simulation before advancing.
  */
-export function Tutorial({
-  stats,
-  onFinished,
-}: {
-  stats: GlobalStats;
-  onFinished: () => void;
-}) {
+export function Tutorial({ stats, onFinished }: { stats: GlobalStats; onFinished: () => void }) {
   const { t } = useI18n();
   const [stepIndex, setStepIndex] = useState(0);
   const step = STEPS[stepIndex];

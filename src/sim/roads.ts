@@ -63,8 +63,7 @@ export interface BuildResult {
 export function buildRoads(state: SimState, tiles: number[]): BuildResult {
   const { layers } = state;
   const buildable = tiles.filter(
-    (index) =>
-      layers.tileType[index] === TileType.Empty && layers.density[index] === 0,
+    (index) => layers.tileType[index] === TileType.Empty && layers.density[index] === 0,
   );
   if (buildable.length === 0) return {};
 

@@ -55,9 +55,7 @@ test('settings page toggles persist', async ({ page }) => {
 test('boots with a running simulation', async ({ page }) => {
   await expect(page).toHaveTitle(/Voltopia/);
   const before = await readTick(page);
-  await expect
-    .poll(async () => readTick(page), { timeout: 5_000 })
-    .toBeGreaterThan(before);
+  await expect.poll(async () => readTick(page), { timeout: 5_000 }).toBeGreaterThan(before);
   await expect(page.getByTestId('money')).toBeVisible();
   await expect(page.getByTestId('energy-panel')).toBeVisible();
 });
@@ -69,9 +67,7 @@ test('pause stops the simulation, play resumes it', async ({ page }) => {
   await page.waitForTimeout(800);
   expect(await readTick(page)).toBe(paused);
   await page.getByTestId('speed-3').click();
-  await expect
-    .poll(async () => readTick(page), { timeout: 5_000 })
-    .toBeGreaterThan(paused);
+  await expect.poll(async () => readTick(page), { timeout: 5_000 }).toBeGreaterThan(paused);
 });
 
 test('tax slider and smart charging are interactive', async ({ page }) => {
@@ -95,9 +91,7 @@ test('overlay toggle switches modes', async ({ page }) => {
 
 test('game state persists across a reload', async ({ page }) => {
   await page.getByTestId('speed-3').click();
-  await expect
-    .poll(async () => readTick(page), { timeout: 10_000 })
-    .toBeGreaterThan(20);
+  await expect.poll(async () => readTick(page), { timeout: 10_000 }).toBeGreaterThan(20);
   const beforeSave = await readTick(page);
   await page.keyboard.press('s'); // quick-save
   await page.waitForTimeout(500);

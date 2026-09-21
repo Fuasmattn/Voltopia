@@ -127,11 +127,7 @@ describe('growthStep', () => {
   it('is deterministic for the same seed', () => {
     const build = (): SimState => {
       const state = cityWithRoad();
-      paintZones(
-        state,
-        [at(4, 4), at(5, 4), at(6, 4), at(4, 6), at(5, 6)],
-        Zone.Residential,
-      );
+      paintZones(state, [at(4, 4), at(5, 4), at(6, 4), at(4, 6), at(5, 6)], Zone.Residential);
       runGrowth(state, 800);
       return state;
     };

@@ -29,7 +29,7 @@ export class IsoCamera {
   }
 
   private currentAzimuth(): number {
-    return (Math.PI / 4) + this.rotationIndex * (Math.PI / 2);
+    return Math.PI / 4 + this.rotationIndex * (Math.PI / 2);
   }
 
   /** Rotate the view by 90°; direction is +1 (counter-clockwise) or -1. */
@@ -44,21 +44,20 @@ export class IsoCamera {
 
   /** Multiply the zoom level, e.g. by a pinch-gesture distance ratio. */
   zoomByFactor(factor: number): void {
-    this.camera.zoom = THREE.MathUtils.clamp(
-      this.camera.zoom * factor,
-      MIN_ZOOM,
-      MAX_ZOOM,
-    );
+    this.camera.zoom = THREE.MathUtils.clamp(this.camera.zoom * factor, MIN_ZOOM, MAX_ZOOM);
     this.camera.updateProjectionMatrix();
   }
 
   /** Pan by a screen-pixel delta, moving the target on the ground plane. */
   pan(deltaXPixels: number, deltaYPixels: number, viewportHeightPixels: number): void {
-    const worldPerPixel =
-      this.viewportHeightWorld / this.camera.zoom / viewportHeightPixels;
+    const worldPerPixel = this.viewportHeightWorld / this.camera.zoom / viewportHeightPixels;
     // Screen right/up vectors projected onto the ground plane.
     const azimuth = this.animatedAzimuth;
-    const right = new THREE.Vector3(Math.sin(azimuth + Math.PI / 2), 0, Math.cos(azimuth + Math.PI / 2));
+    const right = new THREE.Vector3(
+      Math.sin(azimuth + Math.PI / 2),
+      0,
+      Math.cos(azimuth + Math.PI / 2),
+    );
     const forward = new THREE.Vector3(-Math.sin(azimuth), 0, -Math.cos(azimuth));
     // Compensate for the isometric foreshortening of vertical screen movement.
     const verticalScale = 1 / Math.sin(ISO_ELEVATION_RAD);

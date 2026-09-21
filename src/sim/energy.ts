@@ -22,11 +22,7 @@ const SUPPLY_SOURCES: ReadonlySet<PlantType> = new Set<PlantType>([
 ]);
 
 /** Place a plant on an empty tile, charging its construction cost. */
-export function placePlant(
-  state: SimState,
-  tile: number,
-  plant: PlantType,
-): BuildResult {
+export function placePlant(state: SimState, tile: number, plant: PlantType): BuildResult {
   const { layers } = state;
   if (plant === PlantType.None) return { rejected: 'noPlantSelected' };
   if (layers.tileType[tile] !== TileType.Empty || layers.density[tile] !== 0) {
@@ -120,11 +116,7 @@ export function loadProfileFactor(zone: Zone, time: number): number {
 }
 
 /** Base consumption of one building tile at a given time of day. */
-export function buildingConsumption(
-  zone: Zone,
-  density: number,
-  time: number,
-): number {
+export function buildingConsumption(zone: Zone, density: number, time: number): number {
   const base = BALANCE.energy.consumptionByZoneAndDensity[zone]?.[density] ?? 0;
   return base * loadProfileFactor(zone, time);
 }
@@ -133,11 +125,7 @@ export function buildingConsumption(
  * Is a tile within the supply radius (Chebyshev distance) of any
  * grid-connected plant?
  */
-function isConnected(
-  state: SimState,
-  index: number,
-  supplySources: number[],
-): boolean {
+function isConnected(state: SimState, index: number, supplySources: number[]): boolean {
   const radius = BALANCE.energy.supplyRadius;
   const x = tileX(index, state.size);
   const y = tileY(index, state.size);
@@ -167,10 +155,8 @@ export function energyStep(state: SimState, input: EnergyTickInput): void {
   const census = censusPlants(state);
   const time = timeOfDay(state.tick);
 
-  const solar =
-    census.solarFarms * BALANCE.energy.solarPeakOutput * currentSolarFactor(state);
-  const wind =
-    census.windTurbines * BALANCE.energy.windPeakOutput * currentWindFactor(state);
+  const solar = census.solarFarms * BALANCE.energy.solarPeakOutput * currentSolarFactor(state);
+  const wind = census.windTurbines * BALANCE.energy.windPeakOutput * currentWindFactor(state);
 
   // Consumption of all connected buildings, plus their rooftop PV
   // feed-in (rooftop capacity grows automatically with density).
@@ -186,14 +172,8 @@ export function energyStep(state: SimState, input: EnergyTickInput): void {
       continue;
     }
     connectedBuildings.push(i);
-    buildingDemand += buildingConsumption(
-      layers.zone[i] as Zone,
-      layers.density[i],
-      time,
-    );
-    rooftop +=
-      (BALANCE.energy.rooftopSolarPeakByDensity[layers.density[i]] ?? 0) *
-      solarFactorNow;
+    buildingDemand += buildingConsumption(layers.zone[i] as Zone, layers.density[i], time);
+    rooftop += (BALANCE.energy.rooftopSolarPeakByDensity[layers.density[i]] ?? 0) * solarFactorNow;
   }
 
   const chargingDemand = Math.max(0, input.chargingDemand);
@@ -213,11 +193,7 @@ export function energyStep(state: SimState, input: EnergyTickInput): void {
   const net = generation - totalDemand;
   if (net >= 0) {
     const headroom = storageCapacity - state.storedEnergy;
-    const charge = Math.min(
-      net,
-      powerLimit,
-      headroom / BALANCE.energy.batteryChargeEfficiency,
-    );
+    const charge = Math.min(net, powerLimit, headroom / BALANCE.energy.batteryChargeEfficiency);
     state.storedEnergy += charge * BALANCE.energy.batteryChargeEfficiency;
     // Sell what the batteries cannot absorb; curtail beyond the link.
     gridExport = Math.min(net - charge, BALANCE.market.exportCapacity);
@@ -227,10 +203,7 @@ export function energyStep(state: SimState, input: EnergyTickInput): void {
     const discharge = Math.min(shortfall, powerLimit, state.storedEnergy);
     state.storedEnergy -= discharge;
     shortfall -= discharge;
-    biogas = Math.min(
-      shortfall,
-      census.biogasPlants * BALANCE.energy.biogasMaxOutput,
-    );
+    biogas = Math.min(shortfall, census.biogasPlants * BALANCE.energy.biogasMaxOutput);
     shortfall -= biogas;
     // Expensive imports over the limited transmission link come last.
     gridImport = Math.min(shortfall, BALANCE.market.importCapacity);
@@ -242,14 +215,8 @@ export function energyStep(state: SimState, input: EnergyTickInput): void {
   // undersupplied so they visibly flicker while the grid is short.
   const deficitShare = totalDemand > 0 ? deficit / totalDemand : 0;
   for (const index of connectedBuildings) {
-    const undersupplied =
-      deficitShare > 0 &&
-      hashTileTick(index, state.tick) < deficitShare;
-    setSupplied(
-      state,
-      index,
-      undersupplied ? SupplyStatus.Undersupplied : SupplyStatus.Supplied,
-    );
+    const undersupplied = deficitShare > 0 && hashTileTick(index, state.tick) < deficitShare;
+    setSupplied(state, index, undersupplied ? SupplyStatus.Undersupplied : SupplyStatus.Supplied);
   }
 
   state.lastEnergy = {

@@ -5,12 +5,7 @@ import { economyStep } from './economy.ts';
 import { placePlant } from './energy.ts';
 import { happinessStep } from './happiness.ts';
 import { buildRoads } from './roads.ts';
-import {
-  createSimState,
-  PlantType,
-  SupplyStatus,
-  Zone,
-} from './state.ts';
+import { createSimState, PlantType, SupplyStatus, Zone } from './state.ts';
 
 const SIZE = 16;
 const at = (x: number, y: number) => tileIndex(x, y, SIZE);
@@ -21,8 +16,7 @@ describe('economyStep', () => {
     const before = state.money;
     const breakdown = economyStep(state, 100, 50);
     const expected =
-      state.taxRate *
-      (100 * BALANCE.tax.incomePerResident + 50 * BALANCE.tax.incomePerJob);
+      state.taxRate * (100 * BALANCE.tax.incomePerResident + 50 * BALANCE.tax.incomePerJob);
     expect(breakdown.taxIncome).toBeCloseTo(expected, 6);
     expect(state.money).toBeCloseTo(before + expected, 6);
   });
@@ -41,10 +35,7 @@ describe('economyStep', () => {
     buildRoads(state, [at(1, 1), at(2, 1), at(3, 1)]);
     placePlant(state, at(5, 5), PlantType.WindTurbine);
     const breakdown = economyStep(state, 0, 0);
-    expect(breakdown.roadUpkeep).toBeCloseTo(
-      3 * BALANCE.upkeepPerTick.roadPerTile,
-      6,
-    );
+    expect(breakdown.roadUpkeep).toBeCloseTo(3 * BALANCE.upkeepPerTick.roadPerTile, 6);
     expect(breakdown.plantUpkeep).toBeCloseTo(
       BALANCE.upkeepPerTick.plant[PlantType.WindTurbine],
       6,
@@ -67,10 +58,7 @@ describe('economyStep', () => {
     state.lastEnergy.gridExport = 50;
     const before = state.money;
     const breakdown = economyStep(state, 0, 0);
-    expect(breakdown.gridImportCost).toBeCloseTo(
-      40 * BALANCE.market.importCostPerEnergyUnit,
-      6,
-    );
+    expect(breakdown.gridImportCost).toBeCloseTo(40 * BALANCE.market.importCostPerEnergyUnit, 6);
     expect(breakdown.gridExportRevenue).toBeCloseTo(
       50 * BALANCE.market.exportRevenuePerEnergyUnit,
       6,

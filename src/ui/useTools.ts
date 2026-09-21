@@ -155,10 +155,8 @@ export function useTools(
         sound.play('build');
       };
     } else if (tool === 'bulldoze') {
-      callbacks.onBuildStart = (tile) =>
-        send({ type: 'bulldoze', tiles: [tile.index] });
-      callbacks.onBuildDrag = (tile) =>
-        send({ type: 'bulldoze', tiles: [tile.index] });
+      callbacks.onBuildStart = (tile) => send({ type: 'bulldoze', tiles: [tile.index] });
+      callbacks.onBuildDrag = (tile) => send({ type: 'bulldoze', tiles: [tile.index] });
     }
 
     callbacksRef.current = callbacks;

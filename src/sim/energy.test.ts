@@ -9,14 +9,7 @@ import {
   placePlant,
 } from './energy.ts';
 import { undoLastAction } from './roads.ts';
-import {
-  createSimState,
-  PlantType,
-  SupplyStatus,
-  TileType,
-  Zone,
-  type SimState,
-} from './state.ts';
+import { createSimState, PlantType, SupplyStatus, TileType, Zone, type SimState } from './state.ts';
 
 const SIZE = 32;
 const at = (x: number, y: number) => tileIndex(x, y, SIZE);
@@ -149,8 +142,7 @@ describe('energyStep', () => {
       BALANCE.energy.batteryChargeEfficiency;
     expect(state.storedEnergy).toBeCloseTo(expectedCharge, 3);
     // Charge rate is limited; the rest is exported, then curtailed.
-    const leftover =
-      BALANCE.energy.solarPeakOutput - BALANCE.energy.batteryPowerLimit;
+    const leftover = BALANCE.energy.solarPeakOutput - BALANCE.energy.batteryPowerLimit;
     expect(state.lastEnergy.gridExport).toBeCloseTo(
       Math.min(leftover, BALANCE.market.exportCapacity),
       3,
@@ -224,10 +216,7 @@ describe('energyStep', () => {
     state.weather.cloudCover = 1;
     energyStep(state, { chargingDemand: 0 });
     // The transmission link imports at its capacity; the rest is deficit.
-    expect(state.lastEnergy.gridImport).toBeCloseTo(
-      BALANCE.market.importCapacity,
-      3,
-    );
+    expect(state.lastEnergy.gridImport).toBeCloseTo(BALANCE.market.importCapacity, 3);
     expect(state.lastEnergy.deficit).toBeCloseTo(
       state.lastEnergy.buildingConsumption -
         state.lastEnergy.rooftop -
@@ -300,10 +289,7 @@ describe('energyStep', () => {
     addBuilding(state, at(8, 5), Zone.Residential, 1); // no rooftop yet
     setNoonClearSky(state);
     energyStep(state, { chargingDemand: 0 });
-    expect(state.lastEnergy.rooftop).toBeCloseTo(
-      BALANCE.energy.rooftopSolarPeakByDensity[3],
-      3,
-    );
+    expect(state.lastEnergy.rooftop).toBeCloseTo(BALANCE.energy.rooftopSolarPeakByDensity[3], 3);
     // At night there is no rooftop feed-in.
     state.tick = 0;
     energyStep(state, { chargingDemand: 0 });

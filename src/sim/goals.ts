@@ -60,10 +60,7 @@ export function goalsStep(state: SimState): void {
   if (!achieved.has('evFleet') && state.vehicles.length >= EV_FLEET_TARGET) {
     achieved.add('evFleet');
   }
-  if (
-    !achieved.has('exporter') &&
-    progress.exportedTotal >= EXPORTER_TARGET_ENERGY
-  ) {
+  if (!achieved.has('exporter') && progress.exportedTotal >= EXPORTER_TARGET_ENERGY) {
     achieved.add('exporter');
   }
 }

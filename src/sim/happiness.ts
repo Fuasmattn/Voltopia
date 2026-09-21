@@ -21,13 +21,9 @@ export function happinessStep(state: SimState): void {
   const troubledShare = buildings > 0 ? troubled / buildings : 0;
 
   const taxPenalty =
-    Math.max(0, state.taxRate - BALANCE.tax.happinessNeutralRate) *
-    config.taxPenaltyWeight;
+    Math.max(0, state.taxRate - BALANCE.tax.happinessNeutralRate) * config.taxPenaltyWeight;
   const supplyPenalty = troubledShare * config.undersupplyPenaltyWeight;
 
-  const target = Math.min(
-    1,
-    Math.max(0, config.base - taxPenalty - supplyPenalty),
-  );
+  const target = Math.min(1, Math.max(0, config.base - taxPenalty - supplyPenalty));
   state.happiness += (target - state.happiness) * config.smoothing;
 }
