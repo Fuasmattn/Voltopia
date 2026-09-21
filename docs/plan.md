@@ -1,6 +1,6 @@
 # Voltopia Implementation Plan
 
-> **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:executing-plans to implement this plan milestone-by-milestone. Steps use checkbox (`- [ ]`) syntax for tracking.
+> **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:executing-plans to implement this plan milestone-by-milestone. Steps use checkbox (`- [x]`) syntax for tracking.
 
 **Goal:** A browser city-builder with renewable-energy balancing as the core mechanic, per `docs/idea.md`.
 
@@ -113,47 +113,47 @@ Layers in `SimState` (all `Uint8Array`/`Float32Array` of length size²): `tileTy
 Milestone numbering follows `docs/idea.md` (Way of Working). Each milestone ends runnable (`pnpm dev`), tested (`pnpm test`), committed, and is followed by a short summary of what's done and what comes next.
 
 ### M1 — Project setup + grid + camera
-- [ ] Scaffold Vite + React 19 + TS strict + pnpm; add three.js, vitest, coverage
-- [ ] `shared/`: constants/balancing config, grid helpers, RNG, message protocol (tests: rng determinism, grid math)
-- [ ] `sim/state.ts` + `sim/worker.ts`: init, fixed 4/s tick with speed 0/1/3, posts tick events (tests: tick advance, speed changes, determinism)
-- [ ] `render/`: scene, terrain plane with grid overlay, ortho isometric camera with 90° rotation / zoom / pan; picking returns hovered tile
-- [ ] `ui/`: App shell, speed controls; `useSimBridge` worker hook
-- [ ] Deliverable: empty grid, camera navigation, running tick counter. Commit.
+- [x] Scaffold Vite + React 19 + TS strict + pnpm; add three.js, vitest, coverage
+- [x] `shared/`: constants/balancing config, grid helpers, RNG, message protocol (tests: rng determinism, grid math)
+- [x] `sim/state.ts` + `sim/worker.ts`: init, fixed 4/s tick with speed 0/1/3, posts tick events (tests: tick advance, speed changes, determinism)
+- [x] `render/`: scene, terrain plane with grid overlay, ortho isometric camera with 90° rotation / zoom / pan; picking returns hovered tile
+- [x] `ui/`: App shell, speed controls; `useSimBridge` worker hook
+- [x] Deliverable: empty grid, camera navigation, running tick counter. Commit.
 
 ### M2 — Road building
-- [ ] `sim/roads.ts`: place road tiles, recompute 4-neighbor bitmask; cost per tile deducted; reject if broke (tests: bitmask for straights/curves/T/cross/dead-end, cost, rejection)
-- [ ] Drag-to-draw road lines (L-shaped preview), `render/roadsMesh.ts` instanced variants from bitmask
-- [ ] Undo for last build action (history in worker, tests); bulldozer for roads
-- [ ] Deliverable: draw roads with auto intersections. Commit + summary.
+- [x] `sim/roads.ts`: place road tiles, recompute 4-neighbor bitmask; cost per tile deducted; reject if broke (tests: bitmask for straights/curves/T/cross/dead-end, cost, rejection)
+- [x] Drag-to-draw road lines (L-shaped preview), `render/roadsMesh.ts` instanced variants from bitmask
+- [x] Undo for last build action (history in worker, tests); bulldozer for roads
+- [x] Deliverable: draw roads with auto intersections. Commit + summary.
 
 ### M3 — Zones + worker simulation + growth
-- [ ] `sim/zones.ts`: paint residential/commercial/retail on empty tiles (tests)
-- [ ] `sim/growth.ts`: demand model (res needs jobs, jobs need residents, retail needs both), building spawn only on zoned + road-adjacent tiles, 3 density levels, seeded variation; population/jobs derived per density (tests: demand math, growth conditions, determinism)
-- [ ] `render/buildingsMesh.ts`: procedural low-poly buildings (box compositions per zone/density/variant), scale-in animation
-- [ ] Demand bars + population in HUD. Deliverable: paint zones, city grows. Commit + summary.
+- [x] `sim/zones.ts`: paint residential/commercial/retail on empty tiles (tests)
+- [x] `sim/growth.ts`: demand model (res needs jobs, jobs need residents, retail needs both), building spawn only on zoned + road-adjacent tiles, 3 density levels, seeded variation; population/jobs derived per density (tests: demand math, growth conditions, determinism)
+- [x] `render/buildingsMesh.ts`: procedural low-poly buildings (box compositions per zone/density/variant), scale-in animation
+- [x] Demand bars + population in HUD. Deliverable: paint zones, city grows. Commit + summary.
 
 ### M4 — Day/night + weather + lighting
-- [ ] `sim/weather.ts`: day/night clock (1 in-game day ≈ 4 min real time), smooth seeded cloud cover & wind speed (tests: bounds, smoothness, determinism)
-- [ ] `render/`: sun position/dusk lighting, warm window lights and streetlamps at night
-- [ ] HUD: time-of-day + weather display. Commit + summary.
+- [x] `sim/weather.ts`: day/night clock (1 in-game day ≈ 4 min real time), smooth seeded cloud cover & wind speed (tests: bounds, smoothness, determinism)
+- [x] `render/`: sun position/dusk lighting, warm window lights and streetlamps at night
+- [x] HUD: time-of-day + weather display. Commit + summary.
 
 ### M5 — Generation, storage, energy balance + economy + HUD
-- [ ] `sim/energy.ts`: plants placeable (solar farm, wind turbine, battery, biogas); generation = f(sun, clouds) / f(wind); load profiles per zone by time of day; balance order: surplus → charge battery → curtail; deficit → discharge battery → biogas → undersupply; supply-radius connection; undersupplied buildings flagged, flicker/dark, happiness drops, growth stops (tests: balance matrix, SoC limits, curtailment accounting, radius)
-- [ ] `sim/economy.ts`: starting funds, construction costs, per-tick tax income, upkeep incl. plant operating costs, tax slider affects happiness (tests)
-- [ ] `render/`: plant meshes, wind rotors spinning ∝ output, battery SoC indicator
-- [ ] `ui/EnergyPanel.tsx`: per-source generation, consumption, SoC, surplus/deficit/curtailment, 24h mini history graph; HUD money/happiness; TaxSlider. Commit + summary.
+- [x] `sim/energy.ts`: plants placeable (solar farm, wind turbine, battery, biogas); generation = f(sun, clouds) / f(wind); load profiles per zone by time of day; balance order: surplus → charge battery → curtail; deficit → discharge battery → biogas → undersupply; supply-radius connection; undersupplied buildings flagged, flicker/dark, happiness drops, growth stops (tests: balance matrix, SoC limits, curtailment accounting, radius)
+- [x] `sim/economy.ts`: starting funds, construction costs, per-tick tax income, upkeep incl. plant operating costs, tax slider affects happiness (tests)
+- [x] `render/`: plant meshes, wind rotors spinning ∝ output, battery SoC indicator
+- [x] `ui/EnergyPanel.tsx`: per-source generation, consumption, SoC, surplus/deficit/curtailment, 24h mini history graph; HUD money/happiness; TaxSlider. Commit + summary.
 
 ### M6 — Electric vehicles + charging load + charging hubs
-- [ ] `sim/vehicles.ts`: EV count scales with population+jobs; random walk along road tiles (tests: stay on roads, count scaling, determinism); evening charging peak in residential; charging hubs shift load to daytime; smart-charging upgrade follows generation surplus (tests: load shapes)
-- [ ] `render/vehiclesMesh.ts`: instanced low-poly cars, smooth interpolation, headlights at night
-- [ ] Charging hub buildable; smart-charging toggle in UI. Commit + summary.
+- [x] `sim/vehicles.ts`: EV count scales with population+jobs; random walk along road tiles (tests: stay on roads, count scaling, determinism); evening charging peak in residential; charging hubs shift load to daytime; smart-charging upgrade follows generation surplus (tests: load shapes)
+- [x] `render/vehiclesMesh.ts`: instanced low-poly cars, smooth interpolation, headlights at night
+- [x] Charging hub buildable; smart-charging toggle in UI. Commit + summary.
 
 ### M7 — Overlays + save/load + PWA
-- [ ] Supply overlay (supplied/undersupplied/not connected) + demand overlay; overlay toggle UI
-- [ ] `storage/`: `SaveStorage` interface; IndexedDB impl; serialize SimState (typed arrays → ArrayBuffers); autosave every 30s; load on boot; new-game button (tests: round-trip serialization)
-- [ ] PWA via vite-plugin-pwa (offline playable)
-- [ ] Playwright e2e: boot, draw road, paint zone, building appears, save/reload persists
-- [ ] Coverage check ≥90% on `src/sim`. Final commit + summary.
+- [x] Supply overlay (supplied/undersupplied/not connected) + demand overlay; overlay toggle UI
+- [x] `storage/`: `SaveStorage` interface; IndexedDB impl; serialize SimState (typed arrays → ArrayBuffers); autosave every 30s; load on boot; new-game button (tests: round-trip serialization)
+- [x] PWA via vite-plugin-pwa (offline playable)
+- [x] Playwright e2e: boot, draw road, paint zone, building appears, save/reload persists
+- [x] Coverage check ≥90% on `src/sim`. Final commit + summary.
 
 ## Testing Strategy
 

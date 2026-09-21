@@ -1,4 +1,7 @@
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef, useState } from 'react';
+import { OverlayMode, type SaveGame } from '../shared/types.ts';
+import { IndexedDbStorage } from '../storage/indexeddb.ts';
+import { OverlayToggle } from './OverlayToggle.tsx';
 import type { GameRenderer, RendererCallbacks } from '../render/renderer.ts';
 import type { Speed } from '../shared/types.ts';
 import { Clock } from './Clock.tsx';
@@ -11,7 +14,9 @@ import { Toolbar } from './Toolbar.tsx';
 import { useSimBridge } from './useSimBridge.ts';
 import { useTools } from './useTools.ts';
 
-const DEFAULT_SEED = 20260921;
+const AUTOSAVE_INTERVAL_MS = 30_000;
+
+const storage = new IndexedDbStorage();
 
 function happinessEmoji(happiness: number): string {
   if (happiness >= 0.7) return '😊';
@@ -19,13 +24,70 @@ function happinessEmoji(happiness: number): string {
   return '😞';
 }
 
+/** Loads the autosave before booting the simulation. */
 export function App() {
-  const bridge = useSimBridge({ seed: DEFAULT_SEED });
+  const [boot, setBoot] = useState<{ save: SaveGame | null } | null>(null);
+
+  useEffect(() => {
+    let cancelled = false;
+    storage.load().then((save) => {
+      if (!cancelled) setBoot({ save });
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  if (!boot) {
+    return <div className="boot-screen">Voltopia is loading…</div>;
+  }
+  return <Game save={boot.save} />;
+}
+
+function Game({ save }: { save: SaveGame | null }) {
+  const bridge = useSimBridge({
+    seed: save?.seed ?? Date.now() % 2147483647,
+    ...(save ? { save } : {}),
+  });
   const callbacksRef = useRef<RendererCallbacks>({});
   const rendererRef = useRef<GameRenderer | null>(null);
   const { tool, setTool } = useTools(bridge, callbacksRef, rendererRef);
+  const [overlay, setOverlay] = useState<OverlayMode>(OverlayMode.None);
 
   const stats = bridge.stats;
+
+  useEffect(() => {
+    rendererRef.current?.setOverlayMode(overlay);
+  }, [overlay]);
+
+  // Autosave: periodically request a snapshot and persist it.
+  useEffect(() => {
+    const unsubscribe = bridge.onSaveData((save) => {
+      storage.save(save).catch((error) => console.warn('Autosave failed', error));
+    });
+    const timer = setInterval(
+      () => bridge.send({ type: 'requestSave' }),
+      AUTOSAVE_INTERVAL_MS,
+    );
+    // Quick-save on "s" (autosave covers the rest).
+    const onKeyDown = (e: KeyboardEvent): void => {
+      if (e.key === 's' || e.key === 'S') bridge.send({ type: 'requestSave' });
+    };
+    window.addEventListener('keydown', onKeyDown);
+    return () => {
+      unsubscribe();
+      clearInterval(timer);
+      window.removeEventListener('keydown', onKeyDown);
+    };
+  }, [bridge]);
+
+  const startNewGame = async (): Promise<void> => {
+    if (!window.confirm('Start a new city? The current one will be erased.')) {
+      return;
+    }
+    await storage.clear();
+    window.location.reload();
+  };
 
   useEffect(() => {
     if (stats) rendererRef.current?.setStats(stats);
@@ -104,6 +166,14 @@ export function App() {
             />
             <span>⚡ Smart charging</span>
           </label>
+          <button
+            type="button"
+            className="new-game-button"
+            data-testid="new-game"
+            onClick={() => void startNewGame()}
+          >
+            New city
+          </button>
         </div>
       )}
       {bridge.rejection && (
@@ -111,6 +181,7 @@ export function App() {
           {bridge.rejection}
         </div>
       )}
+      <OverlayToggle mode={overlay} onChange={setOverlay} />
       <footer className="hud-help">
         drag right mouse: pan · wheel: zoom · Q/E: rotate
       </footer>

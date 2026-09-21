@@ -9,6 +9,8 @@ import { RoadsMesh } from './roadsMesh.ts';
 import { BuildingsMesh } from './buildingsMesh.ts';
 import { PlantsMesh } from './plantsMesh.ts';
 import { VehiclesMesh } from './vehiclesMesh.ts';
+import { OverlaysMesh } from './overlays.ts';
+import type { OverlayMode } from '../shared/types.ts';
 import { ZoneTilesMesh } from './zoneTilesMesh.ts';
 
 export interface PickedTile {
@@ -38,6 +40,8 @@ export interface RenderEnvironment {
   windFactor: number;
   /** Battery state of charge 0..1. */
   stateOfCharge: number;
+  /** Global zone demand, -1..1 each (drives the demand overlay). */
+  demand: { residential: number; commercial: number; retail: number };
 }
 
 /** A renderable layer that reacts to sim tile diffs (roads, buildings, ...). */
@@ -77,6 +81,7 @@ export class GameRenderer {
   private radiusRing!: THREE.Mesh;
   private radiusTiles = 0;
   private vehiclesMesh!: VehiclesMesh;
+  private overlays!: OverlaysMesh;
   private readonly setGridVisible: (visible: boolean) => void;
   private hoveredIndex: number | null = null;
   private buildPointerActive = false;
@@ -104,6 +109,8 @@ export class GameRenderer {
     this.addDiffLayer(new BuildingsMesh(scene, gridSize));
     this.addDiffLayer(new PlantsMesh(scene, gridSize));
     this.vehiclesMesh = new VehiclesMesh(scene);
+    this.overlays = new OverlaysMesh(scene, gridSize);
+    this.addDiffLayer(this.overlays);
 
     const radiusGeometry = new THREE.RingGeometry(0.95, 1, 48).rotateX(-Math.PI / 2);
     this.radiusRing = new THREE.Mesh(
@@ -186,6 +193,7 @@ export class GameRenderer {
         stats.energy.storageCapacity > 0
           ? stats.energy.storedEnergy / stats.energy.storageCapacity
           : 0,
+      demand: stats.demand,
     };
 
     // Sun travels east -> west across the grid during the day.
@@ -239,6 +247,10 @@ export class GameRenderer {
     }
     this.previewMesh.count = count;
     this.previewMesh.instanceMatrix.needsUpdate = true;
+  }
+
+  setOverlayMode(mode: OverlayMode): void {
+    this.overlays.setMode(mode);
   }
 
   /**

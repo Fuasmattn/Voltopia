@@ -1,0 +1,80 @@
+# ⚡ Voltopia
+
+A modern, streamlined city builder for the browser. Your city runs entirely
+on renewable energy and every vehicle is electric — balancing fluctuating
+generation against consumption is the core of the game.
+
+Built with a low-poly 3D look in the spirit of minimalist city builders:
+few key metrics, feedback directly in the world, organic growth, minimal
+micromanagement.
+
+## Gameplay
+
+- **Build roads** by dragging; intersections, curves and dead ends connect
+  automatically.
+- **Paint zones** — residential, commercial, retail. Buildings appear next
+  to roads when there is demand, and densify through three levels.
+- **Power the city** with solar farms, wind turbines, battery storage and a
+  dispatchable (but expensive) biogas plant. Every plant supplies a radius
+  around it.
+- **Watch the balance**: surplus charges batteries, then is curtailed.
+  Deficits discharge storage, dispatch biogas — and beyond that, buildings
+  flicker and go dark, happiness drops, growth stops.
+- **Day/night and weather** drive everything: PV follows the sun and cloud
+  cover, wind turbines follow the wind, homes and shops follow their daily
+  load profiles.
+- **E-mobility**: the EV fleet grows with your city. Home charging peaks in
+  the evening; charging hubs shift the load into the PV-friendly daytime,
+  and the smart-charging upgrade follows the generation surplus
+  automatically.
+- **Economy**: construction costs, taxes (with a slider), upkeep, biogas
+  fuel costs.
+- **Overlays** show supply status and growth demand; the energy panel
+  tracks generation per source, consumption, state of charge, curtailment
+  and the last in-game day.
+
+The game saves automatically (IndexedDB) and is playable offline as a PWA.
+
+## Controls
+
+| Input | Action |
+| --- | --- |
+| Left mouse | Use the selected tool (drag to draw roads/zones) |
+| Right/middle mouse drag | Pan the camera |
+| Mouse wheel | Zoom |
+| `Q` / `E` | Rotate the view in 90° steps |
+
+## Development
+
+Requirements: Node.js ≥ 22, [pnpm](https://pnpm.io).
+
+```bash
+pnpm install
+pnpm dev        # start the dev server
+pnpm test       # simulation unit tests (Vitest)
+pnpm coverage   # tests with coverage (target: >90% for src/sim)
+pnpm e2e        # end-to-end tests (Playwright)
+pnpm build      # production build
+```
+
+### Architecture
+
+- `src/sim/` — pure simulation logic, runs in a Web Worker. Deterministic
+  (seeded RNG, including weather), fixed tick (4/s), typed-array tile
+  layers. No DOM or three.js dependencies.
+- `src/render/` — three.js rendering: orthographic isometric camera,
+  instanced meshes for roads, buildings, plants and vehicles, day/night
+  lighting.
+- `src/ui/` — React 19 HUD and tools.
+- `src/shared/` — types, the worker message protocol, and the central
+  balancing configuration (`constants.ts` — no magic numbers in sim code).
+- `src/storage/` — save-game persistence behind a small interface
+  (IndexedDB by default).
+
+The worker sends only tile diffs and global stats to the main thread,
+never the full state. See `docs/idea.md` for the design document and
+`docs/plan.md` for the implementation plan.
+
+## License
+
+[MIT](LICENSE)

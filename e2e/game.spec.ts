@@ -1,0 +1,93 @@
+import { expect, test, type Page } from '@playwright/test';
+
+async function readTick(page: Page): Promise<number> {
+  const text = await page.getByTestId('tick-counter').textContent();
+  return Number(text?.replace(/\D/g, '') ?? '0');
+}
+
+/** True when the environment has WebGL and the 3D canvas is present. */
+async function has3dView(page: Page): Promise<boolean> {
+  return (await page.locator('.game-view canvas').count()) > 0;
+}
+
+test.beforeEach(async ({ page }) => {
+  await page.goto('/');
+  await expect(page.getByTestId('tick-counter')).toBeVisible({ timeout: 15_000 });
+});
+
+test('boots with a running simulation', async ({ page }) => {
+  await expect(page).toHaveTitle(/Voltopia/);
+  const before = await readTick(page);
+  await expect
+    .poll(async () => readTick(page), { timeout: 5_000 })
+    .toBeGreaterThan(before);
+  await expect(page.getByTestId('money')).toBeVisible();
+  await expect(page.getByTestId('energy-panel')).toBeVisible();
+});
+
+test('pause stops the simulation, play resumes it', async ({ page }) => {
+  await page.getByTestId('speed-0').click();
+  await page.waitForTimeout(400);
+  const paused = await readTick(page);
+  await page.waitForTimeout(800);
+  expect(await readTick(page)).toBe(paused);
+  await page.getByTestId('speed-3').click();
+  await expect
+    .poll(async () => readTick(page), { timeout: 5_000 })
+    .toBeGreaterThan(paused);
+});
+
+test('tax slider and smart charging are interactive', async ({ page }) => {
+  const slider = page.getByTestId('tax-slider').locator('input');
+  await slider.fill('25');
+  await expect(page.getByTestId('tax-slider')).toContainText('25%');
+
+  // The checkbox is controlled by worker stats, so the checked state
+  // only flips with the next tick event — click and poll.
+  const smartCharging = page.getByTestId('smart-charging').locator('input');
+  await smartCharging.click();
+  await expect(smartCharging).toBeChecked({ timeout: 5_000 });
+});
+
+test('overlay toggle switches modes', async ({ page }) => {
+  await page.getByTestId('overlay-supply').click();
+  await expect(page.getByTestId('overlay-supply')).toHaveClass(/active/);
+  await page.getByTestId('overlay-off').click();
+  await expect(page.getByTestId('overlay-off')).toHaveClass(/active/);
+});
+
+test('game state persists across a reload', async ({ page }) => {
+  await page.getByTestId('speed-3').click();
+  await expect
+    .poll(async () => readTick(page), { timeout: 10_000 })
+    .toBeGreaterThan(20);
+  const beforeSave = await readTick(page);
+  await page.keyboard.press('s'); // quick-save
+  await page.waitForTimeout(500);
+  await page.reload();
+  await expect(page.getByTestId('tick-counter')).toBeVisible({ timeout: 15_000 });
+  expect(await readTick(page)).toBeGreaterThanOrEqual(beforeSave);
+});
+
+test('building a road costs money (needs WebGL)', async ({ page }) => {
+  test.skip(!(await has3dView(page)), 'WebGL not available in this environment');
+
+  const moneyText = async (): Promise<number> => {
+    const text = await page.getByTestId('money').textContent();
+    return Number(text?.replace(/[^\d]/g, '') ?? '0');
+  };
+  const before = await moneyText();
+
+  await page.getByTestId('tool-road').click();
+  const canvas = page.locator('.game-view canvas');
+  const box = await canvas.boundingBox();
+  if (!box) throw new Error('canvas has no bounding box');
+  const centerX = box.x + box.width / 2;
+  const centerY = box.y + box.height / 2;
+  await page.mouse.move(centerX - 60, centerY);
+  await page.mouse.down();
+  await page.mouse.move(centerX + 60, centerY, { steps: 8 });
+  await page.mouse.up();
+
+  await expect.poll(moneyText, { timeout: 5_000 }).toBeLessThan(before);
+});

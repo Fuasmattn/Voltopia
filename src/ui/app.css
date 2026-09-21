@@ -385,3 +385,64 @@ body,
 .smart-charging-toggle input {
   accent-color: var(--accent);
 }
+
+.boot-screen {
+  height: 100%;
+  display: grid;
+  place-items: center;
+  color: var(--hud-muted);
+  font-size: 14px;
+}
+
+.overlay-toggle {
+  position: absolute;
+  bottom: 12px;
+  right: 12px;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 8px 12px;
+  background: var(--hud-bg);
+  border: 1px solid var(--hud-border);
+  border-radius: 12px;
+  backdrop-filter: blur(8px);
+  user-select: none;
+}
+
+.overlay-toggle-label {
+  font-size: 11px;
+  color: var(--hud-muted);
+  margin-right: 6px;
+}
+
+.overlay-toggle button {
+  background: transparent;
+  border: 1px solid var(--hud-border);
+  border-radius: 8px;
+  color: var(--hud-muted);
+  padding: 4px 10px;
+  cursor: pointer;
+  font-size: 12px;
+}
+
+.overlay-toggle button.active {
+  color: #10161f;
+  background: var(--accent);
+  border-color: var(--accent);
+}
+
+.new-game-button {
+  background: var(--hud-bg);
+  border: 1px solid var(--hud-border);
+  border-radius: 12px;
+  padding: 10px 14px;
+  color: var(--hud-muted);
+  font-size: 12px;
+  cursor: pointer;
+  backdrop-filter: blur(8px);
+}
+
+.new-game-button:hover {
+  color: var(--hud-text);
+  border-color: var(--hud-muted);
+}

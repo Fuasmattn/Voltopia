@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest';
+import { nightFactor } from '../shared/daylight.ts';
 import { createSimState } from './state.ts';
 import {
   solarFactor,
@@ -28,6 +29,13 @@ describe('sunIntensity', () => {
 
   it('is zero at sunset', () => {
     expect(sunIntensity(SUNSET)).toBeCloseTo(0, 5);
+  });
+
+  it('night factor is 1 at midnight and 0 at noon', () => {
+    expect(nightFactor(0)).toBe(1);
+    expect(nightFactor(0.5)).toBe(0);
+    expect(nightFactor(0.27)).toBeGreaterThan(0);
+    expect(nightFactor(0.27)).toBeLessThan(1);
   });
 });
 
