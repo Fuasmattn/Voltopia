@@ -1,13 +1,10 @@
 import { Modal } from './Modal.tsx';
 import { useI18n } from './i18n.tsx';
 
-/**
- * Legal notice / Impressum. The address lines below are placeholders —
- * replace them with the real postal address before publishing.
- */
+/** Legal notice / Impressum contact details. */
 const IMPRINT = {
   name: 'Thorsten Rinne',
-  addressLines: ['[Straße und Hausnummer]', '[PLZ Ort]', 'Deutschland'],
+  addressLines: ['Hermann-Hesse-Straße 16', '86830 Schwabmünchen', 'Deutschland'],
   email: 'thorsten@rinne.info',
   website: 'https://www.rinne.info',
 };
