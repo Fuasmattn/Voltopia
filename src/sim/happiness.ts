@@ -1,6 +1,38 @@
 import { BALANCE } from '../shared/constants.ts';
-import { SupplyStatus, TileType } from '../shared/types.ts';
+import { tileX, tileY } from '../shared/grid.ts';
+import { PlantType, SupplyStatus, TileType } from '../shared/types.ts';
 import type { SimState } from './state.ts';
+
+/** Share (0..1) of buildings that have a park within the park radius. */
+export function parkCoverage(state: SimState): number {
+  const { layers } = state;
+  const parks: number[] = [];
+  for (let i = 0; i < layers.tileType.length; i++) {
+    if (layers.tileType[i] === TileType.Plant && layers.plantType[i] === PlantType.Park) {
+      parks.push(i);
+    }
+  }
+  if (parks.length === 0) return 0;
+
+  const radius = BALANCE.happiness.parkRadius;
+  let buildings = 0;
+  let covered = 0;
+  for (let i = 0; i < layers.tileType.length; i++) {
+    if (layers.tileType[i] !== TileType.Empty || layers.density[i] === 0) continue;
+    buildings++;
+    const x = tileX(i, state.size);
+    const y = tileY(i, state.size);
+    for (const park of parks) {
+      const dx = Math.abs(x - tileX(park, state.size));
+      const dy = Math.abs(y - tileY(park, state.size));
+      if (Math.max(dx, dy) <= radius) {
+        covered++;
+        break;
+      }
+    }
+  }
+  return buildings > 0 ? covered / buildings : 0;
+}
 
 /**
  * Move city happiness toward its target: a comfortable base, reduced by
@@ -23,7 +55,8 @@ export function happinessStep(state: SimState): void {
   const taxPenalty =
     Math.max(0, state.taxRate - BALANCE.tax.happinessNeutralRate) * config.taxPenaltyWeight;
   const supplyPenalty = troubledShare * config.undersupplyPenaltyWeight;
+  const parkBonus = parkCoverage(state) * config.parksAndLightsBonus;
 
-  const target = Math.min(1, Math.max(0, config.base - taxPenalty - supplyPenalty));
+  const target = Math.min(1, Math.max(0, config.base + parkBonus - taxPenalty - supplyPenalty));
   state.happiness += (target - state.happiness) * config.smoothing;
 }

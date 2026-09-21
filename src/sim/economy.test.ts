@@ -3,6 +3,8 @@ import { BALANCE } from '../shared/constants.ts';
 import { tileIndex } from '../shared/grid.ts';
 import { economyStep } from './economy.ts';
 import { placePlant } from './energy.ts';
+import { goalsStep } from './goals.ts';
+import { energySystemActive } from './growth.ts';
 import { happinessStep } from './happiness.ts';
 import { buildRoads } from './roads.ts';
 import { createSimState, PlantType, SupplyStatus, Zone } from './state.ts';
@@ -100,6 +102,29 @@ describe('happinessStep', () => {
     state.taxRate = BALANCE.tax.maxRate;
     for (let i = 0; i < 2000; i++) happinessStep(state);
     expect(state.happiness).toBeLessThan(BALANCE.happiness.base - 0.2);
+  });
+
+  it('parks near buildings raise happiness toward base + bonus', () => {
+    const state = withBuildings(SupplyStatus.Supplied);
+    placePlant(state, at(2, 3), PlantType.Park); // adjacent to the row of homes
+    for (let i = 0; i < 3000; i++) happinessStep(state);
+    expect(state.happiness).toBeGreaterThan(BALANCE.happiness.base + 0.02);
+  });
+
+  it('a park far away from all buildings gives no bonus', () => {
+    const state = withBuildings(SupplyStatus.Supplied);
+    const far = BALANCE.happiness.parkRadius + 3;
+    placePlant(state, at(far, far + 2), PlantType.Park);
+    for (let i = 0; i < 3000; i++) happinessStep(state);
+    expect(state.happiness).toBeLessThanOrEqual(BALANCE.happiness.base + 0.005);
+  });
+
+  it('a park does not activate the energy system or firstPower', () => {
+    const state = withBuildings(SupplyStatus.Supplied);
+    placePlant(state, at(2, 3), PlantType.Park);
+    expect(energySystemActive(state)).toBe(false);
+    goalsStep(state);
+    expect(state.goalsAchieved.has('firstPower')).toBe(false);
   });
 
   it('changes smoothly, not abruptly', () => {

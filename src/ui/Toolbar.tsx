@@ -45,6 +45,7 @@ const TOOLS: ToolButton[] = [
     cost: BALANCE.costs.plant[PlantType.BiogasPlant],
   },
   { id: 'plant-hub', icon: '🔌', cost: BALANCE.costs.plant[PlantType.ChargingHub] },
+  { id: 'plant-park', icon: '🌳', cost: BALANCE.costs.plant[PlantType.Park] },
   { id: 'bulldoze', icon: '🚜' },
 ];
 

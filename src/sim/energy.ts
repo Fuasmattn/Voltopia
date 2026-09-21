@@ -21,6 +21,19 @@ const SUPPLY_SOURCES: ReadonlySet<PlantType> = new Set<PlantType>([
   PlantType.BiogasPlant,
 ]);
 
+/** True once any power-related plant exists (parks don't count). */
+export function hasPowerInfrastructure(state: SimState): boolean {
+  const { tileType, plantType } = state.layers;
+  for (let i = 0; i < tileType.length; i++) {
+    if (tileType[i] !== TileType.Plant) continue;
+    const plant = plantType[i] as PlantType;
+    if (SUPPLY_SOURCES.has(plant) || plant === PlantType.ChargingHub) {
+      return true;
+    }
+  }
+  return false;
+}
+
 /** Place a plant on an empty tile, charging its construction cost. */
 export function placePlant(state: SimState, tile: number, plant: PlantType): BuildResult {
   const { layers } = state;
@@ -63,6 +76,7 @@ interface PlantCensus {
   batteries: number;
   biogasPlants: number;
   chargingHubs: number;
+  parks: number;
   /** Tile indices of plants that provide grid connection. */
   supplySources: number[];
 }
@@ -75,6 +89,7 @@ export function censusPlants(state: SimState): PlantCensus {
     batteries: 0,
     biogasPlants: 0,
     chargingHubs: 0,
+    parks: 0,
     supplySources: [],
   };
   for (let i = 0; i < tileType.length; i++) {
@@ -95,6 +110,9 @@ export function censusPlants(state: SimState): PlantCensus {
         break;
       case PlantType.ChargingHub:
         census.chargingHubs++;
+        break;
+      case PlantType.Park:
+        census.parks++;
         break;
       case PlantType.None:
         break;

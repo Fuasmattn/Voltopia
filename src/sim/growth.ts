@@ -1,5 +1,6 @@
 import { BALANCE } from '../shared/constants.ts';
 import { neighbors4 } from '../shared/grid.ts';
+import { hasPowerInfrastructure } from './energy.ts';
 import type { DemandStats } from '../shared/types.ts';
 import {
   countPopulationAndJobs,
@@ -128,13 +129,9 @@ function canDensify(state: SimState, index: number): boolean {
   return state.layers.supplied[index] === SupplyStatus.Supplied;
 }
 
-/** True once the player has placed any power-related plant. */
+/** True once the player has placed any power-related plant (not parks). */
 export function energySystemActive(state: SimState): boolean {
-  const { tileType } = state.layers;
-  for (let i = 0; i < tileType.length; i++) {
-    if (tileType[i] === TileType.Plant) return true;
-  }
-  return false;
+  return hasPowerInfrastructure(state);
 }
 
 /**

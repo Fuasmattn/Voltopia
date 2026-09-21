@@ -31,6 +31,10 @@ const COLORS = {
   biogasDome: 0x93ab6d,
   hubCanopy: 0x58b7a4,
   hubPillar: 0x3a4048,
+  parkGrass: 0x7cb35e,
+  treeTrunk: 0x6e4f36,
+  treeFoliage: 0x3f7d46,
+  treeFoliageLight: 0x549a54,
 } as const;
 
 /** Static box parts per plant type (rotors/domes/fills are separate). */
@@ -87,6 +91,25 @@ function plantBoxParts(plant: PlantType): BoxPart[] {
         { sx: 0.08, sy: 0.45, sz: 0.08, ox: 0.3, oy: 0, oz: -0.3, color: COLORS.hubPillar },
         { sx: 0.9, sy: 0.05, sz: 0.9, ox: 0, oy: 0.45, oz: 0, color: COLORS.hubCanopy },
         { sx: 0.2, sy: 0.35, sz: 0.12, ox: 0, oy: 0, oz: 0.32, color: COLORS.batteryFrame },
+      ];
+    case PlantType.Park:
+      return [
+        { sx: 0.94, sy: 0.03, sz: 0.94, ox: 0, oy: 0, oz: 0, color: COLORS.parkGrass },
+        // three low-poly trees: trunk + foliage cube each
+        { sx: 0.05, sy: 0.16, sz: 0.05, ox: -0.24, oy: 0.03, oz: -0.2, color: COLORS.treeTrunk },
+        { sx: 0.22, sy: 0.26, sz: 0.22, ox: -0.24, oy: 0.17, oz: -0.2, color: COLORS.treeFoliage },
+        { sx: 0.05, sy: 0.2, sz: 0.05, ox: 0.22, oy: 0.03, oz: -0.05, color: COLORS.treeTrunk },
+        {
+          sx: 0.26,
+          sy: 0.32,
+          sz: 0.26,
+          ox: 0.22,
+          oy: 0.2,
+          oz: -0.05,
+          color: COLORS.treeFoliageLight,
+        },
+        { sx: 0.05, sy: 0.13, sz: 0.05, ox: -0.05, oy: 0.03, oz: 0.28, color: COLORS.treeTrunk },
+        { sx: 0.18, sy: 0.2, sz: 0.18, ox: -0.05, oy: 0.14, oz: 0.28, color: COLORS.treeFoliage },
       ];
     default:
       return [];

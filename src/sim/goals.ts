@@ -1,5 +1,5 @@
 import { TICKS_PER_DAY } from '../shared/constants.ts';
-import { PlantType, TileType } from '../shared/types.ts';
+import { hasPowerInfrastructure } from './energy.ts';
 import { countPopulationAndJobs, type SimState } from './state.ts';
 
 export const GOAL_IDS = [
@@ -45,7 +45,7 @@ export function goalsStep(state: SimState): void {
   }
 
   const achieved = state.goalsAchieved;
-  if (!achieved.has('firstPower') && hasAnyPlant(state)) {
+  if (!achieved.has('firstPower') && hasPowerInfrastructure(state)) {
     achieved.add('firstPower');
   }
   if (!achieved.has('population100') && population >= 100) {
@@ -63,16 +63,6 @@ export function goalsStep(state: SimState): void {
   if (!achieved.has('exporter') && progress.exportedTotal >= EXPORTER_TARGET_ENERGY) {
     achieved.add('exporter');
   }
-}
-
-function hasAnyPlant(state: SimState): boolean {
-  const { tileType, plantType } = state.layers;
-  for (let i = 0; i < tileType.length; i++) {
-    if (tileType[i] === TileType.Plant && plantType[i] !== PlantType.None) {
-      return true;
-    }
-  }
-  return false;
 }
 
 export function goalStates(state: SimState): GoalState[] {

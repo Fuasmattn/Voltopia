@@ -17,6 +17,7 @@ export type ToolId =
   | 'plant-battery'
   | 'plant-biogas'
   | 'plant-hub'
+  | 'plant-park'
   | 'bulldoze';
 
 const ZONE_BY_TOOL: Partial<Record<ToolId, Zone>> = {
@@ -38,6 +39,7 @@ export const TOOL_HOTKEYS: Record<string, ToolId> = {
   '9': 'plant-biogas',
   '0': 'plant-hub',
   b: 'bulldoze',
+  p: 'plant-park',
 };
 
 export interface DragCostPreview {
@@ -51,6 +53,7 @@ export const PLANT_BY_TOOL: Partial<Record<ToolId, PlantType>> = {
   'plant-battery': PlantType.Battery,
   'plant-biogas': PlantType.BiogasPlant,
   'plant-hub': PlantType.ChargingHub,
+  'plant-park': PlantType.Park,
 };
 
 /**
@@ -146,8 +149,11 @@ export function useTools(
       };
     } else if (PLANT_BY_TOOL[tool] !== undefined) {
       const plant = PLANT_BY_TOOL[tool]!;
-      // Supply-providing plants show their connection radius while placing.
-      if (plant !== PlantType.ChargingHub) {
+      // Show the relevant radius while placing: supply for power plants,
+      // the happiness radius for parks, none for charging hubs.
+      if (plant === PlantType.Park) {
+        renderer?.setHoverRadius(BALANCE.happiness.parkRadius);
+      } else if (plant !== PlantType.ChargingHub) {
         renderer?.setHoverRadius(BALANCE.energy.supplyRadius);
       }
       callbacks.onBuildStart = (tile) => {

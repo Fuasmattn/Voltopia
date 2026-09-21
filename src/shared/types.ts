@@ -22,6 +22,7 @@ export const PlantType = {
   Battery: 3,
   BiogasPlant: 4,
   ChargingHub: 5,
+  Park: 6,
 } as const;
 export type PlantType = (typeof PlantType)[keyof typeof PlantType];
 
