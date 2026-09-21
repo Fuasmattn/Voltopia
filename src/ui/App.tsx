@@ -4,7 +4,9 @@ import type { Speed } from '../shared/types.ts';
 import { Clock } from './Clock.tsx';
 import { GameView } from './GameView.tsx';
 import { SpeedControls } from './SpeedControls.tsx';
+import { Toolbar } from './Toolbar.tsx';
 import { useSimBridge } from './useSimBridge.ts';
+import { useTools } from './useTools.ts';
 
 const DEFAULT_SEED = 20260921;
 
@@ -12,6 +14,7 @@ export function App() {
   const bridge = useSimBridge({ seed: DEFAULT_SEED });
   const callbacksRef = useRef<RendererCallbacks>({});
   const rendererRef = useRef<GameRenderer | null>(null);
+  const { tool, setTool } = useTools(bridge, callbacksRef, rendererRef);
 
   const stats = bridge.stats;
 
@@ -33,6 +36,11 @@ export function App() {
           </>
         )}
       </header>
+      <Toolbar
+        tool={tool}
+        onSelectTool={setTool}
+        onUndo={() => bridge.send({ type: 'undo' })}
+      />
       {bridge.rejection && (
         <div className="rejection-toast" data-testid="rejection">
           {bridge.rejection}

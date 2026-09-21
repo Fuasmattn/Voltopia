@@ -4,6 +4,7 @@ import { IsoCamera } from './camera.ts';
 import { pickTile } from './picking.ts';
 import { createScene, type SceneLights } from './scene.ts';
 import { createTerrain } from './terrain.ts';
+import { RoadsMesh } from './roadsMesh.ts';
 
 export interface PickedTile {
   index: number;
@@ -39,6 +40,7 @@ export class GameRenderer {
   private readonly callbacks: RendererCallbacks;
   private readonly diffLayers: DiffLayer[] = [];
   private readonly hoverMarker: THREE.Mesh;
+  private previewMesh!: THREE.InstancedMesh;
   private readonly setGridVisible: (visible: boolean) => void;
   private hoveredIndex: number | null = null;
   private buildPointerActive = false;
@@ -60,6 +62,23 @@ export class GameRenderer {
     const terrain = createTerrain(gridSize);
     this.setGridVisible = terrain.setGridVisible;
     scene.add(terrain.group);
+
+    this.addDiffLayer(new RoadsMesh(scene, gridSize));
+
+    const previewGeometry = new THREE.PlaneGeometry(1, 1).rotateX(-Math.PI / 2);
+    const previewMaterial = new THREE.MeshBasicMaterial({
+      color: 0xffffff,
+      transparent: true,
+      opacity: 0.35,
+      depthWrite: false,
+    });
+    this.previewMesh = new THREE.InstancedMesh(
+      previewGeometry,
+      previewMaterial,
+      gridSize * 2,
+    );
+    this.previewMesh.count = 0;
+    scene.add(this.previewMesh);
 
     this.isoCamera = new IsoCamera(gridSize);
 
@@ -108,6 +127,23 @@ export class GameRenderer {
 
   setVehicles(_vehicles: VehicleState[]): void {
     // extended in M6
+  }
+
+  /** Highlight tiles for a pending drag action (e.g. road preview). */
+  setPreviewTiles(indices: number[]): void {
+    const matrix = new THREE.Matrix4();
+    const count = Math.min(indices.length, this.previewMesh.instanceMatrix.count);
+    for (let i = 0; i < count; i++) {
+      const index = indices[i];
+      matrix.setPosition(
+        (index % this.gridSize) + 0.5,
+        0.06,
+        Math.floor(index / this.gridSize) + 0.5,
+      );
+      this.previewMesh.setMatrixAt(i, matrix);
+    }
+    this.previewMesh.count = count;
+    this.previewMesh.instanceMatrix.needsUpdate = true;
   }
 
   showBuildGrid(visible: boolean): void {

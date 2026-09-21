@@ -1,6 +1,7 @@
 import { BALANCE } from '../shared/constants.ts';
 import type { SimCommand, SimEvent } from '../shared/messages.ts';
 import type { VehicleState } from '../shared/types.ts';
+import { buildRoads, bulldozeTiles, undoLastAction, type BuildResult } from './roads.ts';
 import {
   collectDiffs,
   createSimState,
@@ -45,12 +46,33 @@ export class SimEngine {
       case 'requestSave':
         return [{ type: 'saveData', save: serializeState(state) }];
       case 'buildRoad':
+        return this.toEvents(buildRoads(state, command.tiles));
+      case 'bulldoze':
+        return this.toEvents(bulldozeTiles(state, command.tiles));
+      case 'undo':
+        return this.toEvents(undoLastAction(state));
       case 'paintZone':
       case 'placePlant':
-      case 'bulldoze':
-      case 'undo':
         return [{ type: 'rejected', reason: `not implemented: ${command.type}` }];
     }
+  }
+
+  private toEvents(result: BuildResult): SimEvent[] {
+    return result.rejected ? [{ type: 'rejected', reason: result.rejected }] : [];
+  }
+
+  /**
+   * Emit pending tile changes without advancing time — used so build
+   * actions are visible immediately while the game is paused.
+   */
+  flush(): SimEvent | null {
+    if (this.state.dirty.size === 0) return null;
+    return {
+      type: 'tick',
+      diffs: collectDiffs(this.state),
+      stats: buildStats(this.state),
+      vehicles: this.collectVehicles(),
+    };
   }
 
   /** Advance one tick and produce the tick event. */
