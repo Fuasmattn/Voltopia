@@ -5,6 +5,8 @@ import { pickTile } from './picking.ts';
 import { createScene, type SceneLights } from './scene.ts';
 import { createTerrain } from './terrain.ts';
 import { RoadsMesh } from './roadsMesh.ts';
+import { BuildingsMesh } from './buildingsMesh.ts';
+import { ZoneTilesMesh } from './zoneTilesMesh.ts';
 
 export interface PickedTile {
   index: number;
@@ -26,6 +28,8 @@ export interface RendererCallbacks {
 /** A renderable layer that reacts to sim tile diffs (roads, buildings, ...). */
 export interface DiffLayer {
   applyDiffs(diffs: TileDiff[]): void;
+  /** Optional per-frame hook for animations. */
+  update?(deltaSeconds: number, nowSeconds: number): void;
 }
 
 const HOVER_COLOR = 0xffffff;
@@ -64,6 +68,8 @@ export class GameRenderer {
     scene.add(terrain.group);
 
     this.addDiffLayer(new RoadsMesh(scene, gridSize));
+    this.addDiffLayer(new ZoneTilesMesh(scene, gridSize));
+    this.addDiffLayer(new BuildingsMesh(scene, gridSize));
 
     const previewGeometry = new THREE.PlaneGeometry(1, 1).rotateX(-Math.PI / 2);
     const previewMaterial = new THREE.MeshBasicMaterial({
@@ -75,7 +81,7 @@ export class GameRenderer {
     this.previewMesh = new THREE.InstancedMesh(
       previewGeometry,
       previewMaterial,
-      gridSize * 2,
+      gridSize * gridSize,
     );
     this.previewMesh.count = 0;
     scene.add(this.previewMesh);
@@ -256,6 +262,7 @@ export class GameRenderer {
     const deltaSeconds = Math.min((now - this.lastFrameTime) / 1000, 0.1);
     this.lastFrameTime = now;
     this.isoCamera.update(deltaSeconds);
+    for (const layer of this.diffLayers) layer.update?.(deltaSeconds, now / 1000);
     for (const listener of this.frameListeners) listener(deltaSeconds, now / 1000);
     this.webgl.render(this.scene, this.isoCamera.camera);
     this.animationFrame = requestAnimationFrame(this.renderLoop);

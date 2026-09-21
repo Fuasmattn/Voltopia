@@ -71,6 +71,27 @@ export function lShapedPath(
   return tiles;
 }
 
+/** All tiles in the axis-aligned rectangle spanned by two corners. */
+export function rectTiles(
+  ax: number,
+  ay: number,
+  bx: number,
+  by: number,
+  size: number,
+): number[] {
+  const tiles: number[] = [];
+  const minX = Math.min(ax, bx);
+  const maxX = Math.max(ax, bx);
+  const minY = Math.min(ay, by);
+  const maxY = Math.max(ay, by);
+  for (let y = minY; y <= maxY; y++) {
+    for (let x = minX; x <= maxX; x++) {
+      if (inBounds(x, y, size)) tiles.push(tileIndex(x, y, size));
+    }
+  }
+  return tiles;
+}
+
 /** Chebyshev (chessboard) distance between two tiles. */
 export function chebyshevDistance(a: number, b: number, size: number): number {
   return Math.max(

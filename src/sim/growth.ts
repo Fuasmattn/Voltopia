@@ -1,0 +1,140 @@
+import { BALANCE } from '../shared/constants.ts';
+import { neighbors4 } from '../shared/grid.ts';
+import type { DemandStats } from '../shared/types.ts';
+import {
+  countPopulationAndJobs,
+  markDirty,
+  SupplyStatus,
+  TileType,
+  Zone,
+  type SimState,
+} from './state.ts';
+
+/** Number of visual variants per zone the renderer provides. */
+export const BUILDING_VARIANTS = 8;
+
+/**
+ * A small settlement is always attracted to a brand-new city, so growth
+ * can bootstrap before any jobs exist.
+ */
+const PIONEER_POPULATION = 30;
+
+/** Jobs provided by retail buildings only (used for retail demand). */
+function countRetailJobs(state: SimState): number {
+  const { zone, density, tileType } = state.layers;
+  let retailJobs = 0;
+  for (let i = 0; i < zone.length; i++) {
+    if (tileType[i] !== TileType.Empty || density[i] === 0) continue;
+    if (zone[i] === Zone.Retail) {
+      retailJobs += BALANCE.growth.jobsByZoneAndDensity[Zone.Retail][density[i]];
+    }
+  }
+  return retailJobs;
+}
+
+/**
+ * The demand model: residential follows available jobs, commercial follows
+ * the workforce, retail follows both. Values are normalized to -1..1.
+ */
+export function computeDemand(state: SimState): DemandStats {
+  const { population, jobs } = countPopulationAndJobs(state);
+  const { jobsPerResident, retailPerResident, retailPerJob } = BALANCE.growth;
+
+  const targetPopulation = PIONEER_POPULATION + jobs / jobsPerResident;
+  const residential = normalize(targetPopulation - population, targetPopulation);
+
+  const targetJobs = population * jobsPerResident;
+  const commercial = normalize(targetJobs - jobs, Math.max(targetJobs, jobs));
+
+  const retailJobs = countRetailJobs(state);
+  const targetRetail = population * retailPerResident + jobs * retailPerJob;
+  const retail = normalize(targetRetail - retailJobs, Math.max(targetRetail, retailJobs));
+
+  return { residential, commercial, retail };
+}
+
+function normalize(difference: number, scale: number): number {
+  if (scale <= 0) return 0;
+  return Math.min(Math.max(difference / scale, -1), 1);
+}
+
+function demandFor(demand: DemandStats, zone: Zone): number {
+  switch (zone) {
+    case Zone.Residential:
+      return demand.residential;
+    case Zone.Commercial:
+      return demand.commercial;
+    case Zone.Retail:
+      return demand.retail;
+    default:
+      return -1;
+  }
+}
+
+function hasRoadAccess(state: SimState, index: number): boolean {
+  const { tileType } = state.layers;
+  return neighbors4(index, state.size).some(
+    (neighbor) => tileType[neighbor] === TileType.Road,
+  );
+}
+
+/**
+ * One growth step: a few seeded-random tiles get the chance to spawn a
+ * building or densify. Buildings only appear on zoned tiles next to a
+ * road; densification additionally requires full energy supply and a
+ * minimum building age. City-wide happiness gates all growth.
+ */
+export function growthStep(state: SimState, demand: DemandStats): void {
+  const { layers } = state;
+  const tileCount = state.size * state.size;
+
+  layers.buildingAge.forEach((_, i) => {
+    if (layers.density[i] > 0) layers.buildingAge[i]++;
+  });
+
+  if (state.happiness < BALANCE.happiness.growthMinimum) return;
+
+  for (let attempt = 0; attempt < BALANCE.growth.attemptsPerTick; attempt++) {
+    const index = state.rng.nextInt(tileCount);
+    const zone = layers.zone[index] as Zone;
+    if (zone === Zone.None) continue;
+    if (layers.tileType[index] !== TileType.Empty) continue;
+    if (demandFor(demand, zone) < BALANCE.growth.growthDemandThreshold) continue;
+    if (!hasRoadAccess(state, index)) continue;
+
+    const density = layers.density[index];
+    if (density === 0) {
+      if (layers.supplied[index] === SupplyStatus.Undersupplied) continue;
+      if (!state.rng.chance(BALANCE.growth.growthChance)) continue;
+      layers.density[index] = 1;
+      layers.variant[index] = state.rng.nextInt(BUILDING_VARIANTS);
+      layers.buildingAge[index] = 0;
+      markDirty(state, index);
+    } else if (density < 3) {
+      if (!canDensify(state, index)) continue;
+      if (!state.rng.chance(BALANCE.growth.growthChance)) continue;
+      layers.density[index] = density + 1;
+      layers.buildingAge[index] = 0;
+      markDirty(state, index);
+    }
+  }
+}
+
+/**
+ * Densification requires a minimum building age and — once the energy
+ * system is active (any plant placed) — full supply.
+ */
+function canDensify(state: SimState, index: number): boolean {
+  if (state.layers.buildingAge[index] < BALANCE.growth.densifyMinAge) return false;
+  if (!energySystemActive(state)) return true;
+  return state.layers.supplied[index] === SupplyStatus.Supplied;
+}
+
+/** True once the player has placed any power-related plant. */
+export function energySystemActive(state: SimState): boolean {
+  const { tileType } = state.layers;
+  for (let i = 0; i < tileType.length; i++) {
+    if (tileType[i] === TileType.Plant) return true;
+  }
+  return false;
+}

@@ -1,10 +1,23 @@
 import { useEffect, useState } from 'react';
 import type { GameRenderer, PickedTile, RendererCallbacks } from '../render/renderer.ts';
-import { lShapedPath } from '../shared/grid.ts';
+import { lShapedPath, rectTiles } from '../shared/grid.ts';
 import { GRID_SIZE } from '../shared/constants.ts';
+import { Zone } from '../shared/types.ts';
 import type { SimBridge } from './useSimBridge.ts';
 
-export type ToolId = 'select' | 'road' | 'bulldoze';
+export type ToolId =
+  | 'select'
+  | 'road'
+  | 'zone-residential'
+  | 'zone-commercial'
+  | 'zone-retail'
+  | 'bulldoze';
+
+const ZONE_BY_TOOL: Partial<Record<ToolId, Zone>> = {
+  'zone-residential': Zone.Residential,
+  'zone-commercial': Zone.Commercial,
+  'zone-retail': Zone.Retail,
+};
 
 /**
  * Wires the active tool to renderer pointer callbacks: road drags preview
@@ -48,6 +61,25 @@ export function useTools(
           path = lShapedPath(anchor.x, anchor.y, tile.x, tile.y, GRID_SIZE);
         }
         if (path.length > 0) bridge.send({ type: 'buildRoad', tiles: path });
+        clearPreview();
+      };
+    } else if (ZONE_BY_TOOL[tool] !== undefined) {
+      const zone = ZONE_BY_TOOL[tool]!;
+      callbacks.onBuildStart = (tile) => {
+        anchor = tile;
+        path = [tile.index];
+        rendererRef.current?.setPreviewTiles(path);
+      };
+      callbacks.onBuildDrag = (tile) => {
+        if (!anchor) return;
+        path = rectTiles(anchor.x, anchor.y, tile.x, tile.y, GRID_SIZE);
+        rendererRef.current?.setPreviewTiles(path);
+      };
+      callbacks.onBuildEnd = (tile) => {
+        if (anchor && tile) {
+          path = rectTiles(anchor.x, anchor.y, tile.x, tile.y, GRID_SIZE);
+        }
+        if (path.length > 0) bridge.send({ type: 'paintZone', tiles: path, zone });
         clearPreview();
       };
     } else if (tool === 'bulldoze') {

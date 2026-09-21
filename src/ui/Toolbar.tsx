@@ -16,6 +16,24 @@ const TOOLS: ToolButton[] = [
     icon: '🛣',
     cost: `${BALANCE.costs.roadPerTile}/tile`,
   },
+  {
+    id: 'zone-residential',
+    label: 'Residential',
+    icon: '🏠',
+    cost: `${BALANCE.costs.zonePerTile}/tile`,
+  },
+  {
+    id: 'zone-commercial',
+    label: 'Commercial',
+    icon: '🏢',
+    cost: `${BALANCE.costs.zonePerTile}/tile`,
+  },
+  {
+    id: 'zone-retail',
+    label: 'Retail',
+    icon: '🛍',
+    cost: `${BALANCE.costs.zonePerTile}/tile`,
+  },
   { id: 'bulldoze', label: 'Bulldozer', icon: '🚜' },
 ];
 

@@ -2,6 +2,7 @@ import { BALANCE } from '../shared/constants.ts';
 import type { SimCommand, SimEvent } from '../shared/messages.ts';
 import type { VehicleState } from '../shared/types.ts';
 import { buildRoads, bulldozeTiles, undoLastAction, type BuildResult } from './roads.ts';
+import { paintZones } from './zones.ts';
 import {
   collectDiffs,
   createSimState,
@@ -52,6 +53,7 @@ export class SimEngine {
       case 'undo':
         return this.toEvents(undoLastAction(state));
       case 'paintZone':
+        return this.toEvents(paintZones(state, command.tiles, command.zone));
       case 'placePlant':
         return [{ type: 'rejected', reason: `not implemented: ${command.type}` }];
     }

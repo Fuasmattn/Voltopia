@@ -8,6 +8,7 @@ import {
   inBounds,
   lShapedPath,
   neighbors4,
+  rectTiles,
   tileIndex,
   tileX,
   tileY,
@@ -87,6 +88,20 @@ describe('grid math', () => {
 
     it('returns a single tile when start equals end', () => {
       expect(lShapedPath(4, 4, 4, 4, size)).toEqual([tileIndex(4, 4, size)]);
+    });
+  });
+
+  describe('rectTiles', () => {
+    it('returns all tiles in the rectangle regardless of corner order', () => {
+      const size = 8;
+      const a = rectTiles(1, 1, 2, 3, size);
+      const b = rectTiles(2, 3, 1, 1, size);
+      expect(a).toHaveLength(6);
+      expect(b).toEqual(a);
+    });
+
+    it('returns a single tile for a point', () => {
+      expect(rectTiles(4, 4, 4, 4, 8)).toEqual([tileIndex(4, 4, 8)]);
     });
   });
 

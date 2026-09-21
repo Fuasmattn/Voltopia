@@ -2,6 +2,7 @@ import { useRef } from 'react';
 import type { GameRenderer, RendererCallbacks } from '../render/renderer.ts';
 import type { Speed } from '../shared/types.ts';
 import { Clock } from './Clock.tsx';
+import { DemandBars } from './DemandBars.tsx';
 import { GameView } from './GameView.tsx';
 import { SpeedControls } from './SpeedControls.tsx';
 import { Toolbar } from './Toolbar.tsx';
@@ -25,6 +26,21 @@ export function App() {
         <div className="hud-title">Voltopia</div>
         {stats && (
           <>
+            <div className="hud-stat" data-testid="money">
+              <span className="hud-stat-value">
+                {Math.round(stats.money).toLocaleString('en-US')} ⌁
+              </span>
+              <span className="hud-stat-label">funds</span>
+            </div>
+            <div className="hud-stat" data-testid="population">
+              <span className="hud-stat-value">{stats.population}</span>
+              <span className="hud-stat-label">residents</span>
+            </div>
+            <div className="hud-stat" data-testid="jobs">
+              <span className="hud-stat-value">{stats.jobs}</span>
+              <span className="hud-stat-label">jobs</span>
+            </div>
+            <DemandBars demand={stats.demand} />
             <Clock timeOfDay={stats.timeOfDay} day={stats.day} />
             <SpeedControls
               speed={stats.speed as Speed}

@@ -1,6 +1,7 @@
 import { BALANCE, ENERGY_HISTORY_SAMPLES, SAVE_VERSION } from '../shared/constants.ts';
 import { Rng } from '../shared/rng.ts';
 import type {
+  DemandStats,
   EnergyHistoryPoint,
   SaveGame,
   Speed,
@@ -66,6 +67,8 @@ export interface SimState {
   energyHistory: EnergyHistoryPoint[];
   /** Tile indices changed since the last diff collection. */
   dirty: Set<number>;
+  /** Demand computed during the last tick, shown in the HUD. */
+  lastDemand: DemandStats;
   /** Set by the energy step; consumed by growth/happiness. */
   lastEnergy: {
     solar: number;
@@ -110,6 +113,7 @@ export function createSimState(seed: number, size: number): SimState {
     undoStack: [],
     energyHistory: [],
     dirty: new Set(),
+    lastDemand: { residential: 0, commercial: 0, retail: 0 },
     lastEnergy: {
       solar: 0,
       wind: 0,
