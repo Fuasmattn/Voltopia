@@ -112,6 +112,21 @@ const en = {
     'This is a free, open-source browser game (MIT license). Despite careful review, no liability is assumed for external links; their content is the sole responsibility of their operators.',
 
   'modal.close': 'Close',
+
+  'goals.title': 'Goals',
+  'goal.firstPower.title': 'Switched on',
+  'goal.firstPower.body': 'Build your first power plant.',
+  'goal.population100.title': 'Village',
+  'goal.population100.body': 'Reach 100 residents.',
+  'goal.population500.title': 'Town',
+  'goal.population500.body': 'Reach 500 residents.',
+  'goal.cleanDay.title': 'Self-sufficient',
+  'goal.cleanDay.body':
+    'A full day without deficits or grid imports (50+ residents).',
+  'goal.evFleet.title': 'Electric avenue',
+  'goal.evFleet.body': '30 electric vehicles on your roads.',
+  'goal.exporter.title': 'Power exporter',
+  'goal.exporter.body': 'Export 20,000 energy units to the grid.',
 } as const;
 
 export type TranslationKey = keyof typeof en;
@@ -222,6 +237,21 @@ const de: Record<TranslationKey, string> = {
     'Dies ist ein kostenloses Open-Source-Browserspiel (MIT-Lizenz). Trotz sorgfältiger Prüfung wird keine Haftung für externe Links übernommen; für deren Inhalte sind ausschließlich die jeweiligen Betreiber verantwortlich.',
 
   'modal.close': 'Schließen',
+
+  'goals.title': 'Ziele',
+  'goal.firstPower.title': 'Eingeschaltet',
+  'goal.firstPower.body': 'Baue dein erstes Kraftwerk.',
+  'goal.population100.title': 'Dorf',
+  'goal.population100.body': 'Erreiche 100 Einwohner.',
+  'goal.population500.title': 'Stadt',
+  'goal.population500.body': 'Erreiche 500 Einwohner.',
+  'goal.cleanDay.title': 'Autark',
+  'goal.cleanDay.body':
+    'Ein ganzer Tag ohne Defizit und Netzbezug (ab 50 Einwohnern).',
+  'goal.evFleet.title': 'Unter Strom',
+  'goal.evFleet.body': '30 Elektroautos auf deinen Straßen.',
+  'goal.exporter.title': 'Stromexporteur',
+  'goal.exporter.body': 'Speise 20.000 Energieeinheiten ins Netz ein.',
 };
 
 const translations: Record<Locale, Record<TranslationKey, string>> = { en, de };

@@ -12,6 +12,7 @@ import { ImprintPage } from './ImprintPage.tsx';
 import { rejectionKey, useI18n, type Locale } from './i18n.tsx';
 import { TaxSlider } from './TaxSlider.tsx';
 import { GameView } from './GameView.tsx';
+import { GoalsPanel } from './GoalsPanel.tsx';
 import { SpeedControls } from './SpeedControls.tsx';
 import { Toolbar } from './Toolbar.tsx';
 import { useSimBridge } from './useSimBridge.ts';
@@ -224,6 +225,7 @@ function Game({ save }: { save: SaveGame | null }) {
           {rejection}
         </div>
       )}
+      {stats && <GoalsPanel goals={stats.goals} />}
       <OverlayToggle mode={overlay} onChange={setOverlay} />
       <footer className="hud-footer">
         <span className="hud-footer-hint">{t('footer.hint')}</span>

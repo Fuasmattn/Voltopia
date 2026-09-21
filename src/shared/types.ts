@@ -76,6 +76,19 @@ export interface EnergyStats {
   history: EnergyHistoryPoint[];
 }
 
+export interface GoalState {
+  id: string;
+  achieved: boolean;
+}
+
+/** Rough tile counts for the HUD and the tutorial. */
+export interface TileCounts {
+  roadTiles: number;
+  zonedTiles: number;
+  plantTiles: number;
+  buildingTiles: number;
+}
+
 export interface DemandStats {
   residential: number;
   commercial: number;
@@ -102,6 +115,8 @@ export interface GlobalStats {
   speed: Speed;
   /** Whether smart charging (charging follows surplus) is enabled. */
   smartCharging: boolean;
+  goals: GoalState[];
+  counts: TileCounts;
 }
 
 /** Per-tile fields the renderer needs; sent as diffs for changed tiles only. */
@@ -137,6 +152,8 @@ export interface SaveGame {
   taxRate: number;
   smartCharging: boolean;
   storedEnergy: number;
+  /** Achieved goal ids (absent in older saves). */
+  goals?: string[];
   /** Raw copies of the tile layers. */
   layers: {
     tileType: ArrayBuffer;

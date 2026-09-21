@@ -71,6 +71,10 @@ export interface SimState {
   dirty: Set<number>;
   /** Demand computed during the last tick, shown in the HUD. */
   lastDemand: DemandStats;
+  /** Achieved goal ids (persisted with the save game). */
+  goalsAchieved: Set<string>;
+  /** Transient goal progress counters. */
+  goalProgress: { cleanDayTicks: number; exportedTotal: number };
   /** Set by the energy step; consumed by growth/happiness. */
   lastEnergy: {
     solar: number;
@@ -120,6 +124,8 @@ export function createSimState(seed: number, size: number): SimState {
     energyHistory: [],
     dirty: new Set(),
     lastDemand: { residential: 0, commercial: 0, retail: 0 },
+    goalsAchieved: new Set(),
+    goalProgress: { cleanDayTicks: 0, exportedTotal: 0 },
     lastEnergy: {
       solar: 0,
       wind: 0,
@@ -181,6 +187,7 @@ export function serializeState(state: SimState): SaveGame {
     taxRate: state.taxRate,
     smartCharging: state.smartCharging,
     storedEnergy: state.storedEnergy,
+    goals: [...state.goalsAchieved],
     layers: {
       tileType: copyBuffer(layers.tileType),
       roadMask: copyBuffer(layers.roadMask),
@@ -200,6 +207,7 @@ export function deserializeState(save: SaveGame): SimState {
   state.taxRate = save.taxRate;
   state.smartCharging = save.smartCharging;
   state.storedEnergy = save.storedEnergy;
+  state.goalsAchieved = new Set(save.goals ?? []);
   state.layers.tileType.set(new Uint8Array(save.layers.tileType));
   state.layers.roadMask.set(new Uint8Array(save.layers.roadMask));
   state.layers.zone.set(new Uint8Array(save.layers.zone));
