@@ -8,6 +8,7 @@ import { createTerrain } from './terrain.ts';
 import { RoadsMesh } from './roadsMesh.ts';
 import { BuildingsMesh } from './buildingsMesh.ts';
 import { PlantsMesh } from './plantsMesh.ts';
+import { VehiclesMesh } from './vehiclesMesh.ts';
 import { ZoneTilesMesh } from './zoneTilesMesh.ts';
 
 export interface PickedTile {
@@ -75,6 +76,7 @@ export class GameRenderer {
   private previewMesh!: THREE.InstancedMesh;
   private radiusRing!: THREE.Mesh;
   private radiusTiles = 0;
+  private vehiclesMesh!: VehiclesMesh;
   private readonly setGridVisible: (visible: boolean) => void;
   private hoveredIndex: number | null = null;
   private buildPointerActive = false;
@@ -101,6 +103,7 @@ export class GameRenderer {
     this.addDiffLayer(new ZoneTilesMesh(scene, gridSize));
     this.addDiffLayer(new BuildingsMesh(scene, gridSize));
     this.addDiffLayer(new PlantsMesh(scene, gridSize));
+    this.vehiclesMesh = new VehiclesMesh(scene);
 
     const radiusGeometry = new THREE.RingGeometry(0.95, 1, 48).rotateX(-Math.PI / 2);
     this.radiusRing = new THREE.Mesh(
@@ -214,10 +217,11 @@ export class GameRenderer {
       .lerp(SKY_DUSK_COLOR, duskAmount(sunFactor, night) * 0.5);
 
     for (const layer of this.diffLayers) layer.setEnvironment?.(environment);
+    this.vehiclesMesh.setEnvironment(environment);
   }
 
-  setVehicles(_vehicles: VehicleState[]): void {
-    // extended in M6
+  setVehicles(vehicles: VehicleState[]): void {
+    this.vehiclesMesh.setVehicles(vehicles, performance.now() / 1000);
   }
 
   /** Highlight tiles for a pending drag action (e.g. road preview). */
@@ -363,6 +367,7 @@ export class GameRenderer {
     this.lastFrameTime = now;
     this.isoCamera.update(deltaSeconds);
     for (const layer of this.diffLayers) layer.update?.(deltaSeconds, now / 1000);
+    this.vehiclesMesh.update(now / 1000);
     for (const listener of this.frameListeners) listener(deltaSeconds, now / 1000);
     this.webgl.render(this.scene, this.isoCamera.camera);
     this.animationFrame = requestAnimationFrame(this.renderLoop);

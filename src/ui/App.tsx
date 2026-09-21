@@ -90,6 +90,20 @@ export function App() {
             rate={stats.taxRate}
             onChange={(rate) => bridge.send({ type: 'setTaxRate', rate })}
           />
+          <label
+            className="smart-charging-toggle"
+            data-testid="smart-charging"
+            title="EV charging automatically follows the generation surplus"
+          >
+            <input
+              type="checkbox"
+              checked={stats.smartCharging}
+              onChange={(e) =>
+                bridge.send({ type: 'setSmartCharging', enabled: e.target.checked })
+              }
+            />
+            <span>⚡ Smart charging</span>
+          </label>
         </div>
       )}
       {bridge.rejection && (

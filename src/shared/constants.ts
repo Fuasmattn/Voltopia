@@ -141,8 +141,25 @@ export const BALANCE = {
     maxVehicles: 220,
     /** Tiles per second at 1x speed. */
     speedTilesPerSecond: 1.6,
-    /** Total EV charging demand per vehicle per tick (spread over profile). */
+    /** Peak charging demand per vehicle per tick. */
     chargingEnergyPerVehicle: 0.9,
+    /** Vehicles one charging hub can shift into its daytime window. */
+    vehiclesPerHub: 25,
+    /**
+     * Hourly home-charging profile: pronounced evening peak when
+     * commuters plug in (index = hour).
+     */
+    homeChargingProfile: [
+      0.5, 0.4, 0.3, 0.2, 0.15, 0.1, 0.1, 0.1, 0.08, 0.05, 0.05, 0.05,
+      0.05, 0.05, 0.05, 0.08, 0.15, 0.45, 0.85, 1.0, 0.95, 0.85, 0.7, 0.6,
+    ],
+    /** Hourly hub-charging profile: daytime, matching PV generation. */
+    hubChargingProfile: [
+      0.05, 0.05, 0.05, 0.05, 0.05, 0.05, 0.1, 0.3, 0.6, 0.85, 1.0, 1.0,
+      1.0, 1.0, 0.95, 0.85, 0.6, 0.35, 0.2, 0.1, 0.05, 0.05, 0.05, 0.05,
+    ],
+    /** Baseline share of charging that cannot be shifted by smart charging. */
+    smartChargingBaseline: 0.15,
   },
 
   weather: {

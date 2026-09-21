@@ -4,6 +4,7 @@ import { economyStep } from './economy.ts';
 import { energyStep } from './energy.ts';
 import { computeDemand, growthStep } from './growth.ts';
 import { happinessStep } from './happiness.ts';
+import { chargingDemand, vehiclesStep } from './vehicles.ts';
 import { updateWeather } from './weather.ts';
 import {
   countPopulationAndJobs,
@@ -24,7 +25,8 @@ export function dayNumber(tick: number): number {
 export function stepTick(state: SimState): void {
   state.tick++;
   updateWeather(state);
-  energyStep(state, { chargingDemand: 0 });
+  vehiclesStep(state);
+  energyStep(state, { chargingDemand: chargingDemand(state) });
   state.lastDemand = computeDemand(state);
   growthStep(state, state.lastDemand);
   const { population, jobs } = countPopulationAndJobs(state);
