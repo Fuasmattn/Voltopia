@@ -8,6 +8,23 @@ Built with a low-poly 3D look in the spirit of minimalist city builders:
 few key metrics, feedback directly in the world, organic growth, minimal
 micromanagement.
 
+## Screenshots
+
+<!--
+Drop captures into docs/screenshots/ and uncomment:
+  city-day.png    — a grown city at noon (rooftop PV, plants, traffic)
+  city-night.png  — the same view at night (window lights, streetlamps)
+  rush-hour.png   — the morning commute queue
+  energy-panel.png — the energy panel during a Dunkelflaute
+
+<p align="center">
+  <img src="docs/screenshots/city-day.png" width="49%" alt="Voltopia by day" />
+  <img src="docs/screenshots/city-night.png" width="49%" alt="Voltopia at night" />
+</p>
+-->
+
+_Screenshots coming soon — run `pnpm dev`, build a city, and snap away._
+
 ## Gameplay
 
 - **Build roads** by dragging; intersections, curves and dead ends connect
