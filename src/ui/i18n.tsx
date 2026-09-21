@@ -82,7 +82,7 @@ const en = {
   'rejection.nothingToUndo': 'Nothing to undo',
   'rejection.noPlantSelected': 'No plant selected',
 
-  'footer.hint': 'drag right mouse: pan · wheel: zoom · Q/E: rotate',
+  'footer.hint': 'right mouse/WASD: pan · wheel: zoom · Q/E: rotate',
   'footer.help': 'Help',
   'footer.imprint': 'Imprint',
 
@@ -101,7 +101,7 @@ const en = {
     'Your citizens drive EVs. Home charging peaks in the evening — right when solar is gone. Charging hubs shift the load into the sunny midday, and the smart-charging upgrade follows the surplus automatically.',
   'help.controls.title': 'Controls',
   'help.controls.body':
-    'Left mouse: use the selected tool (drag for roads and zones). Right or middle mouse drag: pan. Mouse wheel: zoom. Q/E: rotate the view. S: quick-save. The game autosaves every 30 seconds.',
+    'Left mouse: use the selected tool (drag for roads and zones). Right or middle mouse drag: pan. Mouse wheel: zoom. Q/E: rotate the view. WASD/arrows: pan. Ctrl+S: quick-save. The game autosaves every 30 seconds.',
   'help.icons.title': 'Warning icons',
   'help.icons.body':
     'A red bolt above a building means it is not connected to any plant; an orange bolt means the grid cannot cover its demand right now.',
@@ -265,7 +265,7 @@ const de: Record<TranslationKey, string> = {
   'rejection.nothingToUndo': 'Nichts rückgängig zu machen',
   'rejection.noPlantSelected': 'Keine Anlage ausgewählt',
 
-  'footer.hint': 'rechte Maustaste ziehen: bewegen · Mausrad: zoomen · Q/E: drehen',
+  'footer.hint': 'rechte Maustaste/WASD: bewegen · Mausrad: zoomen · Q/E: drehen',
   'footer.help': 'Hilfe',
   'footer.imprint': 'Impressum',
 
@@ -284,7 +284,7 @@ const de: Record<TranslationKey, string> = {
     'Deine Bürger fahren E-Autos. Das Laden zu Hause hat abends seinen Höhepunkt — genau dann, wenn die Sonne weg ist. Ladeparks verschieben die Last in den sonnigen Mittag, und das Smart-Charging-Upgrade folgt dem Überschuss automatisch.',
   'help.controls.title': 'Steuerung',
   'help.controls.body':
-    'Linke Maustaste: gewähltes Werkzeug benutzen (für Straßen und Zonen ziehen). Rechte oder mittlere Maustaste ziehen: Ansicht bewegen. Mausrad: zoomen. Q/E: Ansicht drehen. S: Schnellspeichern. Das Spiel speichert alle 30 Sekunden automatisch.',
+    'Linke Maustaste: gewähltes Werkzeug benutzen (für Straßen und Zonen ziehen). Rechte oder mittlere Maustaste ziehen: Ansicht bewegen. Mausrad: zoomen. Q/E: Ansicht drehen. WASD/Pfeile: bewegen. Strg+S: Schnellspeichern. Das Spiel speichert alle 30 Sekunden automatisch.',
   'help.icons.title': 'Warnsymbole',
   'help.icons.body':
     'Ein roter Blitz über einem Gebäude bedeutet: nicht an eine Anlage angeschlossen. Ein oranger Blitz: das Netz kann den Bedarf gerade nicht decken.',

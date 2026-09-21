@@ -10,6 +10,7 @@ import { BuildingsMesh } from './buildingsMesh.ts';
 import { PlantsMesh } from './plantsMesh.ts';
 import { VehiclesMesh } from './vehiclesMesh.ts';
 import { OverlaysMesh } from './overlays.ts';
+import { MinimapLayer } from './minimapLayer.ts';
 import { IconsMesh } from './iconsMesh.ts';
 import type { OverlayMode } from '../shared/types.ts';
 import { ZoneTilesMesh } from './zoneTilesMesh.ts';
@@ -85,10 +86,17 @@ export class GameRenderer {
   private radiusTiles = 0;
   private vehiclesMesh!: VehiclesMesh;
   private overlays!: OverlaysMesh;
+  /** One-pixel-per-tile city image for the UI minimap. */
+  minimap!: MinimapLayer;
   private readonly setGridVisible: (visible: boolean) => void;
   private hoveredIndex: number | null = null;
   private buildPointerActive = false;
   private panPointer: { x: number; y: number } | null = null;
+  /** Keys currently held for keyboard panning (WASD / arrows). */
+  private readonly heldPanKeys = new Set<string>();
+  private edgePanEnabled = true;
+  private lastPointerClient: { x: number; y: number } | null = null;
+  private pointerInside = false;
   /** All currently pressed pointers (for two-finger touch gestures). */
   private readonly activePointers = new Map<number, { x: number; y: number }>();
   private pinchState: { distance: number; centerX: number; centerY: number } | null = null;
@@ -117,6 +125,8 @@ export class GameRenderer {
     this.vehiclesMesh = new VehiclesMesh(scene);
     this.overlays = new OverlaysMesh(scene, gridSize);
     this.addDiffLayer(this.overlays);
+    this.minimap = new MinimapLayer(gridSize);
+    this.addDiffLayer(this.minimap);
 
     const radiusGeometry = new THREE.RingGeometry(0.95, 1, 48).rotateX(-Math.PI / 2);
     this.radiusRing = new THREE.Mesh(
@@ -328,6 +338,7 @@ export class GameRenderer {
     });
 
     el.addEventListener('pointermove', (e) => {
+      this.lastPointerClient = { x: e.clientX, y: e.clientY };
       if (this.activePointers.has(e.pointerId)) {
         this.activePointers.set(e.pointerId, { x: e.clientX, y: e.clientY });
       }
@@ -396,6 +407,14 @@ export class GameRenderer {
     );
 
     window.addEventListener('keydown', this.handleKeyDown);
+    window.addEventListener('keyup', this.handleKeyUp);
+    el.addEventListener('pointerenter', () => {
+      this.pointerInside = true;
+    });
+    el.addEventListener('pointerleave', () => {
+      this.pointerInside = false;
+      this.lastPointerClient = null;
+    });
   }
 
   /** Distance and centroid of the first two active pointers. */
@@ -414,9 +433,29 @@ export class GameRenderer {
     };
   }
 
+  private static readonly PAN_KEYS = new Set([
+    'w',
+    'a',
+    's',
+    'd',
+    'arrowup',
+    'arrowdown',
+    'arrowleft',
+    'arrowright',
+  ]);
+
   private handleKeyDown = (e: KeyboardEvent): void => {
+    const target = e.target as HTMLElement | null;
+    if (target && ['INPUT', 'TEXTAREA', 'SELECT'].includes(target.tagName)) return;
+    if (e.ctrlKey || e.metaKey) return; // e.g. Ctrl+S quick-save
     if (e.key === 'q' || e.key === 'Q') this.isoCamera.rotate(1);
     if (e.key === 'e' || e.key === 'E') this.isoCamera.rotate(-1);
+    const key = e.key.toLowerCase();
+    if (GameRenderer.PAN_KEYS.has(key)) this.heldPanKeys.add(key);
+  };
+
+  private handleKeyUp = (e: KeyboardEvent): void => {
+    this.heldPanKeys.delete(e.key.toLowerCase());
   };
 
   private pick(e: PointerEvent): PickedTile | null {
@@ -456,6 +495,7 @@ export class GameRenderer {
     const deltaSeconds = Math.min((now - this.lastFrameTime) / 1000, 0.1);
     this.lastFrameTime = now;
     this.isoCamera.update(deltaSeconds);
+    this.applyContinuousPan(deltaSeconds);
     for (const layer of this.diffLayers) layer.update?.(deltaSeconds, now / 1000);
     this.vehiclesMesh.update(now / 1000);
     for (const listener of this.frameListeners) listener(deltaSeconds, now / 1000);
@@ -463,11 +503,59 @@ export class GameRenderer {
     this.animationFrame = requestAnimationFrame(this.renderLoop);
   };
 
+  /** Keyboard (WASD/arrows) and screen-edge panning, applied per frame. */
+  private applyContinuousPan(deltaSeconds: number): void {
+    const PAN_SPEED_PX_PER_S = 600;
+    const EDGE_PX = 16;
+    let dx = 0;
+    let dy = 0;
+    if (this.heldPanKeys.has('a') || this.heldPanKeys.has('arrowleft')) dx += 1;
+    if (this.heldPanKeys.has('d') || this.heldPanKeys.has('arrowright')) dx -= 1;
+    if (this.heldPanKeys.has('w') || this.heldPanKeys.has('arrowup')) dy += 1;
+    if (this.heldPanKeys.has('s') || this.heldPanKeys.has('arrowdown')) dy -= 1;
+
+    if (
+      this.edgePanEnabled &&
+      this.pointerInside &&
+      this.lastPointerClient &&
+      !this.buildPointerActive &&
+      !this.panPointer &&
+      !this.pinchState
+    ) {
+      const rect = this.webgl.domElement.getBoundingClientRect();
+      const p = this.lastPointerClient;
+      if (p.x - rect.left < EDGE_PX) dx += 1;
+      if (rect.right - p.x < EDGE_PX) dx -= 1;
+      if (p.y - rect.top < EDGE_PX) dy += 1;
+      if (rect.bottom - p.y < EDGE_PX) dy -= 1;
+    }
+
+    if (dx !== 0 || dy !== 0) {
+      const amount = PAN_SPEED_PX_PER_S * deltaSeconds;
+      this.isoCamera.pan(dx * amount, dy * amount, this.webgl.domElement.clientHeight);
+    }
+  }
+
+  setEdgePanEnabled(enabled: boolean): void {
+    this.edgePanEnabled = enabled;
+  }
+
+  /** Move the camera target to a tile-space position (minimap click). */
+  panTo(x: number, z: number): void {
+    this.isoCamera.setTarget(x, z);
+  }
+
+  /** Camera target in tile space (for the minimap viewfinder). */
+  getCameraTarget(): { x: number; z: number } {
+    return this.isoCamera.getTarget();
+  }
+
   dispose(): void {
     this.disposed = true;
     cancelAnimationFrame(this.animationFrame);
     window.removeEventListener('resize', this.handleResize);
     window.removeEventListener('keydown', this.handleKeyDown);
+    window.removeEventListener('keyup', this.handleKeyUp);
     this.webgl.dispose();
     this.webgl.domElement.remove();
   }

@@ -270,6 +270,9 @@ body,
   flex-direction: column;
   gap: 10px;
   width: 250px;
+  /* Leave room for the minimap + overlay stack at the bottom right. */
+  max-height: calc(100vh - 72px - 220px);
+  overflow-y: auto;
 }
 
 .energy-panel {
@@ -932,4 +935,28 @@ body,
   padding: 8px 22px;
   cursor: pointer;
   font-size: 14px;
+}
+
+.bottom-right-stack {
+  position: absolute;
+  bottom: 12px;
+  right: 12px;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 8px;
+}
+
+.bottom-right-stack .overlay-toggle {
+  position: static;
+}
+
+.minimap {
+  width: 144px;
+  height: 144px;
+  border: 1px solid var(--hud-border);
+  border-radius: 10px;
+  background: var(--hud-bg);
+  cursor: crosshair;
+  image-rendering: pixelated;
 }

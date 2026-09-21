@@ -105,7 +105,7 @@ test('game state persists across a reload', async ({ page }) => {
   await page.getByTestId('speed-3').click();
   await expect.poll(async () => readTick(page), { timeout: 10_000 }).toBeGreaterThan(20);
   const beforeSave = await readTick(page);
-  await page.keyboard.press('s'); // quick-save
+  await page.keyboard.press('Control+s'); // quick-save
   await page.waitForTimeout(500);
   await page.reload();
   await expect(page.getByTestId('tick-counter')).toBeVisible({ timeout: 15_000 });

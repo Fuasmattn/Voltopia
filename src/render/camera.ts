@@ -32,6 +32,17 @@ export class IsoCamera {
     return Math.PI / 4 + this.rotationIndex * (Math.PI / 2);
   }
 
+  /** Jump the camera target to a world position on the ground plane. */
+  setTarget(x: number, z: number): void {
+    this.target.set(x, 0, z);
+    this.updatePosition();
+  }
+
+  /** Current camera target on the ground plane. */
+  getTarget(): { x: number; z: number } {
+    return { x: this.target.x, z: this.target.z };
+  }
+
   /** Rotate the view by 90°; direction is +1 (counter-clockwise) or -1. */
   rotate(direction: 1 | -1): void {
     this.rotationIndex = (this.rotationIndex + direction + 4) % 4;

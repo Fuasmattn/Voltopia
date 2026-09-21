@@ -13,6 +13,7 @@ import { rejectionKey, useI18n, type Locale } from './i18n.tsx';
 import { TaxSlider } from './TaxSlider.tsx';
 import { GameView } from './GameView.tsx';
 import { GoalsPanel } from './GoalsPanel.tsx';
+import { Minimap } from './Minimap.tsx';
 import { SpeedControls } from './SpeedControls.tsx';
 import { Toolbar } from './Toolbar.tsx';
 import { consumePendingNewGame, type NewGameOptions } from './newGame.ts';
@@ -119,9 +120,12 @@ function Game({ save, options }: { save: SaveGame | null; options: NewGameOption
       storage.save(save).catch((error) => console.warn('Autosave failed', error));
     });
     const timer = setInterval(() => send({ type: 'requestSave' }), AUTOSAVE_INTERVAL_MS);
-    // Quick-save on "s" (autosave covers the rest).
+    // Quick-save on Ctrl/Cmd+S (autosave covers the rest); plain S pans.
     const onKeyDown = (e: KeyboardEvent): void => {
-      if (e.key === 's' || e.key === 'S') send({ type: 'requestSave' });
+      if ((e.ctrlKey || e.metaKey) && (e.key === 's' || e.key === 'S')) {
+        e.preventDefault();
+        send({ type: 'requestSave' });
+      }
     };
     // Best-effort save when the tab is hidden (switch, reload, close).
     const onVisibilityChange = (): void => {
@@ -277,7 +281,10 @@ function Game({ save, options }: { save: SaveGame | null; options: NewGameOption
         <Tutorial stats={stats} onFinished={() => setShowTutorial(false)} />
       )}
       {stats && <WinScreen stats={stats} onCelebrate={() => sound.play('achievement')} />}
-      <OverlayToggle mode={overlay} onChange={setOverlay} />
+      <div className="bottom-right-stack">
+        <Minimap rendererRef={rendererRef} gridSize={gridSize} />
+        <OverlayToggle mode={overlay} onChange={setOverlay} />
+      </div>
       <footer className="hud-footer">
         <span className="hud-footer-hint">{t('footer.hint')}</span>
         <button type="button" data-testid="open-help" onClick={() => setPage('help')}>
