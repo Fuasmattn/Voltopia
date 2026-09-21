@@ -1,0 +1,73 @@
+# Voltopia — project guide
+
+Browser city builder powered entirely by renewables. Design doc:
+`docs/idea.md`, implementation plan: `docs/plan.md`.
+
+## Commands
+
+```bash
+pnpm dev          # dev server
+pnpm test         # unit tests (vitest) — MUST pass before every commit
+pnpm coverage     # tests + coverage gate (>=90% on src/sim + src/shared)
+pnpm e2e          # Playwright end-to-end tests
+pnpm typecheck    # tsc -b
+pnpm build        # production build (includes typecheck)
+```
+
+A pre-commit hook (simple-git-hooks, installed via `pnpm install`) runs
+`pnpm typecheck && pnpm test` automatically. Never commit with failing
+tests; never bypass the hook with `--no-verify` unless the user asks.
+
+## Architecture (strict boundaries)
+
+- `src/sim/` — pure simulation, runs in a Web Worker. **No DOM or
+  three.js imports.** Deterministic: all randomness through the seeded
+  `Rng` on `SimState` (including weather). Fixed tick (4/s).
+- `src/render/` — three.js only (instanced meshes, isometric camera).
+  Reacts to tile diffs (`DiffLayer`) and stats-driven environment.
+  New `InstancedMesh`? Always set `frustumCulled = false` — instance
+  transforms span the grid and the base-geometry bounds would cull them.
+- `src/ui/` — React 19. All user-visible strings go through
+  `src/ui/i18n.tsx` (English + German — add BOTH when adding keys).
+- `src/shared/` — types, worker message protocol, and `constants.ts`
+  with the central `BALANCE` config. **No magic numbers in sim code**;
+  every tuning value lives in `BALANCE`.
+- `src/storage/` — save games behind the `SaveStorage` interface.
+
+Worker ↔ main: commands in, tile diffs + `GlobalStats` out — never the
+full state (except save snapshots).
+
+## Conventions
+
+- Tests colocated as `*.test.ts`; sim changes need unit tests. For
+  balancing changes, write a temporary headless probe (script a city via
+  `SimEngine`, run N in-game days, print pacing) — see the commit
+  "balance: resize energy system" for the pattern — and delete it after.
+- React effects must depend on stable identities (`bridge.send`,
+  `bridge.onSaveData`), never on the `bridge` object — it changes every
+  tick and silently resets intervals/drag state (caused a real bug).
+- Save-game changes: keep `SaveGame` backward compatible (optional
+  fields) or bump `SAVE_VERSION` knowingly (old autosaves are dropped).
+- Use correct energy terminology (generation, consumption, state of
+  charge, curtailment, peak load) in code and UI.
+- Commit messages: imperative summary + short body; one feature/fix per
+  commit.
+
+## Environment gotchas
+
+- `pnpm-workspace.yaml` pins `supportedArchitectures` (darwin+linux,
+  arm64+x64) because `node_modules` is shared between the macOS host and
+  a Linux dev sandbox — do not remove.
+- The Linux sandbox has no WebGL: the app falls back gracefully; visual
+  checks and the WebGL e2e test need the Mac (or CI, which has
+  SwiftShader). Headless smoke: `node scripts/smoke.mjs`.
+- e2e uses `127.0.0.1` (not `localhost`) and Chromium flags
+  `--no-proxy-server --no-sandbox` (see `playwright.config.ts`).
+- CI runners are 2-3x slower than dev machines — long sim tests need
+  generous vitest timeouts (`testTimeout` is set to 30s).
+
+## Deployment
+
+Push to `main` → GitHub Actions runs typecheck/tests/build and deploys
+to GitHub Pages (base path `/Voltopia/` via `VOLTOPIA_BASE`). PRs and
+branches run `.github/workflows/ci.yml` (unit + e2e).
