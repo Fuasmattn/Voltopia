@@ -3,6 +3,7 @@ import type { GameRenderer, PickedTile, RendererCallbacks } from '../render/rend
 import { lShapedPath, rectTiles } from '../shared/grid.ts';
 import { BALANCE, GRID_SIZE } from '../shared/constants.ts';
 import { PlantType, Zone } from '../shared/types.ts';
+import { sound } from './sound.ts';
 import type { SimBridge } from './useSimBridge.ts';
 
 export type ToolId =
@@ -113,7 +114,10 @@ export function useTools(
         if (anchor && tile) {
           path = lShapedPath(anchor.x, anchor.y, tile.x, tile.y, GRID_SIZE);
         }
-        if (path.length > 0) send({ type: 'buildRoad', tiles: path });
+        if (path.length > 0) {
+          send({ type: 'buildRoad', tiles: path });
+          sound.play('build');
+        }
         clearPreview();
       };
     } else if (ZONE_BY_TOOL[tool] !== undefined) {
@@ -134,7 +138,10 @@ export function useTools(
         if (anchor && tile) {
           path = rectTiles(anchor.x, anchor.y, tile.x, tile.y, GRID_SIZE);
         }
-        if (path.length > 0) send({ type: 'paintZone', tiles: path, zone });
+        if (path.length > 0) {
+          send({ type: 'paintZone', tiles: path, zone });
+          sound.play('build');
+        }
         clearPreview();
       };
     } else if (PLANT_BY_TOOL[tool] !== undefined) {
@@ -143,8 +150,10 @@ export function useTools(
       if (plant !== PlantType.ChargingHub) {
         renderer?.setHoverRadius(BALANCE.energy.supplyRadius);
       }
-      callbacks.onBuildStart = (tile) =>
+      callbacks.onBuildStart = (tile) => {
         send({ type: 'placePlant', tile: tile.index, plant });
+        sound.play('build');
+      };
     } else if (tool === 'bulldoze') {
       callbacks.onBuildStart = (tile) =>
         send({ type: 'bulldoze', tiles: [tile.index] });

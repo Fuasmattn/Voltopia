@@ -15,6 +15,7 @@ import { GameView } from './GameView.tsx';
 import { GoalsPanel } from './GoalsPanel.tsx';
 import { SpeedControls } from './SpeedControls.tsx';
 import { Toolbar } from './Toolbar.tsx';
+import { sound } from './sound.ts';
 import { useSimBridge } from './useSimBridge.ts';
 import { useTools } from './useTools.ts';
 
@@ -130,6 +131,10 @@ function Game({ save }: { save: SaveGame | null }) {
     if (stats) rendererRef.current?.setStats(stats);
   }, [stats]);
 
+  useEffect(() => {
+    if (bridge.rejection) sound.play('reject');
+  }, [bridge.rejection]);
+
   const rejection = bridge.rejection
     ? (() => {
         const key = rejectionKey(bridge.rejection);
@@ -186,7 +191,10 @@ function Game({ save }: { save: SaveGame | null }) {
       </header>
       <Toolbar
         tool={tool}
-        onSelectTool={setTool}
+        onSelectTool={(next) => {
+          sound.play('click');
+          setTool(next);
+        }}
         onUndo={() => bridge.send({ type: 'undo' })}
       />
       {stats && (
@@ -230,7 +238,12 @@ function Game({ save }: { save: SaveGame | null }) {
           {costPreview.tiles} ▦ · {costPreview.cost.toLocaleString('en-US')} ⌁
         </div>
       )}
-      {stats && <GoalsPanel goals={stats.goals} />}
+      {stats && (
+        <GoalsPanel
+          goals={stats.goals}
+          onAchievement={() => sound.play('achievement')}
+        />
+      )}
       <OverlayToggle mode={overlay} onChange={setOverlay} />
       <footer className="hud-footer">
         <span className="hud-footer-hint">{t('footer.hint')}</span>
