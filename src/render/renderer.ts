@@ -7,6 +7,7 @@ import { createScene, PALETTE, type SceneLights } from './scene.ts';
 import { createTerrain } from './terrain.ts';
 import { RoadsMesh } from './roadsMesh.ts';
 import { BuildingsMesh } from './buildingsMesh.ts';
+import { PlantsMesh } from './plantsMesh.ts';
 import { ZoneTilesMesh } from './zoneTilesMesh.ts';
 
 export interface PickedTile {
@@ -72,6 +73,8 @@ export class GameRenderer {
   private readonly diffLayers: DiffLayer[] = [];
   private readonly hoverMarker: THREE.Mesh;
   private previewMesh!: THREE.InstancedMesh;
+  private radiusRing!: THREE.Mesh;
+  private radiusTiles = 0;
   private readonly setGridVisible: (visible: boolean) => void;
   private hoveredIndex: number | null = null;
   private buildPointerActive = false;
@@ -97,6 +100,21 @@ export class GameRenderer {
     this.addDiffLayer(new RoadsMesh(scene, gridSize));
     this.addDiffLayer(new ZoneTilesMesh(scene, gridSize));
     this.addDiffLayer(new BuildingsMesh(scene, gridSize));
+    this.addDiffLayer(new PlantsMesh(scene, gridSize));
+
+    const radiusGeometry = new THREE.RingGeometry(0.95, 1, 48).rotateX(-Math.PI / 2);
+    this.radiusRing = new THREE.Mesh(
+      radiusGeometry,
+      new THREE.MeshBasicMaterial({
+        color: 0x58b7a4,
+        transparent: true,
+        opacity: 0.7,
+        depthWrite: false,
+        side: THREE.DoubleSide,
+      }),
+    );
+    this.radiusRing.visible = false;
+    scene.add(this.radiusRing);
 
     const previewGeometry = new THREE.PlaneGeometry(1, 1).rotateX(-Math.PI / 2);
     const previewMaterial = new THREE.MeshBasicMaterial({
@@ -219,6 +237,15 @@ export class GameRenderer {
     this.previewMesh.instanceMatrix.needsUpdate = true;
   }
 
+  /**
+   * Show a supply-radius ring following the hovered tile (0 disables).
+   * The ring approximates the Chebyshev radius as a circle.
+   */
+  setHoverRadius(tiles: number): void {
+    this.radiusTiles = tiles;
+    if (tiles <= 0) this.radiusRing.visible = false;
+  }
+
   showBuildGrid(visible: boolean): void {
     this.setGridVisible(visible);
   }
@@ -311,10 +338,16 @@ export class GameRenderer {
   private updateHoverMarker(tile: PickedTile | null): void {
     if (!tile) {
       this.hoverMarker.visible = false;
+      this.radiusRing.visible = false;
       return;
     }
     this.hoverMarker.visible = true;
     this.hoverMarker.position.set(tile.x + 0.5, 0.03, tile.y + 0.5);
+    if (this.radiusTiles > 0) {
+      this.radiusRing.visible = true;
+      this.radiusRing.position.set(tile.x + 0.5, 0.05, tile.y + 0.5);
+      this.radiusRing.scale.setScalar(this.radiusTiles);
+    }
   }
 
   private handleResize = (): void => {

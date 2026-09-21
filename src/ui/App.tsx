@@ -3,6 +3,8 @@ import type { GameRenderer, RendererCallbacks } from '../render/renderer.ts';
 import type { Speed } from '../shared/types.ts';
 import { Clock } from './Clock.tsx';
 import { DemandBars } from './DemandBars.tsx';
+import { EnergyPanel } from './EnergyPanel.tsx';
+import { TaxSlider } from './TaxSlider.tsx';
 import { GameView } from './GameView.tsx';
 import { SpeedControls } from './SpeedControls.tsx';
 import { Toolbar } from './Toolbar.tsx';
@@ -10,6 +12,12 @@ import { useSimBridge } from './useSimBridge.ts';
 import { useTools } from './useTools.ts';
 
 const DEFAULT_SEED = 20260921;
+
+function happinessEmoji(happiness: number): string {
+  if (happiness >= 0.7) return '😊';
+  if (happiness >= 0.45) return '😐';
+  return '😞';
+}
 
 export function App() {
   const bridge = useSimBridge({ seed: DEFAULT_SEED });
@@ -44,6 +52,12 @@ export function App() {
               <span className="hud-stat-value">{stats.jobs}</span>
               <span className="hud-stat-label">jobs</span>
             </div>
+            <div className="hud-stat" data-testid="happiness">
+              <span className="hud-stat-value">
+                {happinessEmoji(stats.happiness)} {Math.round(stats.happiness * 100)}%
+              </span>
+              <span className="hud-stat-label">happiness</span>
+            </div>
             <DemandBars demand={stats.demand} />
             <Clock timeOfDay={stats.timeOfDay} day={stats.day} />
             <div
@@ -69,6 +83,15 @@ export function App() {
         onSelectTool={setTool}
         onUndo={() => bridge.send({ type: 'undo' })}
       />
+      {stats && (
+        <div className="right-panel">
+          <EnergyPanel energy={stats.energy} />
+          <TaxSlider
+            rate={stats.taxRate}
+            onChange={(rate) => bridge.send({ type: 'setTaxRate', rate })}
+          />
+        </div>
+      )}
       {bridge.rejection && (
         <div className="rejection-toast" data-testid="rejection">
           {bridge.rejection}

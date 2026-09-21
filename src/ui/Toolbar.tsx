@@ -1,4 +1,5 @@
 import { BALANCE } from '../shared/constants.ts';
+import { PlantType } from '../shared/types.ts';
 import type { ToolId } from './useTools.ts';
 
 interface ToolButton {
@@ -33,6 +34,36 @@ const TOOLS: ToolButton[] = [
     label: 'Retail',
     icon: '🛍',
     cost: `${BALANCE.costs.zonePerTile}/tile`,
+  },
+  {
+    id: 'plant-solar',
+    label: 'Solar farm',
+    icon: '☀️',
+    cost: `${BALANCE.costs.plant[PlantType.SolarFarm]}`,
+  },
+  {
+    id: 'plant-wind',
+    label: 'Wind turbine',
+    icon: '🌀',
+    cost: `${BALANCE.costs.plant[PlantType.WindTurbine]}`,
+  },
+  {
+    id: 'plant-battery',
+    label: 'Battery',
+    icon: '🔋',
+    cost: `${BALANCE.costs.plant[PlantType.Battery]}`,
+  },
+  {
+    id: 'plant-biogas',
+    label: 'Biogas plant',
+    icon: '♻️',
+    cost: `${BALANCE.costs.plant[PlantType.BiogasPlant]}`,
+  },
+  {
+    id: 'plant-hub',
+    label: 'Charging hub',
+    icon: '🔌',
+    cost: `${BALANCE.costs.plant[PlantType.ChargingHub]}`,
   },
   { id: 'bulldoze', label: 'Bulldozer', icon: '🚜' },
 ];

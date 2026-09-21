@@ -51,8 +51,8 @@ export const BALANCE = {
     defaultRate: 0.1,
     maxRate: 0.3,
     /** Income per tick = rate * (population * perResident + jobs * perJob). */
-    incomePerResident: 0.6,
-    incomePerJob: 0.9,
+    incomePerResident: 0.09,
+    incomePerJob: 0.12,
     /** Tax rate above which happiness starts to suffer. */
     happinessNeutralRate: 0.12,
   },
@@ -79,6 +79,25 @@ export const BALANCE = {
       [Zone.Residential]: [0, 2, 4.5, 8],
       [Zone.Commercial]: [0, 3, 6.5, 11],
       [Zone.Retail]: [0, 2.5, 5, 9],
+    } as Record<Zone, number[]>,
+    /**
+     * Hourly load profile per zone (24 factors, index = hour). Residential
+     * peaks in the morning and evening, commercial during office hours,
+     * retail from daytime into the evening.
+     */
+    loadProfileByZone: {
+      [Zone.Residential]: [
+        0.3, 0.25, 0.22, 0.22, 0.25, 0.35, 0.6, 0.85, 0.7, 0.5, 0.45, 0.45,
+        0.5, 0.45, 0.45, 0.5, 0.6, 0.8, 0.95, 1.0, 0.95, 0.8, 0.6, 0.4,
+      ],
+      [Zone.Commercial]: [
+        0.15, 0.12, 0.12, 0.12, 0.15, 0.2, 0.4, 0.7, 0.95, 1.0, 1.0, 1.0,
+        0.95, 1.0, 1.0, 0.95, 0.85, 0.6, 0.4, 0.3, 0.25, 0.2, 0.18, 0.15,
+      ],
+      [Zone.Retail]: [
+        0.12, 0.1, 0.1, 0.1, 0.12, 0.15, 0.25, 0.45, 0.7, 0.9, 1.0, 1.0,
+        0.95, 0.95, 1.0, 1.0, 1.0, 0.95, 0.9, 0.8, 0.6, 0.35, 0.2, 0.15,
+      ],
     } as Record<Zone, number[]>,
   },
 

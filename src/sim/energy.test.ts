@@ -1,0 +1,268 @@
+import { describe, expect, it } from 'vitest';
+import { BALANCE, TICKS_PER_DAY } from '../shared/constants.ts';
+import { tileIndex } from '../shared/grid.ts';
+import {
+  buildingConsumption,
+  censusPlants,
+  energyStep,
+  loadProfileFactor,
+  placePlant,
+} from './energy.ts';
+import { undoLastAction } from './roads.ts';
+import {
+  createSimState,
+  PlantType,
+  SupplyStatus,
+  TileType,
+  Zone,
+  type SimState,
+} from './state.ts';
+
+const SIZE = 32;
+const at = (x: number, y: number) => tileIndex(x, y, SIZE);
+
+function makeState(): SimState {
+  return createSimState(1, SIZE);
+}
+
+/** Put a building on a tile directly (bypassing growth). */
+function addBuilding(state: SimState, index: number, zone: Zone, density: number): void {
+  state.layers.zone[index] = zone;
+  state.layers.density[index] = density;
+}
+
+/** Set the clock to noon with clear skies for predictable solar output. */
+function setNoonClearSky(state: SimState): void {
+  state.tick = TICKS_PER_DAY / 2;
+  state.weather.cloudCover = 0;
+  state.weather.windSpeed = 0;
+}
+
+describe('placePlant', () => {
+  it('places a plant and charges its cost', () => {
+    const state = makeState();
+    const before = state.money;
+    const result = placePlant(state, at(5, 5), PlantType.SolarFarm);
+    expect(result.rejected).toBeUndefined();
+    expect(state.layers.tileType[at(5, 5)]).toBe(TileType.Plant);
+    expect(state.layers.plantType[at(5, 5)]).toBe(PlantType.SolarFarm);
+    expect(state.money).toBe(before - BALANCE.costs.plant[PlantType.SolarFarm]);
+  });
+
+  it('rejects occupied tiles and missing funds', () => {
+    const state = makeState();
+    placePlant(state, at(5, 5), PlantType.SolarFarm);
+    expect(placePlant(state, at(5, 5), PlantType.WindTurbine).rejected).toBeTruthy();
+    state.money = 0;
+    expect(placePlant(state, at(6, 6), PlantType.WindTurbine).rejected).toBeTruthy();
+  });
+
+  it('can be undone', () => {
+    const state = makeState();
+    const before = state.money;
+    placePlant(state, at(5, 5), PlantType.Battery);
+    undoLastAction(state);
+    expect(state.layers.tileType[at(5, 5)]).toBe(TileType.Empty);
+    expect(state.money).toBe(before);
+  });
+
+  it('census counts each plant type', () => {
+    const state = makeState();
+    placePlant(state, at(1, 1), PlantType.SolarFarm);
+    placePlant(state, at(2, 1), PlantType.WindTurbine);
+    placePlant(state, at(3, 1), PlantType.Battery);
+    placePlant(state, at(4, 1), PlantType.BiogasPlant);
+    placePlant(state, at(5, 1), PlantType.ChargingHub);
+    const census = censusPlants(state);
+    expect(census.solarFarms).toBe(1);
+    expect(census.windTurbines).toBe(1);
+    expect(census.batteries).toBe(1);
+    expect(census.biogasPlants).toBe(1);
+    expect(census.chargingHubs).toBe(1);
+    // charging hubs do not provide grid connection
+    expect(census.supplySources).toHaveLength(4);
+  });
+});
+
+describe('load profiles', () => {
+  it('residential peaks in the evening, commercial during the day', () => {
+    const evening = 19.5 / 24;
+    const noon = 12 / 24;
+    const night = 3 / 24;
+    expect(loadProfileFactor(Zone.Residential, evening)).toBeGreaterThan(
+      loadProfileFactor(Zone.Residential, noon),
+    );
+    expect(loadProfileFactor(Zone.Commercial, noon)).toBeGreaterThan(
+      loadProfileFactor(Zone.Commercial, evening),
+    );
+    expect(loadProfileFactor(Zone.Residential, night)).toBeLessThan(0.4);
+  });
+
+  it('interpolates smoothly between hours', () => {
+    const a = loadProfileFactor(Zone.Residential, 18 / 24);
+    const b = loadProfileFactor(Zone.Residential, 18.5 / 24);
+    const c = loadProfileFactor(Zone.Residential, 19 / 24);
+    expect(b).toBeGreaterThan(Math.min(a, c) - 1e-9);
+    expect(b).toBeLessThan(Math.max(a, c) + 1e-9);
+  });
+
+  it('building consumption scales with density', () => {
+    const noon = 0.5;
+    expect(buildingConsumption(Zone.Residential, 3, noon)).toBeGreaterThan(
+      buildingConsumption(Zone.Residential, 1, noon),
+    );
+    expect(buildingConsumption(Zone.None, 1, noon)).toBe(0);
+  });
+});
+
+describe('energyStep', () => {
+  it('solar generates at noon, nothing at night', () => {
+    const state = makeState();
+    placePlant(state, at(5, 5), PlantType.SolarFarm);
+    setNoonClearSky(state);
+    energyStep(state, { chargingDemand: 0 });
+    expect(state.lastEnergy.solar).toBeCloseTo(BALANCE.energy.solarPeakOutput, 3);
+    state.tick = 0; // midnight
+    energyStep(state, { chargingDemand: 0 });
+    expect(state.lastEnergy.solar).toBe(0);
+  });
+
+  it('wind output follows wind speed', () => {
+    const state = makeState();
+    placePlant(state, at(5, 5), PlantType.WindTurbine);
+    state.weather.windSpeed = 0;
+    energyStep(state, { chargingDemand: 0 });
+    expect(state.lastEnergy.wind).toBe(0);
+    state.weather.windSpeed = 1;
+    energyStep(state, { chargingDemand: 0 });
+    expect(state.lastEnergy.wind).toBeCloseTo(BALANCE.energy.windPeakOutput, 3);
+  });
+
+  it('surplus charges the battery first, then curtails', () => {
+    const state = makeState();
+    placePlant(state, at(5, 5), PlantType.SolarFarm);
+    placePlant(state, at(6, 5), PlantType.Battery);
+    setNoonClearSky(state);
+    energyStep(state, { chargingDemand: 0 });
+    const expectedCharge =
+      Math.min(BALANCE.energy.solarPeakOutput, BALANCE.energy.batteryPowerLimit) *
+      BALANCE.energy.batteryChargeEfficiency;
+    expect(state.storedEnergy).toBeCloseTo(expectedCharge, 3);
+    // Charge rate is limited, the rest is curtailed.
+    expect(state.lastEnergy.curtailment).toBeCloseTo(
+      BALANCE.energy.solarPeakOutput - BALANCE.energy.batteryPowerLimit,
+      3,
+    );
+  });
+
+  it('curtails everything when storage is full', () => {
+    const state = makeState();
+    placePlant(state, at(5, 5), PlantType.SolarFarm);
+    placePlant(state, at(6, 5), PlantType.Battery);
+    setNoonClearSky(state);
+    state.storedEnergy = BALANCE.energy.batteryCapacity;
+    energyStep(state, { chargingDemand: 0 });
+    expect(state.lastEnergy.curtailment).toBeCloseTo(
+      BALANCE.energy.solarPeakOutput,
+      3,
+    );
+    expect(state.storedEnergy).toBe(BALANCE.energy.batteryCapacity);
+  });
+
+  it('deficit discharges the battery before dispatching biogas', () => {
+    const state = makeState();
+    placePlant(state, at(5, 5), PlantType.Battery);
+    placePlant(state, at(6, 5), PlantType.BiogasPlant);
+    addBuilding(state, at(7, 5), Zone.Commercial, 3);
+    state.tick = TICKS_PER_DAY / 2; // noon: commercial peak
+    state.weather.cloudCover = 1;
+    state.weather.windSpeed = 0;
+    state.storedEnergy = 100;
+    energyStep(state, { chargingDemand: 0 });
+    const demand = state.lastEnergy.buildingConsumption;
+    expect(demand).toBeGreaterThan(0);
+    expect(state.storedEnergy).toBeCloseTo(100 - demand, 3);
+    expect(state.lastEnergy.biogas).toBe(0);
+    expect(state.lastEnergy.deficit).toBe(0);
+  });
+
+  it('dispatches biogas when the battery is empty', () => {
+    const state = makeState();
+    placePlant(state, at(6, 5), PlantType.BiogasPlant);
+    addBuilding(state, at(7, 5), Zone.Commercial, 3);
+    state.tick = TICKS_PER_DAY / 2;
+    state.weather.cloudCover = 1;
+    state.weather.windSpeed = 0;
+    energyStep(state, { chargingDemand: 0 });
+    expect(state.lastEnergy.biogas).toBeCloseTo(
+      state.lastEnergy.buildingConsumption,
+      3,
+    );
+    expect(state.lastEnergy.deficit).toBe(0);
+  });
+
+  it('flags undersupply when nothing can cover the deficit', () => {
+    const state = makeState();
+    placePlant(state, at(6, 5), PlantType.WindTurbine); // provides connection
+    state.weather.windSpeed = 0; // ...but no output
+    for (let i = 0; i < 6; i++) {
+      addBuilding(state, at(8 + i, 5), Zone.Commercial, 3);
+    }
+    state.tick = TICKS_PER_DAY / 2;
+    state.weather.cloudCover = 1;
+    energyStep(state, { chargingDemand: 0 });
+    expect(state.lastEnergy.deficit).toBeCloseTo(
+      state.lastEnergy.buildingConsumption,
+      3,
+    );
+    // With a 100% deficit share every connected building is undersupplied.
+    for (let i = 0; i < 6; i++) {
+      expect(state.layers.supplied[at(8 + i, 5)]).toBe(SupplyStatus.Undersupplied);
+    }
+  });
+
+  it('marks buildings outside the supply radius as not connected', () => {
+    const state = makeState();
+    placePlant(state, at(0, 0), PlantType.WindTurbine);
+    const inside = at(BALANCE.energy.supplyRadius, 0);
+    const outside = at(BALANCE.energy.supplyRadius + 2, 0);
+    addBuilding(state, inside, Zone.Residential, 1);
+    addBuilding(state, outside, Zone.Residential, 1);
+    state.weather.windSpeed = 1; // plenty of power
+    energyStep(state, { chargingDemand: 0 });
+    expect(state.layers.supplied[inside]).toBe(SupplyStatus.Supplied);
+    expect(state.layers.supplied[outside]).toBe(SupplyStatus.NotConnected);
+    // Unconnected buildings do not draw from the grid.
+    expect(state.lastEnergy.buildingConsumption).toBeCloseTo(
+      buildingConsumption(Zone.Residential, 1, 0),
+      3,
+    );
+  });
+
+  it('serves charging demand and accounts it separately', () => {
+    const state = makeState();
+    placePlant(state, at(5, 5), PlantType.WindTurbine);
+    state.weather.windSpeed = 1;
+    energyStep(state, { chargingDemand: 10 });
+    expect(state.lastEnergy.chargingConsumption).toBe(10);
+    expect(state.lastEnergy.curtailment).toBeCloseTo(
+      BALANCE.energy.windPeakOutput - 10,
+      3,
+    );
+  });
+
+  it('records energy history samples', () => {
+    const state = makeState();
+    placePlant(state, at(5, 5), PlantType.WindTurbine);
+    for (let i = 0; i < 200; i++) {
+      state.tick++;
+      energyStep(state, { chargingDemand: 0 });
+    }
+    expect(state.energyHistory.length).toBeGreaterThan(0);
+    for (const point of state.energyHistory) {
+      expect(point.generation).toBeGreaterThanOrEqual(0);
+      expect(point.stateOfCharge).toBeGreaterThanOrEqual(0);
+      expect(point.stateOfCharge).toBeLessThanOrEqual(1);
+    }
+  });
+});

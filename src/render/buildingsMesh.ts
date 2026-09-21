@@ -1,6 +1,6 @@
 import * as THREE from 'three';
 import type { TileDiff } from '../shared/types.ts';
-import { TileType, Zone } from '../shared/types.ts';
+import { SupplyStatus, TileType, Zone } from '../shared/types.ts';
 import type { DiffLayer, RenderEnvironment } from './renderer.ts';
 
 /** Max boxes composing one building. */
@@ -26,6 +26,7 @@ interface TileBuilding {
   zone: Zone;
   density: number;
   variant: number;
+  supplied: SupplyStatus;
 }
 
 const ZONE_BASE_COLORS: Record<number, THREE.Color> = {
@@ -121,6 +122,7 @@ export class BuildingsMesh implements DiffLayer {
   private readonly buildings = new Map<number, TileBuilding>();
   private readonly animations = new Map<number, number>(); // tile -> elapsed
   private tileSlots = new Map<number, { start: number; count: number }>();
+  private windowsDirty = false;
   private readonly matrix = new THREE.Matrix4();
 
   constructor(scene: THREE.Scene, gridSize: number) {
@@ -179,9 +181,15 @@ export class BuildingsMesh implements DiffLayer {
             zone: diff.zone,
             density: diff.density,
             variant: diff.variant,
+            supplied: diff.supplied,
           });
           this.animations.set(diff.index, 0);
           changed = true;
+        } else if (existing.supplied !== diff.supplied) {
+          // Supply flips only affect the lit windows (flicker/dark), so a
+          // window rebuild is enough — no grow animation.
+          existing.supplied = diff.supplied;
+          this.windowsDirty = true;
         }
       } else if (existing) {
         this.buildings.delete(diff.index);
@@ -190,6 +198,10 @@ export class BuildingsMesh implements DiffLayer {
       }
     }
     if (changed) this.rebuild();
+    else if (this.windowsDirty) {
+      this.windowsDirty = false;
+      this.rebuildWindows();
+    }
   }
 
   update(deltaSeconds: number): void {
@@ -241,6 +253,9 @@ export class BuildingsMesh implements DiffLayer {
     const rotationBack = new THREE.Matrix4().makeRotationY(Math.PI);
     let slot = 0;
     for (const [index, building] of this.buildings) {
+      // Buildings without (enough) power stay dark — undersupply flips
+      // tick to tick, which reads as flickering at night.
+      if (building.supplied !== SupplyStatus.Supplied) continue;
       const main = buildingParts(building.zone, building.density, building.variant)[0];
       if (!main) continue;
       const cx = (index % this.gridSize) + 0.5 + main.ox;

@@ -1,6 +1,9 @@
 import { TICKS_PER_DAY } from '../shared/constants.ts';
 import type { GlobalStats } from '../shared/types.ts';
+import { economyStep } from './economy.ts';
+import { energyStep } from './energy.ts';
 import { computeDemand, growthStep } from './growth.ts';
+import { happinessStep } from './happiness.ts';
 import { updateWeather } from './weather.ts';
 import {
   countPopulationAndJobs,
@@ -21,8 +24,12 @@ export function dayNumber(tick: number): number {
 export function stepTick(state: SimState): void {
   state.tick++;
   updateWeather(state);
+  energyStep(state, { chargingDemand: 0 });
   state.lastDemand = computeDemand(state);
   growthStep(state, state.lastDemand);
+  const { population, jobs } = countPopulationAndJobs(state);
+  economyStep(state, population, jobs);
+  happinessStep(state);
 }
 
 export function buildStats(state: SimState): GlobalStats {

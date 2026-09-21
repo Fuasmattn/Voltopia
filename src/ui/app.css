@@ -255,3 +255,114 @@ body,
   line-height: 1.4;
   font-variant-numeric: tabular-nums;
 }
+
+.right-panel {
+  position: absolute;
+  right: 12px;
+  top: 72px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  width: 250px;
+}
+
+.energy-panel {
+  background: var(--hud-bg);
+  border: 1px solid var(--hud-border);
+  border-radius: 12px;
+  padding: 12px 14px;
+  color: var(--hud-text);
+  backdrop-filter: blur(8px);
+  user-select: none;
+}
+
+.energy-panel h2 {
+  font-size: 12px;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--hud-muted);
+  margin-bottom: 8px;
+}
+
+.energy-rows {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  font-size: 12px;
+}
+
+.energy-row {
+  display: flex;
+  justify-content: space-between;
+  font-variant-numeric: tabular-nums;
+}
+
+.energy-row.balance {
+  margin-top: 4px;
+  padding-top: 4px;
+  border-top: 1px solid var(--hud-border);
+  font-weight: 600;
+}
+
+.energy-row.balance.positive { color: #7be07f; }
+.energy-row.balance.negative { color: #e0788a; }
+.energy-row.muted { color: var(--hud-muted); }
+
+.soc-block { margin-top: 10px; }
+
+.soc-label {
+  display: flex;
+  justify-content: space-between;
+  font-size: 11px;
+  color: var(--hud-muted);
+  margin-bottom: 4px;
+}
+
+.soc-track {
+  height: 6px;
+  background: rgba(255, 255, 255, 0.1);
+  border-radius: 3px;
+  overflow: hidden;
+}
+
+.soc-fill {
+  height: 100%;
+  background: #7be07f;
+  transition: width 0.4s;
+}
+
+.energy-graph {
+  width: 100%;
+  margin-top: 10px;
+  background: rgba(255, 255, 255, 0.04);
+  border-radius: 6px;
+}
+
+.energy-legend {
+  display: flex;
+  gap: 12px;
+  font-size: 10px;
+  margin-top: 4px;
+}
+
+.legend-generation { color: #7be07f; }
+.legend-consumption { color: #e0788a; }
+
+.tax-slider {
+  background: var(--hud-bg);
+  border: 1px solid var(--hud-border);
+  border-radius: 12px;
+  padding: 10px 14px;
+  color: var(--hud-text);
+  font-size: 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  backdrop-filter: blur(8px);
+  user-select: none;
+}
+
+.tax-slider input {
+  width: 100%;
+  accent-color: var(--accent);
+}
