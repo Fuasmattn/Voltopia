@@ -172,8 +172,11 @@ export function energyStep(state: SimState, input: EnergyTickInput): void {
   const wind =
     census.windTurbines * BALANCE.energy.windPeakOutput * currentWindFactor(state);
 
-  // Consumption of all connected buildings.
+  // Consumption of all connected buildings, plus their rooftop PV
+  // feed-in (rooftop capacity grows automatically with density).
+  const solarFactorNow = currentSolarFactor(state);
   let buildingDemand = 0;
+  let rooftop = 0;
   const connectedBuildings: number[] = [];
   for (let i = 0; i < layers.tileType.length; i++) {
     if (layers.tileType[i] !== TileType.Empty || layers.density[i] === 0) continue;
@@ -188,11 +191,14 @@ export function energyStep(state: SimState, input: EnergyTickInput): void {
       layers.density[i],
       time,
     );
+    rooftop +=
+      (BALANCE.energy.rooftopSolarPeakByDensity[layers.density[i]] ?? 0) *
+      solarFactorNow;
   }
 
   const chargingDemand = Math.max(0, input.chargingDemand);
   const totalDemand = buildingDemand + chargingDemand;
-  const generation = solar + wind;
+  const generation = solar + wind + rooftop;
 
   const storageCapacity = census.batteries * BALANCE.energy.batteryCapacity;
   const powerLimit = census.batteries * BALANCE.energy.batteryPowerLimit;
@@ -243,6 +249,7 @@ export function energyStep(state: SimState, input: EnergyTickInput): void {
     solar,
     wind,
     biogas,
+    rooftop,
     buildingConsumption: buildingDemand,
     chargingConsumption: chargingDemand,
     curtailment,
@@ -251,7 +258,7 @@ export function energyStep(state: SimState, input: EnergyTickInput): void {
 
   if (state.tick % TICKS_PER_HISTORY_SAMPLE === 0) {
     pushEnergyHistory(state, {
-      generation: solar + wind + biogas,
+      generation: generation + biogas,
       consumption: totalDemand,
       stateOfCharge: storageCapacity > 0 ? state.storedEnergy / storageCapacity : 0,
     });

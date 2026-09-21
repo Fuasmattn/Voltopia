@@ -74,6 +74,11 @@ export const BALANCE = {
     biogasMaxOutput: 90,
     /** Tiles around a plant that receive supply (Chebyshev distance). */
     supplyRadius: 14,
+    /**
+     * Rooftop PV grows automatically with density: peak output per
+     * building by density level 1..3 (only connected buildings feed in).
+     */
+    rooftopSolarPeakByDensity: [0, 0, 2, 6],
     /** Base consumption per building by zone and density level 1..3. */
     consumptionByZoneAndDensity: {
       [Zone.Residential]: [0, 2, 4.5, 8],

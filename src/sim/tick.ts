@@ -48,7 +48,12 @@ export function buildStats(state: SimState): GlobalStats {
     day: dayNumber(state.tick),
     weather: { ...state.weather },
     energy: {
-      generation: { solar: e.solar, wind: e.wind, biogas: e.biogas },
+      generation: {
+        solar: e.solar,
+        wind: e.wind,
+        biogas: e.biogas,
+        rooftop: e.rooftop,
+      },
       consumption: {
         buildings: e.buildingConsumption,
         charging: e.chargingConsumption,

@@ -74,6 +74,7 @@ export interface SimState {
     solar: number;
     wind: number;
     biogas: number;
+    rooftop: number;
     buildingConsumption: number;
     chargingConsumption: number;
     curtailment: number;
@@ -118,6 +119,7 @@ export function createSimState(seed: number, size: number): SimState {
       solar: 0,
       wind: 0,
       biogas: 0,
+      rooftop: 0,
       buildingConsumption: 0,
       chargingConsumption: 0,
       curtailment: 0,

@@ -41,6 +41,37 @@ const ROOF_COLORS: Record<number, THREE.Color> = {
   [Zone.Retail]: new THREE.Color(0xb85f66),
 };
 
+const ROOFTOP_PV_COLOR = new THREE.Color(0x2b3d66);
+
+/**
+ * Rooftop PV panel on top of the finished part stack — buildings grow
+ * panels automatically from density 2 (mirrors the sim's rooftop
+ * feed-in).
+ */
+function withRooftopPanel(parts: BuildingPart[], density: number): BuildingPart[] {
+  if (density < 2 || parts.length === 0) return parts;
+  let top = 0;
+  let topPart = parts[0];
+  for (const p of parts) {
+    if (p.oy + p.sy > top) {
+      top = p.oy + p.sy;
+      topPart = p;
+    }
+  }
+  parts.push(
+    part(
+      topPart.sx * 0.7,
+      0.03,
+      topPart.sz * 0.55,
+      topPart.ox,
+      top,
+      topPart.oz,
+      ROOFTOP_PV_COLOR,
+    ),
+  );
+  return parts;
+}
+
 /**
  * Procedural low-poly building parts for a zone/density/variant triple.
  * Deterministic in its inputs so every client renders the same city.
@@ -95,7 +126,7 @@ export function buildingParts(
       parts.push(part(0.84, 0.1, 0.84, 0, h, 0, roof));
     }
   }
-  return parts;
+  return withRooftopPanel(parts, density);
 }
 
 function part(

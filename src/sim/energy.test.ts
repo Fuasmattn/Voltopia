@@ -180,8 +180,9 @@ describe('energyStep', () => {
     state.storedEnergy = 100;
     energyStep(state, { chargingDemand: 0 });
     const demand = state.lastEnergy.buildingConsumption;
+    const rooftop = state.lastEnergy.rooftop;
     expect(demand).toBeGreaterThan(0);
-    expect(state.storedEnergy).toBeCloseTo(100 - demand, 3);
+    expect(state.storedEnergy).toBeCloseTo(100 - (demand - rooftop), 3);
     expect(state.lastEnergy.biogas).toBe(0);
     expect(state.lastEnergy.deficit).toBe(0);
   });
@@ -195,7 +196,7 @@ describe('energyStep', () => {
     state.weather.windSpeed = 0;
     energyStep(state, { chargingDemand: 0 });
     expect(state.lastEnergy.biogas).toBeCloseTo(
-      state.lastEnergy.buildingConsumption,
+      state.lastEnergy.buildingConsumption - state.lastEnergy.rooftop,
       3,
     );
     expect(state.lastEnergy.deficit).toBe(0);
@@ -212,13 +213,18 @@ describe('energyStep', () => {
     state.weather.cloudCover = 1;
     energyStep(state, { chargingDemand: 0 });
     expect(state.lastEnergy.deficit).toBeCloseTo(
-      state.lastEnergy.buildingConsumption,
+      state.lastEnergy.buildingConsumption - state.lastEnergy.rooftop,
       3,
     );
-    // With a 100% deficit share every connected building is undersupplied.
+    // The deficit share is near-total (rooftop covers only a sliver), so
+    // almost all connected buildings flicker into undersupply.
+    let undersupplied = 0;
     for (let i = 0; i < 6; i++) {
-      expect(state.layers.supplied[at(8 + i, 5)]).toBe(SupplyStatus.Undersupplied);
+      if (state.layers.supplied[at(8 + i, 5)] === SupplyStatus.Undersupplied) {
+        undersupplied++;
+      }
     }
+    expect(undersupplied).toBeGreaterThanOrEqual(4);
   });
 
   it('marks buildings outside the supply radius as not connected', () => {
@@ -249,6 +255,33 @@ describe('energyStep', () => {
       BALANCE.energy.windPeakOutput - 10,
       3,
     );
+  });
+
+  it('rooftop PV feeds in from dense connected buildings at noon', () => {
+    const state = makeState();
+    placePlant(state, at(5, 5), PlantType.WindTurbine); // provides connection
+    addBuilding(state, at(7, 5), Zone.Residential, 3);
+    addBuilding(state, at(8, 5), Zone.Residential, 1); // no rooftop yet
+    setNoonClearSky(state);
+    energyStep(state, { chargingDemand: 0 });
+    expect(state.lastEnergy.rooftop).toBeCloseTo(
+      BALANCE.energy.rooftopSolarPeakByDensity[3],
+      3,
+    );
+    // At night there is no rooftop feed-in.
+    state.tick = 0;
+    energyStep(state, { chargingDemand: 0 });
+    expect(state.lastEnergy.rooftop).toBe(0);
+  });
+
+  it('unconnected buildings do not feed rooftop PV into the grid', () => {
+    const state = makeState();
+    placePlant(state, at(0, 0), PlantType.WindTurbine);
+    const outside = at(BALANCE.energy.supplyRadius + 3, 20);
+    addBuilding(state, outside, Zone.Residential, 3);
+    setNoonClearSky(state);
+    energyStep(state, { chargingDemand: 0 });
+    expect(state.lastEnergy.rooftop).toBe(0);
   });
 
   it('records energy history samples', () => {

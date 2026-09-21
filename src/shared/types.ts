@@ -58,7 +58,7 @@ export interface EnergyHistoryPoint {
 }
 
 export interface EnergyStats {
-  generation: { solar: number; wind: number; biogas: number };
+  generation: { solar: number; wind: number; biogas: number; rooftop: number };
   consumption: { buildings: number; charging: number };
   /** Absolute stored energy across all batteries. */
   storedEnergy: number;

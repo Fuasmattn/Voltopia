@@ -28,7 +28,10 @@ function formatEnergy(value: number): string {
  */
 export function EnergyPanel({ energy }: { energy: EnergyStats }) {
   const totalGeneration =
-    energy.generation.solar + energy.generation.wind + energy.generation.biogas;
+    energy.generation.solar +
+    energy.generation.wind +
+    energy.generation.biogas +
+    energy.generation.rooftop;
   const totalConsumption =
     energy.consumption.buildings + energy.consumption.charging;
   const balance = totalGeneration - totalConsumption;
@@ -55,6 +58,12 @@ export function EnergyPanel({ energy }: { energy: EnergyStats }) {
           <span>♻️ Biogas</span>
           <span>{formatEnergy(energy.generation.biogas)}</span>
         </div>
+        {energy.generation.rooftop > 0.05 && (
+          <div className="energy-row" data-testid="energy-rooftop">
+            <span>🏠 Rooftop PV</span>
+            <span>{formatEnergy(energy.generation.rooftop)}</span>
+          </div>
+        )}
         <div className="energy-row" data-testid="energy-consumption">
           <span>🏙 Consumption</span>
           <span>{formatEnergy(totalConsumption)}</span>
