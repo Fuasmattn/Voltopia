@@ -1,16 +1,24 @@
 import { OverlayMode } from '../shared/types.ts';
+import { useI18n, type TranslationKey } from './i18n.tsx';
 
-const MODES: Array<{ mode: OverlayMode; label: string; title: string }> = [
-  { mode: OverlayMode.None, label: 'Off', title: 'No overlay' },
+const MODES: Array<{
+  mode: OverlayMode;
+  id: string;
+  label: TranslationKey;
+  title: TranslationKey;
+}> = [
+  { mode: OverlayMode.None, id: 'off', label: 'overlay.off', title: 'overlay.off.title' },
   {
     mode: OverlayMode.Supply,
-    label: 'Supply',
-    title: 'Supply status: green = supplied, orange = undersupplied, red = not connected',
+    id: 'supply',
+    label: 'overlay.supply',
+    title: 'overlay.supply.title',
   },
   {
     mode: OverlayMode.Demand,
-    label: 'Demand',
-    title: 'Growth demand per zone: red = none, green = high',
+    id: 'demand',
+    label: 'overlay.demand',
+    title: 'overlay.demand.title',
   },
 ];
 
@@ -21,19 +29,20 @@ export function OverlayToggle({
   mode: OverlayMode;
   onChange: (mode: OverlayMode) => void;
 }) {
+  const { t } = useI18n();
   return (
     <div className="overlay-toggle" data-testid="overlay-toggle">
-      <span className="overlay-toggle-label">Overlay</span>
+      <span className="overlay-toggle-label">{t('overlay.label')}</span>
       {MODES.map((entry) => (
         <button
           key={entry.mode}
           type="button"
-          title={entry.title}
+          title={t(entry.title)}
           className={mode === entry.mode ? 'active' : ''}
-          data-testid={`overlay-${entry.label.toLowerCase()}`}
+          data-testid={`overlay-${entry.id}`}
           onClick={() => onChange(entry.mode)}
         >
-          {entry.label}
+          {t(entry.label)}
         </button>
       ))}
     </div>

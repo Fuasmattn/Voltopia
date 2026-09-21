@@ -23,7 +23,7 @@ export function paintZones(
 
   const cost = paintable.length * BALANCE.costs.zonePerTile;
   if (cost > state.money) {
-    return { rejected: 'Not enough money to zone this area' };
+    return { rejected: 'notEnoughMoney' };
   }
 
   const undo: UndoEntry = {

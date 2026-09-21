@@ -70,7 +70,7 @@ export function buildRoads(state: SimState, tiles: number[]): BuildResult {
 
   const cost = buildable.length * BALANCE.costs.roadPerTile;
   if (cost > state.money) {
-    return { rejected: 'Not enough money for this road' };
+    return { rejected: 'notEnoughMoney' };
   }
 
   const affected = withNeighbors(state, buildable);
@@ -128,7 +128,7 @@ export function bulldozeTiles(state: SimState, tiles: number[]): BuildResult {
 /** Revert the most recent build/bulldoze action. */
 export function undoLastAction(state: SimState): BuildResult {
   const entry = state.undoStack.pop();
-  if (!entry) return { rejected: 'Nothing to undo' };
+  if (!entry) return { rejected: 'nothingToUndo' };
 
   const { layers } = state;
   state.money += entry.moneyDelta;

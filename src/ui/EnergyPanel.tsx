@@ -1,18 +1,17 @@
 import type { EnergyStats } from '../shared/types.ts';
+import { useI18n } from './i18n.tsx';
 
 const GRAPH_WIDTH = 220;
 const GRAPH_HEIGHT = 64;
 
 /** Polyline points for one metric over the history samples. */
-function polyline(
-  values: number[],
-  maxValue: number,
-): string {
+function polyline(values: number[], maxValue: number): string {
   if (values.length < 2) return '';
   const stepX = GRAPH_WIDTH / (values.length - 1);
   return values
     .map((value, i) => {
-      const y = GRAPH_HEIGHT - (Math.min(value, maxValue) / maxValue) * (GRAPH_HEIGHT - 4) - 2;
+      const y =
+        GRAPH_HEIGHT - (Math.min(value, maxValue) / maxValue) * (GRAPH_HEIGHT - 4) - 2;
       return `${(i * stepX).toFixed(1)},${y.toFixed(1)}`;
     })
     .join(' ');
@@ -27,6 +26,7 @@ function formatEnergy(value: number): string {
  * charge, curtailment/deficit, and a mini graph of the last in-game day.
  */
 export function EnergyPanel({ energy }: { energy: EnergyStats }) {
+  const { t } = useI18n();
   const totalGeneration =
     energy.generation.solar +
     energy.generation.wind +
@@ -44,44 +44,44 @@ export function EnergyPanel({ energy }: { energy: EnergyStats }) {
 
   return (
     <aside className="energy-panel" data-testid="energy-panel">
-      <h2>Energy</h2>
+      <h2>{t('energy.title')}</h2>
       <div className="energy-rows">
         <div className="energy-row" data-testid="energy-solar">
-          <span>☀️ Solar</span>
+          <span>{t('energy.solar')}</span>
           <span>{formatEnergy(energy.generation.solar)}</span>
         </div>
         <div className="energy-row" data-testid="energy-wind">
-          <span>🌀 Wind</span>
+          <span>{t('energy.wind')}</span>
           <span>{formatEnergy(energy.generation.wind)}</span>
         </div>
         <div className="energy-row" data-testid="energy-biogas">
-          <span>♻️ Biogas</span>
+          <span>{t('energy.biogas')}</span>
           <span>{formatEnergy(energy.generation.biogas)}</span>
         </div>
         {energy.generation.rooftop > 0.05 && (
           <div className="energy-row" data-testid="energy-rooftop">
-            <span>🏠 Rooftop PV</span>
+            <span>{t('energy.rooftop')}</span>
             <span>{formatEnergy(energy.generation.rooftop)}</span>
           </div>
         )}
         <div className="energy-row" data-testid="energy-consumption">
-          <span>🏙 Consumption</span>
+          <span>{t('energy.consumption')}</span>
           <span>{formatEnergy(totalConsumption)}</span>
         </div>
         <div className="energy-row" data-testid="energy-charging">
-          <span>🔌 EV charging</span>
+          <span>{t('energy.charging')}</span>
           <span>{formatEnergy(energy.consumption.charging)}</span>
         </div>
         <div
           className={`energy-row balance ${balance >= 0 ? 'positive' : 'negative'}`}
           data-testid="energy-balance"
         >
-          <span>{balance >= 0 ? 'Surplus' : 'Deficit'}</span>
+          <span>{balance >= 0 ? t('energy.surplus') : t('energy.deficit')}</span>
           <span>{formatEnergy(Math.abs(balance))}</span>
         </div>
         {energy.curtailment > 0.05 && (
           <div className="energy-row muted" data-testid="energy-curtailment">
-            <span>Curtailed</span>
+            <span>{t('energy.curtailed')}</span>
             <span>{formatEnergy(energy.curtailment)}</span>
           </div>
         )}
@@ -89,7 +89,7 @@ export function EnergyPanel({ energy }: { energy: EnergyStats }) {
 
       <div className="soc-block" data-testid="energy-soc">
         <div className="soc-label">
-          <span>Storage (SoC)</span>
+          <span>{t('energy.storage')}</span>
           <span>
             {energy.storageCapacity > 0
               ? `${Math.round(stateOfCharge * 100)}%`
@@ -105,7 +105,7 @@ export function EnergyPanel({ energy }: { energy: EnergyStats }) {
         className="energy-graph"
         viewBox={`0 0 ${GRAPH_WIDTH} ${GRAPH_HEIGHT}`}
         role="img"
-        aria-label="Generation and consumption over the last day"
+        aria-label={t('energy.graph.label')}
       >
         <polyline
           points={polyline(consumptionSeries, graphMax)}
@@ -121,8 +121,8 @@ export function EnergyPanel({ energy }: { energy: EnergyStats }) {
         />
       </svg>
       <div className="energy-legend">
-        <span className="legend-generation">generation</span>
-        <span className="legend-consumption">consumption</span>
+        <span className="legend-generation">{t('energy.legend.generation')}</span>
+        <span className="legend-consumption">{t('energy.legend.consumption')}</span>
       </div>
     </aside>
   );

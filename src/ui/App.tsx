@@ -7,6 +7,9 @@ import type { Speed } from '../shared/types.ts';
 import { Clock } from './Clock.tsx';
 import { DemandBars } from './DemandBars.tsx';
 import { EnergyPanel } from './EnergyPanel.tsx';
+import { HelpPage } from './HelpPage.tsx';
+import { ImprintPage } from './ImprintPage.tsx';
+import { rejectionKey, useI18n, type Locale } from './i18n.tsx';
 import { TaxSlider } from './TaxSlider.tsx';
 import { GameView } from './GameView.tsx';
 import { SpeedControls } from './SpeedControls.tsx';
@@ -26,6 +29,7 @@ function happinessEmoji(happiness: number): string {
 
 /** Loads the autosave before booting the simulation. */
 export function App() {
+  const { t } = useI18n();
   const [boot, setBoot] = useState<{ save: SaveGame | null } | null>(null);
 
   useEffect(() => {
@@ -39,12 +43,33 @@ export function App() {
   }, []);
 
   if (!boot) {
-    return <div className="boot-screen">Voltopia is loading…</div>;
+    return <div className="boot-screen">{t('boot.loading')}</div>;
   }
   return <Game save={boot.save} />;
 }
 
+function LanguageSwitch() {
+  const { locale, setLocale } = useI18n();
+  const options: Locale[] = ['en', 'de'];
+  return (
+    <span className="language-switch" data-testid="language-switch">
+      {options.map((option) => (
+        <button
+          key={option}
+          type="button"
+          className={locale === option ? 'active' : ''}
+          data-testid={`language-${option}`}
+          onClick={() => setLocale(option)}
+        >
+          {option.toUpperCase()}
+        </button>
+      ))}
+    </span>
+  );
+}
+
 function Game({ save }: { save: SaveGame | null }) {
+  const { t } = useI18n();
   const bridge = useSimBridge({
     seed: save?.seed ?? Date.now() % 2147483647,
     ...(save ? { save } : {}),
@@ -53,6 +78,7 @@ function Game({ save }: { save: SaveGame | null }) {
   const rendererRef = useRef<GameRenderer | null>(null);
   const { tool, setTool } = useTools(bridge, callbacksRef, rendererRef);
   const [overlay, setOverlay] = useState<OverlayMode>(OverlayMode.None);
+  const [page, setPage] = useState<'help' | 'imprint' | null>(null);
 
   const stats = bridge.stats;
 
@@ -82,7 +108,7 @@ function Game({ save }: { save: SaveGame | null }) {
   }, [bridge]);
 
   const startNewGame = async (): Promise<void> => {
-    if (!window.confirm('Start a new city? The current one will be erased.')) {
+    if (!window.confirm(t('newCity.confirm'))) {
       return;
     }
     await storage.clear();
@@ -92,6 +118,13 @@ function Game({ save }: { save: SaveGame | null }) {
   useEffect(() => {
     if (stats) rendererRef.current?.setStats(stats);
   }, [stats]);
+
+  const rejection = bridge.rejection
+    ? (() => {
+        const key = rejectionKey(bridge.rejection);
+        return key ? t(key) : bridge.rejection;
+      })()
+    : null;
 
   return (
     <div className="app">
@@ -104,28 +137,28 @@ function Game({ save }: { save: SaveGame | null }) {
               <span className="hud-stat-value">
                 {Math.round(stats.money).toLocaleString('en-US')} ⌁
               </span>
-              <span className="hud-stat-label">funds</span>
+              <span className="hud-stat-label">{t('hud.funds')}</span>
             </div>
             <div className="hud-stat" data-testid="population">
               <span className="hud-stat-value">{stats.population}</span>
-              <span className="hud-stat-label">residents</span>
+              <span className="hud-stat-label">{t('hud.residents')}</span>
             </div>
             <div className="hud-stat" data-testid="jobs">
               <span className="hud-stat-value">{stats.jobs}</span>
-              <span className="hud-stat-label">jobs</span>
+              <span className="hud-stat-label">{t('hud.jobs')}</span>
             </div>
             <div className="hud-stat" data-testid="happiness">
               <span className="hud-stat-value">
                 {happinessEmoji(stats.happiness)} {Math.round(stats.happiness * 100)}%
               </span>
-              <span className="hud-stat-label">happiness</span>
+              <span className="hud-stat-label">{t('hud.happiness')}</span>
             </div>
             <DemandBars demand={stats.demand} />
             <Clock timeOfDay={stats.timeOfDay} day={stats.day} />
             <div
               className="hud-weather"
               data-testid="weather"
-              title="Cloud cover / wind speed"
+              title={t('hud.weather.title')}
             >
               <span>☁️ {Math.round(stats.weather.cloudCover * 100)}%</span>
               <span>💨 {Math.round(stats.weather.windSpeed * 100)}%</span>
@@ -155,7 +188,7 @@ function Game({ save }: { save: SaveGame | null }) {
           <label
             className="smart-charging-toggle"
             data-testid="smart-charging"
-            title="EV charging automatically follows the generation surplus"
+            title={t('smartCharging.title')}
           >
             <input
               type="checkbox"
@@ -164,7 +197,7 @@ function Game({ save }: { save: SaveGame | null }) {
                 bridge.send({ type: 'setSmartCharging', enabled: e.target.checked })
               }
             />
-            <span>⚡ Smart charging</span>
+            <span>{t('smartCharging.label')}</span>
           </label>
           <button
             type="button"
@@ -172,19 +205,36 @@ function Game({ save }: { save: SaveGame | null }) {
             data-testid="new-game"
             onClick={() => void startNewGame()}
           >
-            New city
+            {t('newCity.label')}
           </button>
         </div>
       )}
-      {bridge.rejection && (
+      {rejection && (
         <div className="rejection-toast" data-testid="rejection">
-          {bridge.rejection}
+          {rejection}
         </div>
       )}
       <OverlayToggle mode={overlay} onChange={setOverlay} />
-      <footer className="hud-help">
-        drag right mouse: pan · wheel: zoom · Q/E: rotate
+      <footer className="hud-footer">
+        <span className="hud-footer-hint">{t('footer.hint')}</span>
+        <button
+          type="button"
+          data-testid="open-help"
+          onClick={() => setPage('help')}
+        >
+          {t('footer.help')}
+        </button>
+        <button
+          type="button"
+          data-testid="open-imprint"
+          onClick={() => setPage('imprint')}
+        >
+          {t('footer.imprint')}
+        </button>
+        <LanguageSwitch />
       </footer>
+      {page === 'help' && <HelpPage onClose={() => setPage(null)} />}
+      {page === 'imprint' && <ImprintPage onClose={() => setPage(null)} />}
     </div>
   );
 }

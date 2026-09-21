@@ -1,4 +1,5 @@
 import type { DemandStats } from '../shared/types.ts';
+import { useI18n } from './i18n.tsx';
 
 const BARS: Array<{ key: keyof DemandStats; label: string; className: string }> = [
   { key: 'residential', label: 'R', className: 'demand-residential' },
@@ -8,8 +9,9 @@ const BARS: Array<{ key: keyof DemandStats; label: string; className: string }> 
 
 /** Compact R/C/S demand indicator (S = shopping/retail). */
 export function DemandBars({ demand }: { demand: DemandStats }) {
+  const { t } = useI18n();
   return (
-    <div className="demand-bars" title="Demand: residential / commercial / retail">
+    <div className="demand-bars" title={t('hud.demand.title')}>
       {BARS.map(({ key, label, className }) => {
         const value = demand[key];
         const height = Math.round(Math.abs(value) * 100);

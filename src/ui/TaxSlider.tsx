@@ -1,4 +1,5 @@
 import { BALANCE } from '../shared/constants.ts';
+import { useI18n } from './i18n.tsx';
 
 export function TaxSlider({
   rate,
@@ -7,10 +8,11 @@ export function TaxSlider({
   rate: number;
   onChange: (rate: number) => void;
 }) {
+  const { t } = useI18n();
   return (
     <label className="tax-slider" data-testid="tax-slider">
       <span>
-        Tax rate <strong>{Math.round(rate * 100)}%</strong>
+        {t('tax.label')} <strong>{Math.round(rate * 100)}%</strong>
       </span>
       <input
         type="range"

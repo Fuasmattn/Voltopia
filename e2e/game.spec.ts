@@ -69,6 +69,32 @@ test('game state persists across a reload', async ({ page }) => {
   expect(await readTick(page)).toBeGreaterThanOrEqual(beforeSave);
 });
 
+test('help and imprint pages work in both languages', async ({ page }) => {
+  // Default (non-German browser) is English.
+  await page.getByTestId('open-help').click();
+  await expect(page.getByTestId('help-page')).toBeVisible();
+  await expect(page.getByTestId('help-page')).toContainText('Goal');
+  await page.getByTestId('help-page').getByRole('button').click(); // close
+  await expect(page.getByTestId('help-page')).toHaveCount(0);
+
+  // Switch to German: UI translates immediately.
+  await page.getByTestId('language-de').click();
+  await expect(page.getByTestId('tool-road')).toContainText('Straße');
+  await page.getByTestId('open-help').click();
+  await expect(page.getByTestId('help-page')).toContainText('Ziel');
+  await page.getByTestId('help-page').getByRole('button').click();
+
+  await page.getByTestId('open-imprint').click();
+  await expect(page.getByTestId('imprint-page')).toContainText('Thorsten Rinne');
+  await expect(page.getByTestId('imprint-page')).toContainText('Impressum');
+
+  // The chosen language survives a reload.
+  await page.reload();
+  await expect(page.getByTestId('tool-road')).toContainText('Straße', {
+    timeout: 15_000,
+  });
+});
+
 test('building a road costs money (needs WebGL)', async ({ page }) => {
   test.skip(!(await has3dView(page)), 'WebGL not available in this environment');
 

@@ -1,0 +1,25 @@
+import { Modal } from './Modal.tsx';
+import { useI18n, type TranslationKey } from './i18n.tsx';
+
+const SECTIONS: Array<{ title: TranslationKey; body: TranslationKey }> = [
+  { title: 'help.goal.title', body: 'help.goal.body' },
+  { title: 'help.build.title', body: 'help.build.body' },
+  { title: 'help.energy.title', body: 'help.energy.body' },
+  { title: 'help.ev.title', body: 'help.ev.body' },
+  { title: 'help.icons.title', body: 'help.icons.body' },
+  { title: 'help.controls.title', body: 'help.controls.body' },
+];
+
+export function HelpPage({ onClose }: { onClose: () => void }) {
+  const { t } = useI18n();
+  return (
+    <Modal title={t('help.title')} onClose={onClose} testId="help-page">
+      {SECTIONS.map((section) => (
+        <section key={section.title}>
+          <h3>{t(section.title)}</h3>
+          <p>{t(section.body)}</p>
+        </section>
+      ))}
+    </Modal>
+  );
+}

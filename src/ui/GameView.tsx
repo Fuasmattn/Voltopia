@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { GameRenderer, type RendererCallbacks } from '../render/renderer.ts';
 import { GRID_SIZE } from '../shared/constants.ts';
+import { useI18n } from './i18n.tsx';
 import type { SimBridge } from './useSimBridge.ts';
 
 /**
@@ -17,6 +18,7 @@ export function GameView({
   callbacksRef: React.RefObject<RendererCallbacks>;
   rendererRef: React.RefObject<GameRenderer | null>;
 }) {
+  const { t } = useI18n();
   const containerRef = useRef<HTMLDivElement>(null);
   const [webglError, setWebglError] = useState(false);
 
@@ -62,8 +64,7 @@ export function GameView({
     <div ref={containerRef} className="game-view" data-testid="game-view">
       {webglError && (
         <div className="webgl-fallback" data-testid="webgl-fallback">
-          3D view unavailable (WebGL not supported here) — simulation keeps
-          running.
+          {t('webgl.fallback')}
         </div>
       )}
     </div>

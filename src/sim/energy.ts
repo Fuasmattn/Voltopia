@@ -28,13 +28,13 @@ export function placePlant(
   plant: PlantType,
 ): BuildResult {
   const { layers } = state;
-  if (plant === PlantType.None) return { rejected: 'No plant selected' };
+  if (plant === PlantType.None) return { rejected: 'noPlantSelected' };
   if (layers.tileType[tile] !== TileType.Empty || layers.density[tile] !== 0) {
-    return { rejected: 'This tile is already occupied' };
+    return { rejected: 'tileOccupied' };
   }
   const cost = BALANCE.costs.plant[plant];
   if (cost > state.money) {
-    return { rejected: 'Not enough money for this plant' };
+    return { rejected: 'notEnoughMoney' };
   }
 
   const undo: UndoEntry = {
