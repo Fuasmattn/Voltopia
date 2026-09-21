@@ -127,6 +127,14 @@ export const BALANCE = {
     densifyMinAge: TICKS_PER_DAY / 4,
     /** Chance (0..1) that an eligible growth attempt succeeds. */
     growthChance: 0.6,
+    /**
+     * Abandonment: after this many ticks without full supply a building
+     * starts to decay (one density level at a time, eventually emptying).
+     * Only active once the energy system is in play (a plant exists).
+     */
+    abandonAfterTicks: TICKS_PER_DAY,
+    /** Per-tick chance that an eligible troubled building decays. */
+    abandonChancePerTick: 0.01,
   },
 
   happiness: {

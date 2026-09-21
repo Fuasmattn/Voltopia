@@ -1,7 +1,9 @@
 import { describe, expect, it } from 'vitest';
 import { BALANCE } from '../shared/constants.ts';
 import { tileIndex } from '../shared/grid.ts';
-import { computeDemand, growthStep } from './growth.ts';
+import { computeDemand, decayStep, growthStep } from './growth.ts';
+import { placePlant } from './energy.ts';
+import { PlantType } from '../shared/types.ts';
 import { buildRoads } from './roads.ts';
 import { createSimState, SupplyStatus, TileType, Zone, type SimState } from './state.ts';
 import { paintZones } from './zones.ts';
@@ -137,6 +139,57 @@ describe('growthStep', () => {
     const b = build();
     expect([...a.layers.density]).toEqual([...b.layers.density]);
     expect([...a.layers.variant]).toEqual([...b.layers.variant]);
+  });
+
+  it('chronically unpowered buildings decay and eventually empty', () => {
+    const state = cityWithRoad();
+    placePlant(state, at(14, 14), PlantType.WindTurbine); // activates the grid
+    state.layers.zone[at(4, 4)] = Zone.Residential;
+    state.layers.density[at(4, 4)] = 3;
+    state.layers.supplied[at(4, 4)] = SupplyStatus.Undersupplied;
+    for (let i = 0; i < BALANCE.growth.abandonAfterTicks * 8; i++) {
+      decayStep(state);
+      // decayStep resets nothing here: keep the tile troubled
+      state.layers.supplied[at(4, 4)] = SupplyStatus.Undersupplied;
+    }
+    expect(state.layers.density[at(4, 4)]).toBe(0);
+  });
+
+  it('supplied buildings never decay', () => {
+    const state = cityWithRoad();
+    placePlant(state, at(14, 14), PlantType.WindTurbine);
+    state.layers.zone[at(4, 4)] = Zone.Residential;
+    state.layers.density[at(4, 4)] = 2;
+    state.layers.supplied[at(4, 4)] = SupplyStatus.Supplied;
+    for (let i = 0; i < BALANCE.growth.abandonAfterTicks * 4; i++) {
+      decayStep(state);
+    }
+    expect(state.layers.density[at(4, 4)]).toBe(2);
+  });
+
+  it('no decay before the first plant exists', () => {
+    const state = cityWithRoad();
+    state.layers.zone[at(4, 4)] = Zone.Residential;
+    state.layers.density[at(4, 4)] = 2;
+    state.layers.supplied[at(4, 4)] = SupplyStatus.NotConnected;
+    for (let i = 0; i < BALANCE.growth.abandonAfterTicks * 4; i++) {
+      decayStep(state);
+    }
+    expect(state.layers.density[at(4, 4)]).toBe(2);
+  });
+
+  it('brief undersupply dips recover instead of accumulating', () => {
+    const state = cityWithRoad();
+    placePlant(state, at(14, 14), PlantType.WindTurbine);
+    state.layers.zone[at(4, 4)] = Zone.Residential;
+    state.layers.density[at(4, 4)] = 2;
+    // 30% troubled ticks: the leaky counter must stay near zero.
+    for (let i = 0; i < BALANCE.growth.abandonAfterTicks * 6; i++) {
+      state.layers.supplied[at(4, 4)] =
+        i % 10 < 3 ? SupplyStatus.Undersupplied : SupplyStatus.Supplied;
+      decayStep(state);
+    }
+    expect(state.layers.density[at(4, 4)]).toBe(2);
   });
 
   it('commercial grows once residents exist', () => {

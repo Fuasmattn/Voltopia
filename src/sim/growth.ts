@@ -138,3 +138,38 @@ export function energySystemActive(state: SimState): boolean {
   }
   return false;
 }
+
+/**
+ * Abandonment: buildings track how long they have been without full
+ * supply; after a grace period they decay one density level at a time
+ * until the lot is vacant again. Inactive until the first plant exists,
+ * so a young pre-grid settlement doesn't self-destruct.
+ */
+export function decayStep(state: SimState): void {
+  const { layers } = state;
+  const active = energySystemActive(state);
+  for (let i = 0; i < layers.density.length; i++) {
+    if (layers.tileType[i] !== TileType.Empty || layers.density[i] === 0) {
+      layers.troubledTicks[i] = 0;
+      continue;
+    }
+    if (!active) {
+      layers.troubledTicks[i] = 0;
+      continue;
+    }
+    // Leaky counter: undersupply flickers tick to tick, so supplied ticks
+    // drain the counter faster than troubled ticks fill it. Chronic
+    // trouble accumulates; occasional dips recover.
+    if (layers.supplied[i] === SupplyStatus.Supplied) {
+      layers.troubledTicks[i] = Math.max(0, layers.troubledTicks[i] - 2);
+      continue;
+    }
+    layers.troubledTicks[i]++;
+    if (layers.troubledTicks[i] < BALANCE.growth.abandonAfterTicks) continue;
+    if (!state.rng.chance(BALANCE.growth.abandonChancePerTick)) continue;
+    layers.density[i]--;
+    layers.buildingAge[i] = 0;
+    layers.troubledTicks[i] = 0;
+    markDirty(state, i);
+  }
+}

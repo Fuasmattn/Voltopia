@@ -47,6 +47,8 @@ export interface TileLayers {
   plantType: Uint8Array;
   /** Ticks since the building on this tile last changed (not persisted). */
   buildingAge: Uint32Array;
+  /** Consecutive ticks without full supply (not persisted). */
+  troubledTicks: Uint32Array;
 }
 
 export interface SimState {
@@ -93,6 +95,7 @@ export function createTileLayers(size: number): TileLayers {
     supplied: new Uint8Array(tiles),
     plantType: new Uint8Array(tiles),
     buildingAge: new Uint32Array(tiles),
+    troubledTicks: new Uint32Array(tiles),
   };
 }
 
