@@ -79,6 +79,18 @@ export function EnergyPanel({ energy }: { energy: EnergyStats }) {
           <span>{balance >= 0 ? t('energy.surplus') : t('energy.deficit')}</span>
           <span>{formatEnergy(Math.abs(balance))}</span>
         </div>
+        {energy.gridImport > 0.05 && (
+          <div className="energy-row negative-muted" data-testid="energy-import">
+            <span>{t('energy.import')}</span>
+            <span>{formatEnergy(energy.gridImport)}</span>
+          </div>
+        )}
+        {energy.gridExport > 0.05 && (
+          <div className="energy-row muted" data-testid="energy-export">
+            <span>{t('energy.export')}</span>
+            <span>{formatEnergy(energy.gridExport)}</span>
+          </div>
+        )}
         {energy.curtailment > 0.05 && (
           <div className="energy-row muted" data-testid="energy-curtailment">
             <span>{t('energy.curtailed')}</span>

@@ -63,6 +63,8 @@ export function buildStats(state: SimState): GlobalStats {
       storageCapacity: totalStorageCapacity(state),
       curtailment: e.curtailment,
       deficit: e.deficit,
+      gridImport: e.gridImport,
+      gridExport: e.gridExport,
       history: state.energyHistory.slice(),
     },
     taxRate: state.taxRate,

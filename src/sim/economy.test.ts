@@ -60,6 +60,26 @@ describe('economyStep', () => {
       6,
     );
   });
+
+  it('grid imports cost money, exports earn a little', () => {
+    const state = createSimState(1, SIZE);
+    state.lastEnergy.gridImport = 40;
+    state.lastEnergy.gridExport = 50;
+    const before = state.money;
+    const breakdown = economyStep(state, 0, 0);
+    expect(breakdown.gridImportCost).toBeCloseTo(
+      40 * BALANCE.market.importCostPerEnergyUnit,
+      6,
+    );
+    expect(breakdown.gridExportRevenue).toBeCloseTo(
+      50 * BALANCE.market.exportRevenuePerEnergyUnit,
+      6,
+    );
+    expect(state.money).toBeCloseTo(
+      before + breakdown.gridExportRevenue - breakdown.gridImportCost,
+      6,
+    );
+  });
 });
 
 describe('happinessStep', () => {

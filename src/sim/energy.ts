@@ -207,6 +207,8 @@ export function energyStep(state: SimState, input: EnergyTickInput): void {
   let curtailment = 0;
   let biogas = 0;
   let deficit = 0;
+  let gridImport = 0;
+  let gridExport = 0;
 
   const net = generation - totalDemand;
   if (net >= 0) {
@@ -217,7 +219,9 @@ export function energyStep(state: SimState, input: EnergyTickInput): void {
       headroom / BALANCE.energy.batteryChargeEfficiency,
     );
     state.storedEnergy += charge * BALANCE.energy.batteryChargeEfficiency;
-    curtailment = net - charge;
+    // Sell what the batteries cannot absorb; curtail beyond the link.
+    gridExport = Math.min(net - charge, BALANCE.market.exportCapacity);
+    curtailment = net - charge - gridExport;
   } else {
     let shortfall = -net;
     const discharge = Math.min(shortfall, powerLimit, state.storedEnergy);
@@ -228,6 +232,9 @@ export function energyStep(state: SimState, input: EnergyTickInput): void {
       census.biogasPlants * BALANCE.energy.biogasMaxOutput,
     );
     shortfall -= biogas;
+    // Expensive imports over the limited transmission link come last.
+    gridImport = Math.min(shortfall, BALANCE.market.importCapacity);
+    shortfall -= gridImport;
     deficit = shortfall;
   }
 
@@ -254,6 +261,8 @@ export function energyStep(state: SimState, input: EnergyTickInput): void {
     chargingConsumption: chargingDemand,
     curtailment,
     deficit,
+    gridImport,
+    gridExport,
   };
 
   if (state.tick % TICKS_PER_HISTORY_SAMPLE === 0) {

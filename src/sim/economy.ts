@@ -7,6 +7,8 @@ export interface EconomyBreakdown {
   roadUpkeep: number;
   plantUpkeep: number;
   biogasFuelCost: number;
+  gridImportCost: number;
+  gridExportRevenue: number;
 }
 
 /**
@@ -37,7 +39,24 @@ export function economyStep(
   const roadUpkeep = roadTiles * BALANCE.upkeepPerTick.roadPerTile;
   const biogasFuelCost =
     state.lastEnergy.biogas * BALANCE.upkeepPerTick.biogasFuelCostPerEnergyUnit;
+  const gridImportCost =
+    state.lastEnergy.gridImport * BALANCE.market.importCostPerEnergyUnit;
+  const gridExportRevenue =
+    state.lastEnergy.gridExport * BALANCE.market.exportRevenuePerEnergyUnit;
 
-  state.money += taxIncome - roadUpkeep - plantUpkeep - biogasFuelCost;
-  return { taxIncome, roadUpkeep, plantUpkeep, biogasFuelCost };
+  state.money +=
+    taxIncome +
+    gridExportRevenue -
+    roadUpkeep -
+    plantUpkeep -
+    biogasFuelCost -
+    gridImportCost;
+  return {
+    taxIncome,
+    roadUpkeep,
+    plantUpkeep,
+    biogasFuelCost,
+    gridImportCost,
+    gridExportRevenue,
+  };
 }

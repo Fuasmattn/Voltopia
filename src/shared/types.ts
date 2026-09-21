@@ -68,6 +68,10 @@ export interface EnergyStats {
   curtailment: number;
   /** Consumption that could not be served this tick. */
   deficit: number;
+  /** Energy bought from the transmission link this tick (expensive). */
+  gridImport: number;
+  /** Surplus sold to the transmission link this tick. */
+  gridExport: number;
   /** Sampled history of the last in-game day, oldest first. */
   history: EnergyHistoryPoint[];
 }

@@ -106,6 +106,18 @@ export const BALANCE = {
     } as Record<Zone, number[]>,
   },
 
+  market: {
+    /**
+     * The city has a limited transmission link to the wider (green)
+     * grid: imports cover small deficits at a steep price, exports earn
+     * a little instead of curtailing. Big shortfalls still black out.
+     */
+    importCapacity: 60,
+    importCostPerEnergyUnit: 0.4,
+    exportCapacity: 80,
+    exportRevenuePerEnergyUnit: 0.03,
+  },
+
   growth: {
     /** How many growth attempts happen per tick (seeded random tiles). */
     attemptsPerTick: 3,

@@ -148,22 +148,32 @@ describe('energyStep', () => {
       Math.min(BALANCE.energy.solarPeakOutput, BALANCE.energy.batteryPowerLimit) *
       BALANCE.energy.batteryChargeEfficiency;
     expect(state.storedEnergy).toBeCloseTo(expectedCharge, 3);
-    // Charge rate is limited, the rest is curtailed.
+    // Charge rate is limited; the rest is exported, then curtailed.
+    const leftover =
+      BALANCE.energy.solarPeakOutput - BALANCE.energy.batteryPowerLimit;
+    expect(state.lastEnergy.gridExport).toBeCloseTo(
+      Math.min(leftover, BALANCE.market.exportCapacity),
+      3,
+    );
     expect(state.lastEnergy.curtailment).toBeCloseTo(
-      BALANCE.energy.solarPeakOutput - BALANCE.energy.batteryPowerLimit,
+      Math.max(0, leftover - BALANCE.market.exportCapacity),
       3,
     );
   });
 
-  it('curtails everything when storage is full', () => {
+  it('with full storage, surplus is exported up to the link capacity', () => {
     const state = makeState();
     placePlant(state, at(5, 5), PlantType.SolarFarm);
     placePlant(state, at(6, 5), PlantType.Battery);
     setNoonClearSky(state);
     state.storedEnergy = BALANCE.energy.batteryCapacity;
     energyStep(state, { chargingDemand: 0 });
+    expect(state.lastEnergy.gridExport).toBeCloseTo(
+      Math.min(BALANCE.energy.solarPeakOutput, BALANCE.market.exportCapacity),
+      3,
+    );
     expect(state.lastEnergy.curtailment).toBeCloseTo(
-      BALANCE.energy.solarPeakOutput,
+      Math.max(0, BALANCE.energy.solarPeakOutput - BALANCE.market.exportCapacity),
       3,
     );
     expect(state.storedEnergy).toBe(BALANCE.energy.batteryCapacity);
@@ -202,29 +212,50 @@ describe('energyStep', () => {
     expect(state.lastEnergy.deficit).toBe(0);
   });
 
-  it('flags undersupply when nothing can cover the deficit', () => {
+  it('flags undersupply when even imports cannot cover the deficit', () => {
     const state = makeState();
     placePlant(state, at(6, 5), PlantType.WindTurbine); // provides connection
     state.weather.windSpeed = 0; // ...but no output
-    for (let i = 0; i < 6; i++) {
-      addBuilding(state, at(8 + i, 5), Zone.Commercial, 3);
+    const buildings = 20;
+    for (let i = 0; i < buildings; i++) {
+      addBuilding(state, at(8 + (i % 10), 5 + Math.floor(i / 10)), Zone.Commercial, 3);
     }
     state.tick = TICKS_PER_DAY / 2;
     state.weather.cloudCover = 1;
     energyStep(state, { chargingDemand: 0 });
-    expect(state.lastEnergy.deficit).toBeCloseTo(
-      state.lastEnergy.buildingConsumption - state.lastEnergy.rooftop,
+    // The transmission link imports at its capacity; the rest is deficit.
+    expect(state.lastEnergy.gridImport).toBeCloseTo(
+      BALANCE.market.importCapacity,
       3,
     );
-    // The deficit share is near-total (rooftop covers only a sliver), so
-    // almost all connected buildings flicker into undersupply.
+    expect(state.lastEnergy.deficit).toBeCloseTo(
+      state.lastEnergy.buildingConsumption -
+        state.lastEnergy.rooftop -
+        BALANCE.market.importCapacity,
+      3,
+    );
+    // A majority of connected buildings flicker into undersupply.
     let undersupplied = 0;
-    for (let i = 0; i < 6; i++) {
-      if (state.layers.supplied[at(8 + i, 5)] === SupplyStatus.Undersupplied) {
+    for (let i = 0; i < buildings; i++) {
+      const tile = at(8 + (i % 10), 5 + Math.floor(i / 10));
+      if (state.layers.supplied[tile] === SupplyStatus.Undersupplied) {
         undersupplied++;
       }
     }
-    expect(undersupplied).toBeGreaterThanOrEqual(4);
+    expect(undersupplied).toBeGreaterThan(buildings / 3);
+  });
+
+  it('small deficits are fully covered by (expensive) imports', () => {
+    const state = makeState();
+    placePlant(state, at(6, 5), PlantType.WindTurbine);
+    state.weather.windSpeed = 0;
+    addBuilding(state, at(8, 5), Zone.Commercial, 3);
+    state.tick = TICKS_PER_DAY / 2;
+    state.weather.cloudCover = 1;
+    energyStep(state, { chargingDemand: 0 });
+    expect(state.lastEnergy.deficit).toBe(0);
+    expect(state.lastEnergy.gridImport).toBeGreaterThan(0);
+    expect(state.layers.supplied[at(8, 5)]).toBe(SupplyStatus.Supplied);
   });
 
   it('marks buildings outside the supply radius as not connected', () => {
@@ -251,8 +282,13 @@ describe('energyStep', () => {
     state.weather.windSpeed = 1;
     energyStep(state, { chargingDemand: 10 });
     expect(state.lastEnergy.chargingConsumption).toBe(10);
+    const surplus = BALANCE.energy.windPeakOutput - 10;
+    expect(state.lastEnergy.gridExport).toBeCloseTo(
+      Math.min(surplus, BALANCE.market.exportCapacity),
+      3,
+    );
     expect(state.lastEnergy.curtailment).toBeCloseTo(
-      BALANCE.energy.windPeakOutput - 10,
+      Math.max(0, surplus - BALANCE.market.exportCapacity),
       3,
     );
   });

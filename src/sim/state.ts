@@ -81,6 +81,8 @@ export interface SimState {
     chargingConsumption: number;
     curtailment: number;
     deficit: number;
+    gridImport: number;
+    gridExport: number;
   };
 }
 
@@ -127,6 +129,8 @@ export function createSimState(seed: number, size: number): SimState {
       chargingConsumption: 0,
       curtailment: 0,
       deficit: 0,
+      gridImport: 0,
+      gridExport: 0,
     },
   };
 }
