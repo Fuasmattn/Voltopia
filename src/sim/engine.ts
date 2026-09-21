@@ -48,6 +48,13 @@ export class SimEngine {
         return [];
       case 'requestSave':
         return [{ type: 'saveData', save: serializeState(state) }];
+      case 'requestLifetime':
+        return [
+          {
+            type: 'lifetimeData',
+            samples: state.lifetime.samples.map((sample) => ({ ...sample })),
+          },
+        ];
       case 'buildRoad':
         return this.toEvents(buildRoads(state, command.tiles));
       case 'bulldoze':

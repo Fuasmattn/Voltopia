@@ -37,6 +37,36 @@ export function stepTick(state: SimState): void {
   economyStep(state, population, jobs);
   happinessStep(state);
   goalsStep(state);
+  recordLifetime(state, population, jobs);
+}
+
+/** Cap on stored daily samples (oldest are dropped beyond this). */
+const MAX_LIFETIME_SAMPLES = 365;
+
+/** Accumulate day sums; at each day rollover, store one daily sample. */
+function recordLifetime(state: SimState, population: number, jobs: number): void {
+  const e = state.lastEnergy;
+  const sums = state.lifetime.daySums;
+  sums.generation += e.solar + e.wind + e.rooftop + e.biogas;
+  sums.consumption += e.buildingConsumption + e.chargingConsumption;
+  sums.ticks++;
+
+  if (state.tick % TICKS_PER_DAY !== 0) return;
+  state.lifetime.samples.push({
+    day: dayNumber(state.tick) - 1,
+    population,
+    jobs,
+    happiness: state.happiness,
+    avgGeneration: sums.generation / Math.max(1, sums.ticks),
+    avgConsumption: sums.consumption / Math.max(1, sums.ticks),
+    money: state.money,
+  });
+  if (state.lifetime.samples.length > MAX_LIFETIME_SAMPLES) {
+    state.lifetime.samples.shift();
+  }
+  sums.generation = 0;
+  sums.consumption = 0;
+  sums.ticks = 0;
 }
 
 function countTiles(state: SimState): {

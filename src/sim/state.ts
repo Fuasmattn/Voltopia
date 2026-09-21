@@ -2,6 +2,7 @@ import { BALANCE, ENERGY_HISTORY_SAMPLES, SAVE_VERSION } from '../shared/constan
 import { Rng } from '../shared/rng.ts';
 import type {
   DemandStats,
+  LifetimeSample,
   EnergyHistoryPoint,
   SaveGame,
   Speed,
@@ -107,6 +108,11 @@ export interface SimState {
    * Feeds the commute happiness penalty.
    */
   commuteCongestion: number;
+  /** Daily lifetime statistics (persisted) plus running day sums. */
+  lifetime: {
+    samples: LifetimeSample[];
+    daySums: { generation: number; consumption: number; ticks: number };
+  };
   /** Set by the energy step; consumed by growth/happiness. */
   lastEnergy: {
     solar: number;
@@ -164,6 +170,7 @@ export function createSimState(
     goalProgress: { cleanDayTicks: 0, exportedTotal: 0 },
     nextVehicleId: 1,
     commuteCongestion: 1,
+    lifetime: { samples: [], daySums: { generation: 0, consumption: 0, ticks: 0 } },
     lastEnergy: {
       solar: 0,
       wind: 0,
@@ -226,6 +233,7 @@ export function serializeState(state: SimState): SaveGame {
     smartCharging: state.smartCharging,
     storedEnergy: state.storedEnergy,
     goals: [...state.goalsAchieved],
+    lifetime: state.lifetime.samples.map((sample) => ({ ...sample })),
     layers: {
       tileType: copyBuffer(layers.tileType),
       roadMask: copyBuffer(layers.roadMask),
@@ -246,6 +254,7 @@ export function deserializeState(save: SaveGame): SimState {
   state.smartCharging = save.smartCharging;
   state.storedEnergy = save.storedEnergy;
   state.goalsAchieved = new Set(save.goals ?? []);
+  state.lifetime.samples = (save.lifetime ?? []).map((sample) => ({ ...sample }));
   state.layers.tileType.set(new Uint8Array(save.layers.tileType));
   state.layers.roadMask.set(new Uint8Array(save.layers.roadMask));
   state.layers.zone.set(new Uint8Array(save.layers.zone));

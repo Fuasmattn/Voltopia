@@ -1,5 +1,5 @@
 import { SAVE_VERSION } from '../shared/constants.ts';
-import type { SaveGame } from '../shared/types.ts';
+import type { LifetimeSample, SaveGame } from '../shared/types.ts';
 
 /** JSON-friendly form of a save game (ArrayBuffers as base64). */
 interface SaveGameJson {
@@ -12,6 +12,7 @@ interface SaveGameJson {
   smartCharging: boolean;
   storedEnergy: number;
   goals?: string[];
+  lifetime?: LifetimeSample[];
   layers: Record<string, string>;
 }
 
@@ -50,6 +51,7 @@ export function saveToJson(save: SaveGame): string {
     smartCharging: save.smartCharging,
     storedEnergy: save.storedEnergy,
     ...(save.goals ? { goals: save.goals } : {}),
+    ...(save.lifetime ? { lifetime: save.lifetime } : {}),
     layers,
   };
   return JSON.stringify(json, null, 2);
@@ -105,6 +107,14 @@ export function saveFromJson(text: string): SaveGame {
     storedEnergy: typeof parsed.storedEnergy === 'number' ? parsed.storedEnergy : 0,
     ...(Array.isArray(parsed.goals)
       ? { goals: parsed.goals.filter((g): g is string => typeof g === 'string') }
+      : {}),
+    ...(Array.isArray(parsed.lifetime)
+      ? {
+          lifetime: parsed.lifetime.filter(
+            (sample): sample is LifetimeSample =>
+              typeof sample === 'object' && sample !== null && typeof sample.day === 'number',
+          ),
+        }
       : {}),
     layers,
   };

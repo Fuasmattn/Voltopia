@@ -1,7 +1,13 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { GRID_SIZE } from '../shared/constants.ts';
 import type { SimCommand, SimEvent } from '../shared/messages.ts';
-import type { GlobalStats, SaveGame, TileDiff, VehicleState } from '../shared/types.ts';
+import type {
+  GlobalStats,
+  LifetimeSample,
+  SaveGame,
+  TileDiff,
+  VehicleState,
+} from '../shared/types.ts';
 
 export interface SimBridge {
   /** Latest global stats from the worker (null until the first tick). */
@@ -12,6 +18,7 @@ export interface SimBridge {
   onDiffs: (listener: (diffs: TileDiff[]) => void) => () => void;
   onVehicles: (listener: (vehicles: VehicleState[]) => void) => () => void;
   onSaveData: (listener: (save: SaveGame) => void) => () => void;
+  onLifetime: (listener: (samples: LifetimeSample[]) => void) => () => void;
   /** Most recent rejection reason (e.g. not enough money), transient. */
   rejection: string | null;
 }
@@ -36,6 +43,7 @@ export function useSimBridge(options: SimBridgeOptions): SimBridge {
   const diffListeners = useRef(new Set<(diffs: TileDiff[]) => void>());
   const vehicleListeners = useRef(new Set<(vehicles: VehicleState[]) => void>());
   const saveListeners = useRef(new Set<(save: SaveGame) => void>());
+  const lifetimeListeners = useRef(new Set<(samples: LifetimeSample[]) => void>());
   const [stats, setStats] = useState<GlobalStats | null>(null);
   const [rejection, setRejection] = useState<string | null>(null);
   const rejectionTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -58,6 +66,9 @@ export function useSimBridge(options: SimBridgeOptions): SimBridge {
           break;
         case 'saveData':
           for (const listener of saveListeners.current) listener(event.save);
+          break;
+        case 'lifetimeData':
+          for (const listener of lifetimeListeners.current) listener(event.samples);
           break;
         case 'rejected':
           setRejection(event.reason);
@@ -105,5 +116,10 @@ export function useSimBridge(options: SimBridgeOptions): SimBridge {
     return () => saveListeners.current.delete(listener);
   }, []);
 
-  return { stats, send, onDiffs, onVehicles, onSaveData, rejection };
+  const onLifetime = useCallback((listener: (samples: LifetimeSample[]) => void) => {
+    lifetimeListeners.current.add(listener);
+    return () => lifetimeListeners.current.delete(listener);
+  }, []);
+
+  return { stats, send, onDiffs, onVehicles, onSaveData, onLifetime, rejection };
 }

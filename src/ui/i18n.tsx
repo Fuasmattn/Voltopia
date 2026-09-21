@@ -139,6 +139,13 @@ const en = {
   'tutorial.skip': 'Skip tutorial',
   'tutorial.waiting': '… waiting',
 
+  'stats.title': 'City statistics',
+  'stats.empty': 'Come back after your first full day — statistics are recorded daily.',
+  'stats.population': 'Population & jobs',
+  'stats.energy': 'Energy (daily average per tick)',
+  'stats.money': 'Treasury',
+  'stats.happiness': 'Happiness',
+  'footer.stats': 'Statistics',
   'settings.title': 'Settings',
   'settings.sound': 'Sound',
   'settings.soundEnabled': 'Sound effects',
@@ -311,6 +318,14 @@ const de: Record<TranslationKey, string> = {
   'tutorial.skip': 'Tutorial überspringen',
   'tutorial.waiting': '… warte',
 
+  'stats.title': 'Stadtstatistik',
+  'stats.empty':
+    'Schau nach dem ersten vollen Tag wieder vorbei — Statistiken werden täglich erfasst.',
+  'stats.population': 'Bevölkerung & Jobs',
+  'stats.energy': 'Energie (Tagesdurchschnitt pro Tick)',
+  'stats.money': 'Stadtkasse',
+  'stats.happiness': 'Zufriedenheit',
+  'footer.stats': 'Statistik',
   'settings.title': 'Einstellungen',
   'settings.sound': 'Ton',
   'settings.soundEnabled': 'Soundeffekte',

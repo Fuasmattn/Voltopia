@@ -77,6 +77,20 @@ export interface EnergyStats {
   history: EnergyHistoryPoint[];
 }
 
+/** One per in-game day: averages/totals for the lifetime statistics. */
+export interface LifetimeSample {
+  day: number;
+  population: number;
+  jobs: number;
+  /** 0..1 */
+  happiness: number;
+  /** Average energy generation per tick over the day. */
+  avgGeneration: number;
+  /** Average consumption per tick over the day. */
+  avgConsumption: number;
+  money: number;
+}
+
 export interface GoalState {
   id: string;
   achieved: boolean;
@@ -157,6 +171,8 @@ export interface SaveGame {
   storedEnergy: number;
   /** Achieved goal ids (absent in older saves). */
   goals?: string[];
+  /** Daily lifetime statistics (absent in older saves). */
+  lifetime?: LifetimeSample[];
   /** Raw copies of the tile layers. */
   layers: {
     tileType: ArrayBuffer;

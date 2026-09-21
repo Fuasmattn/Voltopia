@@ -18,6 +18,7 @@ import { Toolbar } from './Toolbar.tsx';
 import { consumePendingNewGame, type NewGameOptions } from './newGame.ts';
 import { NewGamePage } from './NewGamePage.tsx';
 import { SettingsPage } from './SettingsPage.tsx';
+import { StatsPage } from './StatsPage.tsx';
 import { loadSettings, persistSettings, type AppSettings } from './settings.ts';
 import { sound } from './sound.ts';
 import { isTutorialDone, Tutorial } from './Tutorial.tsx';
@@ -94,7 +95,9 @@ function Game({ save, options }: { save: SaveGame | null; options: NewGameOption
   const rendererRef = useRef<GameRenderer | null>(null);
   const { tool, setTool, costPreview } = useTools(bridge, callbacksRef, rendererRef, gridSize);
   const [overlay, setOverlay] = useState<OverlayMode>(OverlayMode.None);
-  const [page, setPage] = useState<'help' | 'imprint' | 'settings' | 'newGame' | null>(null);
+  const [page, setPage] = useState<'help' | 'imprint' | 'settings' | 'newGame' | 'stats' | null>(
+    null,
+  );
   const [settings, setSettings] = useState<AppSettings>(loadSettings);
   // The tutorial runs for brand-new cities only (no autosave existed).
   const [showTutorial, setShowTutorial] = useState(() => save === null && !isTutorialDone());
@@ -288,6 +291,7 @@ function Game({ save, options }: { save: SaveGame | null; options: NewGameOption
       </footer>
       {page === 'help' && <HelpPage onClose={() => setPage(null)} />}
       {page === 'imprint' && <ImprintPage onClose={() => setPage(null)} />}
+      {page === 'stats' && <StatsPage bridge={bridge} onClose={() => setPage(null)} />}
       {page === 'newGame' && (
         <NewGamePage onStart={() => void startNewGame()} onClose={() => setPage(null)} />
       )}

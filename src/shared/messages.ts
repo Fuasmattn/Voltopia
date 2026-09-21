@@ -1,5 +1,6 @@
 import type {
   GlobalStats,
+  LifetimeSample,
   PlantType,
   SaveGame,
   Speed,
@@ -26,7 +27,8 @@ export type SimCommand =
   | { type: 'undo' }
   | { type: 'setTaxRate'; rate: number }
   | { type: 'setSmartCharging'; enabled: boolean }
-  | { type: 'requestSave' };
+  | { type: 'requestSave' }
+  | { type: 'requestLifetime' };
 
 /** Events sent from the simulation worker to the main thread. */
 export type SimEvent =
@@ -38,4 +40,5 @@ export type SimEvent =
       vehicles: VehicleState[];
     }
   | { type: 'saveData'; save: SaveGame }
+  | { type: 'lifetimeData'; samples: LifetimeSample[] }
   | { type: 'rejected'; reason: string };
