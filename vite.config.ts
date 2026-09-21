@@ -3,6 +3,9 @@ import react from '@vitejs/plugin-react';
 import { VitePWA } from 'vite-plugin-pwa';
 
 export default defineConfig({
+  // For GitHub Pages the app is served from /<repo>/ — the deploy
+  // workflow sets VOLTOPIA_BASE accordingly.
+  base: process.env.VOLTOPIA_BASE ?? '/',
   plugins: [
     react(),
     VitePWA({
