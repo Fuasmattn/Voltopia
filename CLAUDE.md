@@ -69,6 +69,13 @@ full state (except save snapshots).
   `--no-proxy-server --no-sandbox` (see `playwright.config.ts`).
 - CI runners are 2-3x slower than dev machines — long sim tests need
   generous vitest timeouts (`testTimeout` is set to 30s).
+- When adding a dependency that has build/postinstall scripts, pnpm 12
+  hard-fails a fresh install (`ERR_PNPM_IGNORED_BUILDS`) until the
+  package is approved. The approval lives in `pnpm-workspace.yaml`
+  (`allowBuilds`), so run `pnpm approve-builds <pkg>` and commit the
+  changed `pnpm-workspace.yaml` IN THE SAME COMMIT as the dependency —
+  otherwise CI's install step breaks on that commit (this happened with
+  `simple-git-hooks`).
 
 ## Deployment
 
