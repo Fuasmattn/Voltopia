@@ -35,6 +35,9 @@ export class RoadsMesh implements DiffLayer {
       material,
       gridSize * gridSize * INSTANCES_PER_TILE,
     );
+    // Instance transforms live across the whole grid; the base geometry's
+    // bounds would wrongly cull the mesh, so culling is disabled.
+    this.mesh.frustumCulled = false;
     this.mesh.receiveShadow = true;
     this.mesh.count = 0;
     scene.add(this.mesh);
@@ -47,6 +50,9 @@ export class RoadsMesh implements DiffLayer {
       poleMaterial,
       gridSize * gridSize,
     );
+    // Instance transforms live across the whole grid; the base geometry's
+    // bounds would wrongly cull the mesh, so culling is disabled.
+    this.lampPoles.frustumCulled = false;
     this.lampPoles.count = 0;
     scene.add(this.lampPoles);
 
@@ -61,6 +67,9 @@ export class RoadsMesh implements DiffLayer {
       this.lampHeadMaterial,
       gridSize * gridSize,
     );
+    // Instance transforms live across the whole grid; the base geometry's
+    // bounds would wrongly cull the mesh, so culling is disabled.
+    this.lampHeads.frustumCulled = false;
     this.lampHeads.count = 0;
     scene.add(this.lampHeads);
   }

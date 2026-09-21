@@ -138,6 +138,9 @@ export class GameRenderer {
       previewMaterial,
       gridSize * gridSize,
     );
+    // Instance transforms live across the whole grid; the base geometry's
+    // bounds would wrongly cull the mesh, so culling is disabled.
+    this.previewMesh.frustumCulled = false;
     this.previewMesh.count = 0;
     scene.add(this.previewMesh);
 

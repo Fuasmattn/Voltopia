@@ -42,6 +42,9 @@ export class VehiclesMesh {
       new THREE.MeshLambertMaterial(),
       MAX_VEHICLES,
     );
+    // Instance transforms live across the whole grid; the base geometry's
+    // bounds would wrongly cull the mesh, so culling is disabled.
+    this.mesh.frustumCulled = false;
     this.mesh.castShadow = true;
     this.mesh.count = 0;
     const color = new THREE.Color();
@@ -62,6 +65,9 @@ export class VehiclesMesh {
       this.headlightMaterial,
       MAX_VEHICLES,
     );
+    // Instance transforms live across the whole grid; the base geometry's
+    // bounds would wrongly cull the mesh, so culling is disabled.
+    this.headlights.frustumCulled = false;
     this.headlights.count = 0;
     scene.add(this.headlights);
   }

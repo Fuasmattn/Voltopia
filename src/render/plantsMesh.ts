@@ -143,6 +143,9 @@ export class PlantsMesh implements DiffLayer {
       new THREE.MeshLambertMaterial(),
       capacity * MAX_BOX_PARTS_PER_PLANT,
     );
+    // Instance transforms live across the whole grid; the base geometry's
+    // bounds would wrongly cull the mesh, so culling is disabled.
+    this.boxMesh.frustumCulled = false;
     this.boxMesh.castShadow = true;
     this.boxMesh.count = 0;
     scene.add(this.boxMesh);
@@ -152,6 +155,9 @@ export class PlantsMesh implements DiffLayer {
       new THREE.MeshLambertMaterial({ color: COLORS.pole }),
       capacity,
     );
+    // Instance transforms live across the whole grid; the base geometry's
+    // bounds would wrongly cull the mesh, so culling is disabled.
+    this.rotorMesh.frustumCulled = false;
     this.rotorMesh.count = 0;
     scene.add(this.rotorMesh);
 
@@ -161,6 +167,9 @@ export class PlantsMesh implements DiffLayer {
       new THREE.MeshLambertMaterial({ color: COLORS.biogasDome }),
       capacity,
     );
+    // Instance transforms live across the whole grid; the base geometry's
+    // bounds would wrongly cull the mesh, so culling is disabled.
+    this.domeMesh.frustumCulled = false;
     this.domeMesh.castShadow = true;
     this.domeMesh.count = 0;
     scene.add(this.domeMesh);
@@ -172,6 +181,9 @@ export class PlantsMesh implements DiffLayer {
       new THREE.MeshBasicMaterial({ color: 0x7be07f }),
       capacity,
     );
+    // Instance transforms live across the whole grid; the base geometry's
+    // bounds would wrongly cull the mesh, so culling is disabled.
+    this.socFillMesh.frustumCulled = false;
     this.socFillMesh.count = 0;
     scene.add(this.socFillMesh);
   }

@@ -135,6 +135,9 @@ export class BuildingsMesh implements DiffLayer {
       material,
       gridSize * gridSize * PARTS_PER_TILE,
     );
+    // Instance transforms live across the whole grid; the base geometry's
+    // bounds would wrongly cull the mesh, so culling is disabled.
+    this.mesh.frustumCulled = false;
     this.mesh.castShadow = true;
     this.mesh.receiveShadow = true;
     this.mesh.count = 0;
@@ -153,6 +156,9 @@ export class BuildingsMesh implements DiffLayer {
       this.windowsMaterial,
       gridSize * gridSize * WINDOWS_PER_TILE,
     );
+    // Instance transforms live across the whole grid; the base geometry's
+    // bounds would wrongly cull the mesh, so culling is disabled.
+    this.windowsMesh.frustumCulled = false;
     this.windowsMesh.count = 0;
     this.windowsMesh.visible = false;
     scene.add(this.windowsMesh);

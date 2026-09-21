@@ -38,6 +38,9 @@ export class OverlaysMesh implements DiffLayer {
       depthWrite: false,
     });
     this.mesh = new THREE.InstancedMesh(geometry, material, gridSize * gridSize);
+    // Instance transforms live across the whole grid; the base geometry's
+    // bounds would wrongly cull the mesh, so culling is disabled.
+    this.mesh.frustumCulled = false;
     this.mesh.count = 0;
     this.mesh.renderOrder = 2;
     scene.add(this.mesh);
