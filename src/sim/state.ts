@@ -105,14 +105,18 @@ export function createTileLayers(size: number): TileLayers {
   };
 }
 
-export function createSimState(seed: number, size: number): SimState {
+export function createSimState(
+  seed: number,
+  size: number,
+  startingMoney: number = BALANCE.startingMoney,
+): SimState {
   return {
     seed,
     size,
     rng: new Rng(seed),
     tick: 0,
     speed: 1,
-    money: BALANCE.startingMoney,
+    money: startingMoney,
     taxRate: BALANCE.tax.defaultRate,
     smartCharging: false,
     happiness: BALANCE.happiness.base,

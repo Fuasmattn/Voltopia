@@ -10,7 +10,14 @@ import type {
 
 /** Commands sent from the main thread to the simulation worker. */
 export type SimCommand =
-  | { type: 'init'; seed: number; size: number; save?: SaveGame }
+  | {
+      type: 'init';
+      seed: number;
+      size: number;
+      save?: SaveGame;
+      /** Difficulty: overrides the default starting funds (new games only). */
+      startingMoney?: number;
+    }
   | { type: 'setSpeed'; speed: Speed }
   | { type: 'buildRoad'; tiles: number[] }
   | { type: 'paintZone'; tiles: number[]; zone: Zone }

@@ -1,0 +1,83 @@
+import { BALANCE, GRID_SIZE } from '../shared/constants.ts';
+
+/** Options chosen in the new-game dialog, applied on the next boot. */
+export interface NewGameOptions {
+  size: number;
+  startingMoney: number;
+  /** Fixed seed, or null for a random one. */
+  seed: number | null;
+}
+
+export const MAP_SIZES = [48, 64, 96] as const;
+
+export const DIFFICULTIES = [
+  { id: 'easy', startingMoney: 40_000 },
+  { id: 'normal', startingMoney: BALANCE.startingMoney },
+  { id: 'hard', startingMoney: 15_000 },
+] as const;
+
+export const DEFAULT_NEW_GAME: NewGameOptions = {
+  size: GRID_SIZE,
+  startingMoney: BALANCE.startingMoney,
+  seed: null,
+};
+
+const PENDING_KEY = 'voltopia.pendingNewGame';
+
+/** Persist options for the reload that starts the new city. */
+export function storePendingNewGame(options: NewGameOptions): void {
+  try {
+    localStorage.setItem(PENDING_KEY, JSON.stringify(options));
+  } catch {
+    // best effort only
+  }
+}
+
+let consumedThisLoad: NewGameOptions | null = null;
+
+/**
+ * Read and consume pending options (returns defaults if none). The
+ * result is cached per page load so React StrictMode's double effect
+ * run doesn't lose the options after the first consumption.
+ */
+export function consumePendingNewGame(): NewGameOptions {
+  if (consumedThisLoad) return consumedThisLoad;
+  consumedThisLoad = readPendingNewGame();
+  return consumedThisLoad;
+}
+
+function readPendingNewGame(): NewGameOptions {
+  try {
+    const raw = localStorage.getItem(PENDING_KEY);
+    localStorage.removeItem(PENDING_KEY);
+    if (!raw) return { ...DEFAULT_NEW_GAME };
+    const parsed = JSON.parse(raw) as Partial<NewGameOptions>;
+    return {
+      size: MAP_SIZES.includes(parsed.size as (typeof MAP_SIZES)[number])
+        ? (parsed.size as number)
+        : DEFAULT_NEW_GAME.size,
+      startingMoney:
+        typeof parsed.startingMoney === 'number' && parsed.startingMoney > 0
+          ? parsed.startingMoney
+          : DEFAULT_NEW_GAME.startingMoney,
+      seed: typeof parsed.seed === 'number' ? parsed.seed : null,
+    };
+  } catch {
+    return { ...DEFAULT_NEW_GAME };
+  }
+}
+
+/** Derive a numeric seed from free-form text (or random when empty). */
+export function seedFromText(text: string): number | null {
+  const trimmed = text.trim();
+  if (!trimmed) return null;
+  const numeric = Number(trimmed);
+  if (Number.isFinite(numeric) && Number.isInteger(numeric)) {
+    return Math.abs(numeric) % 2147483647;
+  }
+  let hash = 5381;
+  for (let i = 0; i < trimmed.length; i++) {
+    hash = (hash * 33 + trimmed.charCodeAt(i)) >>> 0;
+  }
+  return hash % 2147483647;
+}

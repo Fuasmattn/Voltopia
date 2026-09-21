@@ -792,3 +792,64 @@ body,
   font-size: 11px;
   color: var(--hud-muted);
 }
+
+.option-row {
+  display: flex;
+  gap: 6px;
+  margin: 6px 0;
+}
+
+.option-row button {
+  background: transparent;
+  border: 1px solid var(--hud-border);
+  border-radius: 8px;
+  color: var(--hud-text);
+  padding: 6px 12px;
+  cursor: pointer;
+  font-size: 12px;
+}
+
+.option-row button.active {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: #10161f;
+}
+
+.seed-input {
+  width: 100%;
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid var(--hud-border);
+  border-radius: 8px;
+  color: var(--hud-text);
+  padding: 6px 10px;
+  font-size: 13px;
+}
+
+.new-game-actions {
+  display: flex;
+  gap: 8px;
+  margin-top: 14px;
+}
+
+.new-game-actions button {
+  background: transparent;
+  border: 1px solid var(--hud-border);
+  border-radius: 8px;
+  color: var(--hud-text);
+  padding: 6px 14px;
+  cursor: pointer;
+  font-size: 13px;
+}
+
+.new-game-actions button.primary {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: #10161f;
+  font-weight: 600;
+}
+
+.new-game-warning {
+  margin-top: 10px;
+  font-size: 11px;
+  color: var(--hud-muted);
+}

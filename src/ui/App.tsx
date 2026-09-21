@@ -15,6 +15,8 @@ import { GameView } from './GameView.tsx';
 import { GoalsPanel } from './GoalsPanel.tsx';
 import { SpeedControls } from './SpeedControls.tsx';
 import { Toolbar } from './Toolbar.tsx';
+import { consumePendingNewGame, type NewGameOptions } from './newGame.ts';
+import { NewGamePage } from './NewGamePage.tsx';
 import { SettingsPage } from './SettingsPage.tsx';
 import { loadSettings, persistSettings, type AppSettings } from './settings.ts';
 import { sound } from './sound.ts';
@@ -35,12 +37,17 @@ function happinessEmoji(happiness: number): string {
 /** Loads the autosave before booting the simulation. */
 export function App() {
   const { t } = useI18n();
-  const [boot, setBoot] = useState<{ save: SaveGame | null } | null>(null);
+  const [boot, setBoot] = useState<{
+    save: SaveGame | null;
+    options: NewGameOptions;
+  } | null>(null);
 
   useEffect(() => {
     let cancelled = false;
     storage.load().then((save) => {
-      if (!cancelled) setBoot({ save });
+      // Pending options only apply when starting fresh.
+      const options = consumePendingNewGame();
+      if (!cancelled) setBoot({ save, options });
     });
     return () => {
       cancelled = true;
@@ -50,7 +57,7 @@ export function App() {
   if (!boot) {
     return <div className="boot-screen">{t('boot.loading')}</div>;
   }
-  return <Game save={boot.save} />;
+  return <Game save={boot.save} options={boot.options} />;
 }
 
 function LanguageSwitch() {
@@ -73,17 +80,21 @@ function LanguageSwitch() {
   );
 }
 
-function Game({ save }: { save: SaveGame | null }) {
+function Game({ save, options }: { save: SaveGame | null; options: NewGameOptions }) {
   const { t } = useI18n();
+  // A saved city keeps its own size/seed; new cities use the chosen options.
+  const gridSize = save?.size ?? options.size;
   const bridge = useSimBridge({
-    seed: save?.seed ?? Date.now() % 2147483647,
+    seed: save?.seed ?? options.seed ?? Date.now() % 2147483647,
+    size: gridSize,
+    startingMoney: options.startingMoney,
     ...(save ? { save } : {}),
   });
   const callbacksRef = useRef<RendererCallbacks>({});
   const rendererRef = useRef<GameRenderer | null>(null);
-  const { tool, setTool, costPreview } = useTools(bridge, callbacksRef, rendererRef);
+  const { tool, setTool, costPreview } = useTools(bridge, callbacksRef, rendererRef, gridSize);
   const [overlay, setOverlay] = useState<OverlayMode>(OverlayMode.None);
-  const [page, setPage] = useState<'help' | 'imprint' | 'settings' | null>(null);
+  const [page, setPage] = useState<'help' | 'imprint' | 'settings' | 'newGame' | null>(null);
   const [settings, setSettings] = useState<AppSettings>(loadSettings);
   // The tutorial runs for brand-new cities only (no autosave existed).
   const [showTutorial, setShowTutorial] = useState(() => save === null && !isTutorialDone());
@@ -123,9 +134,6 @@ function Game({ save }: { save: SaveGame | null }) {
   }, [send, onSaveData]);
 
   const startNewGame = async (): Promise<void> => {
-    if (!window.confirm(t('newCity.confirm'))) {
-      return;
-    }
     await storage.clear();
     window.location.reload();
   };
@@ -167,7 +175,12 @@ function Game({ save }: { save: SaveGame | null }) {
 
   return (
     <div className="app">
-      <GameView bridge={bridge} callbacksRef={callbacksRef} rendererRef={rendererRef} />
+      <GameView
+        bridge={bridge}
+        gridSize={gridSize}
+        callbacksRef={callbacksRef}
+        rendererRef={rendererRef}
+      />
       <header className="hud-top">
         <div className="hud-title">Voltopia</div>
         {stats && (
@@ -239,7 +252,7 @@ function Game({ save }: { save: SaveGame | null }) {
             type="button"
             className="new-game-button"
             data-testid="new-game"
-            onClick={() => void startNewGame()}
+            onClick={() => setPage('newGame')}
           >
             {t('newCity.label')}
           </button>
@@ -275,6 +288,9 @@ function Game({ save }: { save: SaveGame | null }) {
       </footer>
       {page === 'help' && <HelpPage onClose={() => setPage(null)} />}
       {page === 'imprint' && <ImprintPage onClose={() => setPage(null)} />}
+      {page === 'newGame' && (
+        <NewGamePage onStart={() => void startNewGame()} onClose={() => setPage(null)} />
+      )}
       {page === 'settings' && (
         <SettingsPage
           settings={settings}

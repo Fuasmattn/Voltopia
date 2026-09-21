@@ -20,6 +20,8 @@ export interface SimBridgeOptions {
   seed: number;
   size?: number;
   save?: SaveGame;
+  /** Starting funds for a brand-new city (difficulty setting). */
+  startingMoney?: number;
 }
 
 const REJECTION_DISPLAY_MS = 2500;
@@ -71,6 +73,7 @@ export function useSimBridge(options: SimBridgeOptions): SimBridge {
       type: 'init',
       seed: options.seed,
       size: options.size ?? GRID_SIZE,
+      ...(options.startingMoney !== undefined ? { startingMoney: options.startingMoney } : {}),
       ...(options.save ? { save: options.save } : {}),
     };
     worker.postMessage(init);

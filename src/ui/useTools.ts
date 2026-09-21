@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import type { GameRenderer, PickedTile, RendererCallbacks } from '../render/renderer.ts';
 import { lShapedPath, rectTiles } from '../shared/grid.ts';
-import { BALANCE, GRID_SIZE } from '../shared/constants.ts';
+import { BALANCE } from '../shared/constants.ts';
 import { PlantType, Zone } from '../shared/types.ts';
 import { sound } from './sound.ts';
 import type { SimBridge } from './useSimBridge.ts';
@@ -65,6 +65,7 @@ export function useTools(
   bridge: SimBridge,
   callbacksRef: React.RefObject<RendererCallbacks>,
   rendererRef: React.RefObject<GameRenderer | null>,
+  gridSize: number,
 ): {
   tool: ToolId;
   setTool: (tool: ToolId) => void;
@@ -109,13 +110,13 @@ export function useTools(
       };
       callbacks.onBuildDrag = (tile) => {
         if (!anchor) return;
-        path = lShapedPath(anchor.x, anchor.y, tile.x, tile.y, GRID_SIZE);
+        path = lShapedPath(anchor.x, anchor.y, tile.x, tile.y, gridSize);
         rendererRef.current?.setPreviewTiles(path);
         showCost(path.length, BALANCE.costs.roadPerTile);
       };
       callbacks.onBuildEnd = (tile) => {
         if (anchor && tile) {
-          path = lShapedPath(anchor.x, anchor.y, tile.x, tile.y, GRID_SIZE);
+          path = lShapedPath(anchor.x, anchor.y, tile.x, tile.y, gridSize);
         }
         if (path.length > 0) {
           send({ type: 'buildRoad', tiles: path });
@@ -133,13 +134,13 @@ export function useTools(
       };
       callbacks.onBuildDrag = (tile) => {
         if (!anchor) return;
-        path = rectTiles(anchor.x, anchor.y, tile.x, tile.y, GRID_SIZE);
+        path = rectTiles(anchor.x, anchor.y, tile.x, tile.y, gridSize);
         rendererRef.current?.setPreviewTiles(path);
         showCost(path.length, BALANCE.costs.zonePerTile);
       };
       callbacks.onBuildEnd = (tile) => {
         if (anchor && tile) {
-          path = rectTiles(anchor.x, anchor.y, tile.x, tile.y, GRID_SIZE);
+          path = rectTiles(anchor.x, anchor.y, tile.x, tile.y, gridSize);
         }
         if (path.length > 0) {
           send({ type: 'paintZone', tiles: path, zone });
@@ -167,7 +168,7 @@ export function useTools(
 
     callbacksRef.current = callbacks;
     return clearPreview;
-  }, [tool, send, callbacksRef, rendererRef]);
+  }, [tool, send, callbacksRef, rendererRef, gridSize]);
 
   // Tool hotkeys: digits + B, Escape returns to select.
   useEffect(() => {

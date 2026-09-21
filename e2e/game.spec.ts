@@ -40,6 +40,18 @@ test('tutorial guides brand-new games and can be skipped', async ({ page }) => {
   await expect(page.getByTestId('tutorial')).toHaveCount(0);
 });
 
+test('new-game dialog starts a fresh city with chosen difficulty', async ({ page }) => {
+  await page.getByTestId('new-game').click();
+  await expect(page.getByTestId('new-game-page')).toBeVisible();
+  await page.getByTestId('size-48').click();
+  await page.getByTestId('difficulty-hard').click();
+  await page.getByTestId('seed-input').fill('gridtown');
+  await page.getByTestId('start-city').click();
+  await expect(page.getByTestId('tick-counter')).toBeVisible({ timeout: 15_000 });
+  // Hard difficulty: starting funds are 15,000.
+  await expect(page.getByTestId('money')).toContainText('15,000');
+});
+
 test('settings page toggles persist', async ({ page }) => {
   await page.getByTestId('open-settings').click();
   await expect(page.getByTestId('settings-page')).toBeVisible();

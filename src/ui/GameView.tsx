@@ -1,6 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
 import { GameRenderer, type RendererCallbacks } from '../render/renderer.ts';
-import { GRID_SIZE } from '../shared/constants.ts';
 import { useI18n } from './i18n.tsx';
 import type { SimBridge } from './useSimBridge.ts';
 
@@ -10,10 +9,12 @@ import type { SimBridge } from './useSimBridge.ts';
  */
 export function GameView({
   bridge,
+  gridSize,
   callbacksRef,
   rendererRef,
 }: {
   bridge: SimBridge;
+  gridSize: number;
   /** Mutable callbacks so tools can change without remounting the canvas. */
   callbacksRef: React.RefObject<RendererCallbacks>;
   rendererRef: React.RefObject<GameRenderer | null>;
@@ -50,7 +51,7 @@ export function GameView({
   }, []);
 
   function createRenderer(container: HTMLElement): GameRenderer {
-    return new GameRenderer(container, GRID_SIZE, {
+    return new GameRenderer(container, gridSize, {
       onHover: (tile) => callbacksRef.current.onHover?.(tile),
       onBuildStart: (tile) => callbacksRef.current.onBuildStart?.(tile),
       onBuildDrag: (tile) => callbacksRef.current.onBuildDrag?.(tile),

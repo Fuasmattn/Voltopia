@@ -34,7 +34,7 @@ export class SimEngine {
       case 'init':
         this.state = command.save
           ? deserializeState(command.save)
-          : createSimState(command.seed, command.size);
+          : createSimState(command.seed, command.size, command.startingMoney);
         return [];
       case 'setSpeed':
         state.speed = command.speed;
