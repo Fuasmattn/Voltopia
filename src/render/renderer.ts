@@ -11,6 +11,7 @@ import { PlantsMesh } from './plantsMesh.ts';
 import { VehiclesMesh } from './vehiclesMesh.ts';
 import { OverlaysMesh } from './overlays.ts';
 import { MinimapLayer } from './minimapLayer.ts';
+import { WeatherFx } from './weatherFx.ts';
 import { IconsMesh } from './iconsMesh.ts';
 import type { OverlayMode } from '../shared/types.ts';
 import { ZoneTilesMesh } from './zoneTilesMesh.ts';
@@ -88,6 +89,7 @@ export class GameRenderer {
   private overlays!: OverlaysMesh;
   /** One-pixel-per-tile city image for the UI minimap. */
   minimap!: MinimapLayer;
+  private weatherFx!: WeatherFx;
   private readonly setGridVisible: (visible: boolean) => void;
   private hoveredIndex: number | null = null;
   private buildPointerActive = false;
@@ -127,6 +129,8 @@ export class GameRenderer {
     this.addDiffLayer(this.overlays);
     this.minimap = new MinimapLayer(gridSize);
     this.addDiffLayer(this.minimap);
+    this.weatherFx = new WeatherFx(scene, gridSize);
+    this.addDiffLayer(this.weatherFx);
 
     const radiusGeometry = new THREE.RingGeometry(0.95, 1, 48).rotateX(-Math.PI / 2);
     this.radiusRing = new THREE.Mesh(
@@ -241,6 +245,7 @@ export class GameRenderer {
       .lerp(SKY_DUSK_COLOR, duskAmount(sunFactor, night) * 0.5);
 
     for (const layer of this.diffLayers) layer.setEnvironment?.(environment);
+    this.weatherFx.setCloudCover(stats.weather.cloudCover);
     this.vehiclesMesh.setEnvironment(environment);
   }
 
