@@ -1,0 +1,103 @@
+import { describe, expect, it } from 'vitest';
+import { BALANCE, TICKS_PER_DAY } from '../shared/constants.ts';
+import { SimEngine } from './engine.ts';
+import { timeOfDay, dayNumber } from './tick.ts';
+
+function makeEngine(seed = 42, size = 16): SimEngine {
+  return new SimEngine(seed, size);
+}
+
+describe('SimEngine basics', () => {
+  it('starts with the configured funds and default tax rate', () => {
+    const engine = makeEngine();
+    expect(engine.state.money).toBe(BALANCE.startingMoney);
+    expect(engine.state.taxRate).toBe(BALANCE.tax.defaultRate);
+  });
+
+  it('advances the tick counter', () => {
+    const engine = makeEngine();
+    const first = engine.tick();
+    const second = engine.tick();
+    expect(first.type).toBe('tick');
+    if (first.type === 'tick' && second.type === 'tick') {
+      expect(first.stats.tick).toBe(1);
+      expect(second.stats.tick).toBe(2);
+    }
+  });
+
+  it('changes speed via command', () => {
+    const engine = makeEngine();
+    engine.applyCommand({ type: 'setSpeed', speed: 3 });
+    expect(engine.state.speed).toBe(3);
+    engine.applyCommand({ type: 'setSpeed', speed: 0 });
+    expect(engine.state.speed).toBe(0);
+  });
+
+  it('clamps the tax rate to the allowed range', () => {
+    const engine = makeEngine();
+    engine.applyCommand({ type: 'setTaxRate', rate: 0.9 });
+    expect(engine.state.taxRate).toBe(BALANCE.tax.maxRate);
+    engine.applyCommand({ type: 'setTaxRate', rate: -0.5 });
+    expect(engine.state.taxRate).toBe(0);
+  });
+
+  it('toggles smart charging', () => {
+    const engine = makeEngine();
+    engine.applyCommand({ type: 'setSmartCharging', enabled: true });
+    expect(engine.state.smartCharging).toBe(true);
+  });
+
+  it('is deterministic: same seed produces identical stats over time', () => {
+    const a = makeEngine(1234);
+    const b = makeEngine(1234);
+    for (let i = 0; i < 200; i++) {
+      const ea = a.tick();
+      const eb = b.tick();
+      if (ea.type === 'tick' && eb.type === 'tick') {
+        expect(ea.stats).toEqual(eb.stats);
+      }
+    }
+  });
+
+  it('produces save data on request and restores from it', () => {
+    const engine = makeEngine(7, 16);
+    for (let i = 0; i < 10; i++) engine.tick();
+    const events = engine.applyCommand({ type: 'requestSave' });
+    expect(events).toHaveLength(1);
+    const event = events[0]!;
+    expect(event.type).toBe('saveData');
+    if (event.type !== 'saveData') return;
+
+    const restored = makeEngine(0, 4);
+    restored.applyCommand({ type: 'init', seed: 7, size: 16, save: event.save });
+    expect(restored.state.tick).toBe(10);
+    expect(restored.state.money).toBe(engine.state.money);
+    expect(restored.state.size).toBe(16);
+    // Loading marks the whole grid dirty so the renderer redraws everything.
+    const tickEvent = restored.tick();
+    if (tickEvent.type === 'tick') {
+      expect(tickEvent.diffs.length).toBe(16 * 16);
+    }
+  });
+
+  it('re-inits into a fresh state without a save', () => {
+    const engine = makeEngine(1, 8);
+    engine.tick();
+    engine.applyCommand({ type: 'init', seed: 2, size: 8 });
+    expect(engine.state.tick).toBe(0);
+    expect(engine.state.seed).toBe(2);
+  });
+});
+
+describe('time helpers', () => {
+  it('wraps time of day over the day length', () => {
+    expect(timeOfDay(0)).toBe(0);
+    expect(timeOfDay(TICKS_PER_DAY / 2)).toBe(0.5);
+    expect(timeOfDay(TICKS_PER_DAY)).toBe(0);
+  });
+
+  it('counts days', () => {
+    expect(dayNumber(0)).toBe(0);
+    expect(dayNumber(TICKS_PER_DAY * 3 + 5)).toBe(3);
+  });
+});
