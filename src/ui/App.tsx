@@ -18,6 +18,7 @@ import { Toolbar } from './Toolbar.tsx';
 import { SettingsPage } from './SettingsPage.tsx';
 import { loadSettings, persistSettings, type AppSettings } from './settings.ts';
 import { sound } from './sound.ts';
+import { isTutorialDone, Tutorial } from './Tutorial.tsx';
 import { useSimBridge } from './useSimBridge.ts';
 import { useTools } from './useTools.ts';
 
@@ -84,6 +85,10 @@ function Game({ save }: { save: SaveGame | null }) {
   const [overlay, setOverlay] = useState<OverlayMode>(OverlayMode.None);
   const [page, setPage] = useState<'help' | 'imprint' | 'settings' | null>(null);
   const [settings, setSettings] = useState<AppSettings>(loadSettings);
+  // The tutorial runs for brand-new cities only (no autosave existed).
+  const [showTutorial, setShowTutorial] = useState(
+    () => save === null && !isTutorialDone(),
+  );
 
   const stats = bridge.stats;
 
@@ -266,6 +271,9 @@ function Game({ save }: { save: SaveGame | null }) {
           goals={stats.goals}
           onAchievement={() => sound.play('achievement')}
         />
+      )}
+      {showTutorial && stats && (
+        <Tutorial stats={stats} onFinished={() => setShowTutorial(false)} />
       )}
       <OverlayToggle mode={overlay} onChange={setOverlay} />
       <footer className="hud-footer">

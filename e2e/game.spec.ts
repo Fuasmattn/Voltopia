@@ -11,8 +11,45 @@ async function has3dView(page: Page): Promise<boolean> {
 }
 
 test.beforeEach(async ({ page }) => {
+  // Keep the first-run tutorial out of unrelated tests (the tutorial
+  // test opts back in via the e2eAllowTutorial marker).
+  await page.addInitScript(() => {
+    if (!localStorage.getItem('voltopia.e2eAllowTutorial')) {
+      localStorage.setItem('voltopia.tutorialDone', '1');
+    }
+  });
   await page.goto('/');
   await expect(page.getByTestId('tick-counter')).toBeVisible({ timeout: 15_000 });
+});
+
+test('tutorial guides brand-new games and can be skipped', async ({ page }) => {
+  await page.evaluate(() => {
+    localStorage.setItem('voltopia.e2eAllowTutorial', '1');
+    localStorage.removeItem('voltopia.tutorialDone');
+  });
+  await page.evaluate(() => indexedDB.deleteDatabase('voltopia'));
+  await page.reload();
+  await expect(page.getByTestId('tutorial')).toBeVisible({ timeout: 15_000 });
+  await page.getByTestId('tutorial-next').click(); // welcome -> build a road
+  await expect(page.getByTestId('tutorial')).toContainText('2');
+  await page.getByTestId('tutorial-skip').click();
+  await expect(page.getByTestId('tutorial')).toHaveCount(0);
+  // Skipping is remembered.
+  await page.reload();
+  await expect(page.getByTestId('tick-counter')).toBeVisible({ timeout: 15_000 });
+  await expect(page.getByTestId('tutorial')).toHaveCount(0);
+});
+
+test('settings page toggles persist', async ({ page }) => {
+  await page.getByTestId('open-settings').click();
+  await expect(page.getByTestId('settings-page')).toBeVisible();
+  await page.getByTestId('setting-shadows').click();
+  await page.getByTestId('setting-sound').click();
+  await page.reload();
+  await expect(page.getByTestId('tick-counter')).toBeVisible({ timeout: 15_000 });
+  await page.getByTestId('open-settings').click();
+  await expect(page.getByTestId('setting-shadows')).not.toBeChecked();
+  await expect(page.getByTestId('setting-sound')).not.toBeChecked();
 });
 
 test('boots with a running simulation', async ({ page }) => {

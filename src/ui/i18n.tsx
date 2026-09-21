@@ -113,6 +113,29 @@ const en = {
 
   'modal.close': 'Close',
 
+  'tutorial.welcome.title': 'Welcome to Voltopia!',
+  'tutorial.welcome.body':
+    'Your city will run entirely on renewable energy. Let’s get the first neighborhood powered up.',
+  'tutorial.road.title': 'Build a road',
+  'tutorial.road.body':
+    'Select the road tool (🛣 or key 2) and drag a line across the grass. Everything grows along roads.',
+  'tutorial.zone.title': 'Zone some homes',
+  'tutorial.zone.body':
+    'Pick the residential tool (🏠 or key 3) and drag a small rectangle next to your road.',
+  'tutorial.power.title': 'Provide power',
+  'tutorial.power.body':
+    'Place a wind turbine (🌀, key 7) or a solar farm (☀️, key 6) nearby. The ring shows its supply radius — keep your zones inside it.',
+  'tutorial.growth.title': 'Watch it grow',
+  'tutorial.growth.body':
+    'With demand, roads and power in place, the first houses will appear on their own. Give it a moment (▶▶▶ speeds things up).',
+  'tutorial.night.title': 'Survive the night',
+  'tutorial.night.body':
+    'Solar dies at sunset — add a battery (🔋) to store the midday surplus, and check the energy panel. Good luck, mayor!',
+  'tutorial.next': 'Next',
+  'tutorial.done': 'Let’s go!',
+  'tutorial.skip': 'Skip tutorial',
+  'tutorial.waiting': '… waiting',
+
   'settings.title': 'Settings',
   'settings.sound': 'Sound',
   'settings.soundEnabled': 'Sound effects',
@@ -254,6 +277,29 @@ const de: Record<TranslationKey, string> = {
     'Dies ist ein kostenloses Open-Source-Browserspiel (MIT-Lizenz). Trotz sorgfältiger Prüfung wird keine Haftung für externe Links übernommen; für deren Inhalte sind ausschließlich die jeweiligen Betreiber verantwortlich.',
 
   'modal.close': 'Schließen',
+
+  'tutorial.welcome.title': 'Willkommen in Voltopia!',
+  'tutorial.welcome.body':
+    'Deine Stadt läuft komplett mit erneuerbarer Energie. Bringen wir das erste Viertel ans Netz.',
+  'tutorial.road.title': 'Baue eine Straße',
+  'tutorial.road.body':
+    'Wähle das Straßenwerkzeug (🛣 oder Taste 2) und ziehe eine Linie übers Gras. Alles wächst entlang von Straßen.',
+  'tutorial.zone.title': 'Weise Wohngebiete aus',
+  'tutorial.zone.body':
+    'Nimm das Wohngebiets-Werkzeug (🏠 oder Taste 3) und ziehe ein kleines Rechteck neben deine Straße.',
+  'tutorial.power.title': 'Sorge für Strom',
+  'tutorial.power.body':
+    'Platziere ein Windrad (🌀, Taste 7) oder einen Solarpark (☀️, Taste 6) in der Nähe. Der Ring zeigt den Versorgungsradius — halte deine Zonen darin.',
+  'tutorial.growth.title': 'Sieh zu, wie es wächst',
+  'tutorial.growth.body':
+    'Mit Nachfrage, Straßen und Strom entstehen die ersten Häuser von selbst. Gib ihnen einen Moment (▶▶▶ beschleunigt).',
+  'tutorial.night.title': 'Überstehe die Nacht',
+  'tutorial.night.body':
+    'Solar endet mit dem Sonnenuntergang — baue einen Batteriespeicher (🔋) für den Mittagsüberschuss und behalte das Energie-Panel im Blick. Viel Erfolg!',
+  'tutorial.next': 'Weiter',
+  'tutorial.done': 'Los geht’s!',
+  'tutorial.skip': 'Tutorial überspringen',
+  'tutorial.waiting': '… warte',
 
   'settings.title': 'Einstellungen',
   'settings.sound': 'Ton',

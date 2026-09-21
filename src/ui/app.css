@@ -709,3 +709,60 @@ body,
   color: var(--accent);
   font-size: 12px;
 }
+
+.tutorial-card {
+  position: absolute;
+  top: 76px;
+  left: 12px;
+  width: 260px;
+  background: var(--hud-bg);
+  border: 1px solid var(--accent);
+  border-radius: 12px;
+  padding: 14px 16px;
+  color: var(--hud-text);
+  backdrop-filter: blur(8px);
+  font-size: 13px;
+  line-height: 1.45;
+  user-select: none;
+}
+
+.tutorial-progress {
+  font-size: 11px;
+  color: var(--hud-muted);
+  margin-bottom: 4px;
+}
+
+.tutorial-card h3 {
+  font-size: 14px;
+  color: var(--accent);
+  margin-bottom: 6px;
+}
+
+.tutorial-actions {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-top: 10px;
+  gap: 8px;
+}
+
+.tutorial-actions button {
+  background: transparent;
+  border: 1px solid var(--hud-border);
+  border-radius: 8px;
+  color: var(--hud-text);
+  padding: 4px 12px;
+  cursor: pointer;
+  font-size: 12px;
+}
+
+.tutorial-actions button[data-testid='tutorial-next'] {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: #10161f;
+}
+
+.tutorial-waiting {
+  font-size: 11px;
+  color: var(--hud-muted);
+}
