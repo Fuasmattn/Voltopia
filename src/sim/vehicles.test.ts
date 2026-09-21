@@ -178,56 +178,174 @@ describe('vehiclesStep (commuting)', () => {
   });
 });
 
-describe('chargingDemand', () => {
-  it('is zero without vehicles', () => {
-    const state = createSimState(1, SIZE);
-    expect(chargingDemand(state)).toBe(0);
+/** Simulate from the state's current tick for whole in-game days. */
+function runDays(state: SimState, days: number, sample?: (hour: number) => void): void {
+  const ticks = days * TICKS_PER_DAY;
+  for (let i = 0; i < ticks; i++) {
+    vehiclesStep(state);
+    if (sample) sample(((state.tick % TICKS_PER_DAY) / TICKS_PER_DAY) * 24);
+    state.tick++;
+  }
+}
+
+describe('emergent charging', () => {
+  it('driving drains the battery', () => {
+    const state = commuterTown(3, 200);
+    setHour(state, BALANCE.vehicles.commute.morningStartHour);
+    vehiclesStep(state);
+    const before = state.vehicles.map((v) => v.charge);
+    runHours(state, 4);
+    const drained = state.vehicles.filter((v, i) => v.charge < before[i]);
+    expect(drained.length).toBeGreaterThan(0);
   });
 
-  it('peaks in the evening with home charging only', () => {
-    const state = commuterTown(1, 250);
-    vehiclesStep(state);
-    setHour(state, 19);
-    const evening = chargingDemand(state);
-    setHour(state, 12);
-    const noon = chargingDemand(state);
-    setHour(state, 4);
-    const night = chargingDemand(state);
-    expect(evening).toBeGreaterThan(noon * 3);
-    expect(evening).toBeGreaterThan(night);
+  it('the evening home-charging peak emerges from arrivals', () => {
+    const state = commuterTown(11, 200);
+    const demandByHour = new Map<number, number>();
+    runDays(state, 2, (hour) => {
+      // keep the day-2 samples only (day 1 still burns the spawn charge)
+      if (state.tick >= TICKS_PER_DAY) {
+        demandByHour.set(Math.floor(hour), chargingDemand(state));
+      }
+    });
+    const atWorkNoon = demandByHour.get(13) ?? 0;
+    const evening = demandByHour.get(19) ?? 0;
+    // No hubs: nothing charges at work; plugging in happens after the
+    // evening commute.
+    expect(atWorkNoon).toBe(0);
+    expect(evening).toBeGreaterThan(0);
   });
 
-  it('charging hubs shift load into the daytime', () => {
-    const state = commuterTown(1, 250);
-    vehiclesStep(state);
-    setHour(state, 12);
-    const noonBefore = chargingDemand(state);
-    setHour(state, 19);
-    const eveningBefore = chargingDemand(state);
-    placePlant(state, at(6, 12), PlantType.ChargingHub);
-    placePlant(state, at(8, 12), PlantType.ChargingHub);
-    setHour(state, 12);
-    const noonAfter = chargingDemand(state);
-    setHour(state, 19);
-    const eveningAfter = chargingDemand(state);
-    expect(noonAfter).toBeGreaterThan(noonBefore);
-    expect(eveningAfter).toBeLessThan(eveningBefore);
+  it('charging hubs near workplaces shift load into the day', () => {
+    const withHub = commuterTown(11, 200);
+    placePlant(withHub, at(17, 11), PlantType.ChargingHub); // next to the jobs
+    const demandByHour = new Map<number, number>();
+    runDays(withHub, 2, (hour) => {
+      if (withHub.tick >= TICKS_PER_DAY) {
+        demandByHour.set(Math.floor(hour), chargingDemand(withHub));
+      }
+    });
+    // Mid-morning, arrivals are plugged in at the hub (PV ramp window).
+    expect(demandByHour.get(10) ?? 0).toBeGreaterThan(0);
   });
 
-  it('smart charging follows the generation surplus', () => {
-    const state = commuterTown(1, 250);
+  it('a hub only serves a limited number of vehicles', () => {
+    const state = commuterTown(11, 250);
+    placePlant(state, at(17, 11), PlantType.ChargingHub);
+    setHour(state, 12);
+    // Everyone parked at work with an empty-ish battery.
     vehiclesStep(state);
+    for (const v of state.vehicles) {
+      v.phase = VehiclePhase.ParkedWork;
+      v.charge = 0.3;
+      v.path = [];
+    }
+    vehiclesStep(state);
+    const charging = state.vehicles.filter((v) => v.charging).length;
+    expect(charging).toBeGreaterThan(0);
+    expect(charging).toBeLessThanOrEqual(BALANCE.vehicles.vehiclesPerHub);
+  });
+
+  it('smart charging defers home charging until there is surplus', () => {
+    const state = commuterTown(5, 200);
     state.smartCharging = true;
-    setHour(state, 19);
-    const fullLoad = state.vehicles.length * BALANCE.vehicles.chargingEnergyPerVehicle;
+    setHour(state, 3); // everyone parked at home
+    vehiclesStep(state);
+    for (const v of state.vehicles) v.charge = 0.8; // above the floor
 
+    // No renewable surplus: nobody charges.
     state.lastEnergy.solar = 0;
     state.lastEnergy.wind = 0;
+    state.lastEnergy.rooftop = 0;
     state.lastEnergy.buildingConsumption = 50;
-    expect(chargingDemand(state)).toBeCloseTo(fullLoad * BALANCE.vehicles.smartChargingBaseline, 5);
+    vehiclesStep(state);
+    expect(chargingDemand(state)).toBe(0);
 
-    state.lastEnergy.solar = 500;
-    state.lastEnergy.buildingConsumption = 20;
-    expect(chargingDemand(state)).toBeCloseTo(fullLoad, 5);
+    // Surplus appears: charging follows it.
+    state.lastEnergy.wind = 500;
+    vehiclesStep(state);
+    expect(chargingDemand(state)).toBeGreaterThan(0);
+
+    // Below the floor, vehicles charge even without surplus.
+    state.lastEnergy.wind = 0;
+    for (const v of state.vehicles) v.charge = BALANCE.vehicles.smartChargeFloor - 0.1;
+    vehiclesStep(state);
+    expect(chargingDemand(state)).toBeGreaterThan(0);
+  });
+
+  it('full batteries stop charging', () => {
+    const state = commuterTown(5, 200);
+    setHour(state, 3);
+    vehiclesStep(state);
+    for (const v of state.vehicles) v.charge = 1;
+    vehiclesStep(state);
+    expect(chargingDemand(state)).toBe(0);
+  });
+});
+
+describe('congestion', () => {
+  /** A hand-built driving vehicle for gate tests. */
+  function makeDriver(state: SimState, id: number, tile: number, path: number[], workRoad: number) {
+    state.vehicles.push({
+      id,
+      homeRoad: tile,
+      workRoad,
+      x: (tile % SIZE) + 0.5,
+      y: Math.floor(tile / SIZE) + 0.5,
+      angle: 0,
+      phase: VehiclePhase.ToWork,
+      path,
+      pathIndex: 0,
+      departureOffset: 0,
+      charge: 0.8,
+      charging: false,
+    });
+  }
+
+  it('a full tile blocks followers from entering', () => {
+    const state = createSimState(1, SIZE);
+    const a = at(3, 5);
+    const b = at(4, 5);
+    const c = at(5, 5);
+    buildRoads(state, [a, b, c]);
+    state.layers.zone[at(3, 4)] = Zone.Residential;
+    state.layers.density[at(3, 4)] = 1;
+    // The follower is processed first; two blockers already fill tile b.
+    makeDriver(state, 100, a, [b, c], c);
+    makeDriver(state, 101, b, [b, c], c);
+    makeDriver(state, 102, b, [b, c], c);
+    const follower = state.vehicles[0];
+    const xBefore = follower.x;
+    vehiclesStep(state);
+    expect(follower.x).toBe(xBefore); // waited instead of entering b
+  });
+
+  it('queues form at a bottleneck but everyone still arrives', () => {
+    const state = createSimState(2, SIZE);
+    const road = Array.from({ length: 14 }, (_, x) => at(x + 3, 10));
+    buildRoads(state, road);
+    // Homes spread along the road, one shared workplace at the far end.
+    for (let i = 0; i < 8; i++) {
+      state.layers.zone[at(3 + i, 9)] = Zone.Residential;
+      state.layers.density[at(3 + i, 9)] = 3;
+    }
+    state.layers.zone[at(16, 9)] = Zone.Commercial;
+    state.layers.density[at(16, 9)] = 3;
+    setHour(state, BALANCE.vehicles.commute.morningStartHour);
+    vehiclesStep(state);
+    for (const v of state.vehicles) v.departureOffset = 0; // rush together
+
+    let sawWaiting = false;
+    const positions = new Map<number, number>();
+    for (let i = 0; i < TICKS_PER_DAY / 4; i++) {
+      for (const v of drivingVehicles(state)) positions.set(v.id, v.x);
+      vehiclesStep(state);
+      state.tick++;
+      for (const v of drivingVehicles(state)) {
+        if (positions.get(v.id) === v.x && v.path.length > 0) sawWaiting = true;
+      }
+    }
+    expect(sawWaiting).toBe(true);
+    expect(state.vehicles.every((v) => v.phase === VehiclePhase.ParkedWork)).toBe(true);
   });
 });

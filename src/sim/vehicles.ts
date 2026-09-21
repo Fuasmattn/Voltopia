@@ -1,7 +1,6 @@
 import { BALANCE, TICK_RATE, TICKS_PER_DAY } from '../shared/constants.ts';
-import { neighbors4, tileX, tileY } from '../shared/grid.ts';
-import { Zone } from '../shared/types.ts';
-import { censusPlants } from './energy.ts';
+import { neighbors4, tileIndex, tileX, tileY } from '../shared/grid.ts';
+import { PlantType, Zone } from '../shared/types.ts';
 import {
   countPopulationAndJobs,
   TileType,
@@ -9,16 +8,6 @@ import {
   type SimState,
   type Vehicle,
 } from './state.ts';
-import { timeOfDay } from './tick.ts';
-
-/** Interpolated hourly factor from a 24-value profile. */
-function profileFactor(profile: readonly number[], time: number): number {
-  const hour = (time * 24) % 24;
-  const lower = Math.floor(hour) % 24;
-  const upper = (lower + 1) % 24;
-  const blend = hour - Math.floor(hour);
-  return profile[lower] * (1 - blend) + profile[upper] * blend;
-}
 
 /**
  * Breadth-first search over road tiles. Returns the tile path from
@@ -77,8 +66,20 @@ function roadTilesNextToZones(state: SimState, zones: readonly Zone[]): number[]
   return result;
 }
 
-function departureTicks(startHour: number, offset: number): number {
-  return Math.floor((startHour / 24) * TICKS_PER_DAY) + offset;
+/** Tile indices of all charging hubs. */
+function chargingHubTiles(state: SimState): number[] {
+  const { tileType, plantType } = state.layers;
+  const hubs: number[] = [];
+  for (let i = 0; i < tileType.length; i++) {
+    if (tileType[i] === TileType.Plant && plantType[i] === PlantType.ChargingHub) {
+      hubs.push(i);
+    }
+  }
+  return hubs;
+}
+
+function departureTicks(startHour: number): number {
+  return Math.floor((startHour / 24) * TICKS_PER_DAY);
 }
 
 function parkAt(state: SimState, vehicle: Vehicle, tile: number): void {
@@ -88,11 +89,16 @@ function parkAt(state: SimState, vehicle: Vehicle, tile: number): void {
   vehicle.pathIndex = 0;
 }
 
+function vehicleTile(state: SimState, vehicle: Vehicle): number {
+  return tileIndex(Math.floor(vehicle.x), Math.floor(vehicle.y), state.size);
+}
+
 /**
- * Commuting electric vehicles: every vehicle has a home and (if the city
- * offers one) a workplace, and drives the road network between them via
- * breadth-first pathfinding — to work in the morning, home in the
- * evening, with seeded departure offsets so traffic ramps up naturally.
+ * Commuting electric vehicles with a physical battery model: driving
+ * drains the battery, plugging in at home (evenings) or at a nearby
+ * charging hub (workdays) recharges it — the charging load on the grid
+ * emerges from what the fleet actually does. Congestion: at most a few
+ * vehicles fit on a road tile; followers wait, so queues form.
  */
 export function vehiclesStep(state: SimState): void {
   const { population, jobs } = countPopulationAndJobs(state);
@@ -116,7 +122,7 @@ export function vehiclesStep(state: SimState): void {
   while (state.vehicles.length < targetCount) {
     const home = homeRoads[state.rng.nextInt(homeRoads.length)];
     const work = workRoads.length > 0 ? workRoads[state.rng.nextInt(workRoads.length)] : -1;
-    const vehicle: Vehicle = {
+    state.vehicles.push({
       id: state.nextVehicleId++,
       homeRoad: home,
       workRoad: work,
@@ -127,15 +133,34 @@ export function vehiclesStep(state: SimState): void {
       path: [],
       pathIndex: 0,
       departureOffset: state.rng.nextInt(Math.max(1, windowTicks)),
-    };
-    state.vehicles.push(vehicle);
+      charge: state.rng.nextRange(0.5, 0.9),
+      charging: false,
+    });
   }
 
   const { tileType } = state.layers;
   const step = BALANCE.vehicles.speedTilesPerSecond / TICK_RATE;
   const ticksIntoDay = state.tick % TICKS_PER_DAY;
-  const morningDeparture = departureTicks(BALANCE.vehicles.commute.morningStartHour, 0);
-  const eveningDeparture = departureTicks(BALANCE.vehicles.commute.eveningStartHour, 0);
+  const morningDeparture = departureTicks(BALANCE.vehicles.commute.morningStartHour);
+  const eveningDeparture = departureTicks(BALANCE.vehicles.commute.eveningStartHour);
+
+  // Congestion: how many driving vehicles occupy each road tile.
+  const occupancy = new Map<number, number>();
+  for (const vehicle of state.vehicles) {
+    if (vehicle.phase === VehiclePhase.ToWork || vehicle.phase === VehiclePhase.ToHome) {
+      const tile = vehicleTile(state, vehicle);
+      occupancy.set(tile, (occupancy.get(tile) ?? 0) + 1);
+    }
+  }
+
+  // Work charging: hubs serve nearby workplaces up to their capacity.
+  const hubs = chargingHubTiles(state);
+  const hubLoad = new Map<number, number>();
+
+  // Smart charging gate: is there renewable surplus right now (last tick)?
+  const surplusAvailable =
+    state.lastEnergy.solar + state.lastEnergy.wind + state.lastEnergy.rooftop >
+    state.lastEnergy.buildingConsumption;
 
   for (const vehicle of state.vehicles) {
     // Reassign endpoints that were bulldozed or lost their buildings.
@@ -185,14 +210,61 @@ export function vehiclesStep(state: SimState): void {
       }
       case VehiclePhase.ToWork:
       case VehiclePhase.ToHome: {
-        driveAlongPath(state, vehicle, step);
+        driveAlongPath(state, vehicle, step, occupancy);
         break;
       }
+    }
+
+    vehicle.charging = decideCharging(state, vehicle, hubs, hubLoad, surplusAvailable);
+    if (vehicle.charging) {
+      vehicle.charge = Math.min(1, vehicle.charge + BALANCE.vehicles.chargeRatePerTick);
     }
   }
 }
 
-function driveAlongPath(state: SimState, vehicle: Vehicle, step: number): void {
+/**
+ * Plugged in? At home whenever the battery isn't full (smart charging
+ * defers to renewable surplus unless the battery is low); at work only
+ * when a charging hub with free capacity is near the workplace.
+ */
+function decideCharging(
+  state: SimState,
+  vehicle: Vehicle,
+  hubs: number[],
+  hubLoad: Map<number, number>,
+  surplusAvailable: boolean,
+): boolean {
+  if (vehicle.charge >= 1) return false;
+
+  if (vehicle.phase === VehiclePhase.ParkedHome) {
+    if (!state.smartCharging) return true;
+    return surplusAvailable || vehicle.charge < BALANCE.vehicles.smartChargeFloor;
+  }
+
+  if (vehicle.phase === VehiclePhase.ParkedWork && vehicle.workRoad >= 0) {
+    const wx = tileX(vehicle.workRoad, state.size);
+    const wy = tileY(vehicle.workRoad, state.size);
+    for (const hub of hubs) {
+      const distance = Math.max(
+        Math.abs(wx - tileX(hub, state.size)),
+        Math.abs(wy - tileY(hub, state.size)),
+      );
+      if (distance > BALANCE.vehicles.hubRadius) continue;
+      const used = hubLoad.get(hub) ?? 0;
+      if (used >= BALANCE.vehicles.vehiclesPerHub) continue;
+      hubLoad.set(hub, used + 1);
+      return true;
+    }
+  }
+  return false;
+}
+
+function driveAlongPath(
+  state: SimState,
+  vehicle: Vehicle,
+  step: number,
+  occupancy: Map<number, number>,
+): void {
   // A bulldozed tile on the route: abort the trip and re-plan next tick.
   const target = vehicle.path[vehicle.pathIndex];
   if (target === undefined || state.layers.tileType[target] !== TileType.Road) {
@@ -208,21 +280,37 @@ function driveAlongPath(state: SimState, vehicle: Vehicle, step: number): void {
   const dx = targetX - vehicle.x;
   const dy = targetY - vehicle.y;
   const distance = Math.hypot(dx, dy);
+  const move = Math.min(step, distance);
+
+  // Congestion: entering an occupied-to-capacity tile means waiting.
+  const currentTile = vehicleTile(state, vehicle);
+  const nextX = distance <= step ? targetX : vehicle.x + (dx / distance) * move;
+  const nextY = distance <= step ? targetY : vehicle.y + (dy / distance) * move;
+  const nextTile = tileIndex(Math.floor(nextX), Math.floor(nextY), state.size);
+  if (nextTile !== currentTile) {
+    if ((occupancy.get(nextTile) ?? 0) >= BALANCE.vehicles.maxPerRoadTile) {
+      return; // queue behind the jam, try again next tick
+    }
+    occupancy.set(currentTile, Math.max(0, (occupancy.get(currentTile) ?? 1) - 1));
+    occupancy.set(nextTile, (occupancy.get(nextTile) ?? 0) + 1);
+  }
+
+  vehicle.x = nextX;
+  vehicle.y = nextY;
+  if (move > 1e-9) {
+    vehicle.angle = Math.atan2(dy, dx);
+    vehicle.charge = Math.max(0, vehicle.charge - move * BALANCE.vehicles.batteryDrainPerTile);
+  }
 
   if (distance <= step) {
-    vehicle.x = targetX;
-    vehicle.y = targetY;
     vehicle.pathIndex++;
     if (vehicle.pathIndex >= vehicle.path.length) {
-      vehicle.phase =
-        vehicle.phase === VehiclePhase.ToWork ? VehiclePhase.ParkedWork : VehiclePhase.ParkedHome;
+      const arrivedAtWork = vehicle.phase === VehiclePhase.ToWork;
+      vehicle.phase = arrivedAtWork ? VehiclePhase.ParkedWork : VehiclePhase.ParkedHome;
+      occupancy.set(nextTile, Math.max(0, (occupancy.get(nextTile) ?? 1) - 1));
       vehicle.path = [];
       vehicle.pathIndex = 0;
     }
-  } else {
-    vehicle.x += (dx / distance) * step;
-    vehicle.y += (dy / distance) * step;
-    vehicle.angle = Math.atan2(dy, dx);
   }
 }
 
@@ -234,35 +322,15 @@ export function drivingVehicles(state: SimState): Vehicle[] {
 }
 
 /**
- * EV charging demand for this tick.
- *
- * - Home charging peaks in the evening (commuters plug in).
- * - Charging hubs shift a share of the fleet into a daytime window that
- *   matches PV generation.
- * - The smart-charging upgrade instead follows the current generation
- *   surplus (last tick's balance), keeping only a small baseline load.
+ * EV charging demand for this tick: the number of vehicles actually
+ * plugged in right now times the charger power. The evening peak, the
+ * daytime hub window, and smart charging's surplus-following all emerge
+ * from individual vehicle behavior in vehiclesStep.
  */
 export function chargingDemand(state: SimState): number {
-  const vehicles = state.vehicles.length;
-  if (vehicles === 0) return 0;
-  const time = timeOfDay(state.tick);
-  const perVehicle = BALANCE.vehicles.chargingEnergyPerVehicle;
-  const fullLoad = vehicles * perVehicle;
-
-  if (state.smartCharging) {
-    const baseline = fullLoad * BALANCE.vehicles.smartChargingBaseline;
-    const lastSurplus = Math.max(
-      0,
-      state.lastEnergy.solar + state.lastEnergy.wind - state.lastEnergy.buildingConsumption,
-    );
-    return Math.min(fullLoad, baseline + lastSurplus);
+  let charging = 0;
+  for (const vehicle of state.vehicles) {
+    if (vehicle.charging) charging++;
   }
-
-  const hubs = censusPlants(state).chargingHubs;
-  const hubShare = Math.min(1, (hubs * BALANCE.vehicles.vehiclesPerHub) / vehicles);
-  const home = profileFactor(BALANCE.vehicles.homeChargingProfile, time);
-  const hub = profileFactor(BALANCE.vehicles.hubChargingProfile, time);
-  return fullLoad * ((1 - hubShare) * home + hubShare * hub);
+  return charging * BALANCE.vehicles.chargingEnergyPerVehicle;
 }
-
-export { profileFactor };

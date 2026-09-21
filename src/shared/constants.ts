@@ -174,8 +174,18 @@ export const BALANCE = {
     maxVehicles: 220,
     /** Tiles per second at 1x speed. */
     speedTilesPerSecond: 1.6,
-    /** Peak charging demand per vehicle per tick. */
-    chargingEnergyPerVehicle: 0.9,
+    /** Energy drawn per tick by one actively charging vehicle. */
+    chargingEnergyPerVehicle: 1.5,
+    /** State-of-charge gained per tick while charging (0..1 scale). */
+    chargeRatePerTick: 0.0012,
+    /** State of charge consumed per road tile driven. */
+    batteryDrainPerTile: 0.02,
+    /** Below this SoC, smart charging charges regardless of surplus. */
+    smartChargeFloor: 0.35,
+    /** A hub serves workplaces within this Chebyshev radius. */
+    hubRadius: 5,
+    /** Vehicles queuing on one road tile before followers must wait. */
+    maxPerRoadTile: 2,
     /**
      * Commuting: vehicles drive home -> workplace in the morning and
      * back in the evening (hours of the in-game day). Departures are
@@ -186,23 +196,8 @@ export const BALANCE = {
       eveningStartHour: 17.25,
       departureWindowHours: 1.5,
     },
-    /** Vehicles one charging hub can shift into its daytime window. */
+    /** Vehicles one charging hub can serve simultaneously. */
     vehiclesPerHub: 25,
-    /**
-     * Hourly home-charging profile: pronounced evening peak when
-     * commuters plug in (index = hour).
-     */
-    homeChargingProfile: [
-      0.5, 0.4, 0.3, 0.2, 0.15, 0.1, 0.1, 0.1, 0.08, 0.05, 0.05, 0.05, 0.05, 0.05, 0.05, 0.08, 0.15,
-      0.45, 0.85, 1.0, 0.95, 0.85, 0.7, 0.6,
-    ],
-    /** Hourly hub-charging profile: daytime, matching PV generation. */
-    hubChargingProfile: [
-      0.05, 0.05, 0.05, 0.05, 0.05, 0.05, 0.1, 0.3, 0.6, 0.85, 1.0, 1.0, 1.0, 1.0, 0.95, 0.85, 0.6,
-      0.35, 0.2, 0.1, 0.05, 0.05, 0.05, 0.05,
-    ],
-    /** Baseline share of charging that cannot be shifted by smart charging. */
-    smartChargingBaseline: 0.15,
   },
 
   weather: {

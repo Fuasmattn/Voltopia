@@ -36,6 +36,10 @@ export interface Vehicle {
   pathIndex: number;
   /** Departure offset in ticks within the commute window. */
   departureOffset: number;
+  /** Battery state of charge, 0..1. Drains while driving. */
+  charge: number;
+  /** True while plugged in this tick (drives the charging load). */
+  charging: boolean;
 }
 
 /** A reversible build action for the undo tool. */
