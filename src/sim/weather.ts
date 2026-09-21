@@ -1,4 +1,4 @@
-import { BALANCE } from '../shared/constants.ts';
+import { BALANCE, TICKS_PER_DAY } from '../shared/constants.ts';
 import { timeOfDay } from './tick.ts';
 import type { SimState } from './state.ts';
 
@@ -25,14 +25,54 @@ export function windFactor(windSpeed: number): number {
 }
 
 /**
+ * Multi-day pressure systems: slowly moving fronts shift the mean that
+ * the short-term weather noise reverts to. Stateless in (seed, tick), so
+ * save games reproduce the same fronts. When a high-cloud front meets a
+ * low-wind front, the city faces a genuine Dunkelflaute.
+ */
+export function frontMeans(
+  seed: number,
+  tick: number,
+): { cloudMean: number; windMean: number } {
+  const { cloud, wind } = BALANCE.weather.fronts;
+  return {
+    cloudMean: frontValue(seed, tick, cloud, 0),
+    windMean: frontValue(seed, tick, wind, 1),
+  };
+}
+
+function frontValue(
+  seed: number,
+  tick: number,
+  config: {
+    periodsDays: readonly number[];
+    amplitudes: readonly number[];
+    base: number;
+  },
+  channel: number,
+): number {
+  let value = config.base;
+  for (let i = 0; i < config.periodsDays.length; i++) {
+    // Seed-derived phase per wave so every city gets its own fronts.
+    const phase =
+      (((seed >>> (channel * 8 + i * 4)) & 0xff) / 255) * 2 * Math.PI;
+    const period = config.periodsDays[i] * TICKS_PER_DAY;
+    value += config.amplitudes[i] * Math.sin((2 * Math.PI * tick) / period + phase);
+  }
+  return Math.min(0.95, Math.max(0.05, value));
+}
+
+/**
  * Advance cloud cover and wind speed by one tick: a seeded random walk
- * with mean reversion, so weather varies smoothly and reproducibly.
+ * with mean reversion toward the current front means, so weather varies
+ * smoothly, reproducibly, and with multi-day character.
  */
 export function updateWeather(state: SimState): void {
   const { cloudDrift, windDrift } = BALANCE.weather;
+  const { cloudMean, windMean } = frontMeans(state.seed, state.tick);
   const w = state.weather;
-  w.cloudCover = drift(w.cloudCover, state.rng.next(), cloudDrift, 0.45);
-  w.windSpeed = drift(w.windSpeed, state.rng.next(), windDrift, 0.5);
+  w.cloudCover = drift(w.cloudCover, state.rng.next(), cloudDrift, cloudMean);
+  w.windSpeed = drift(w.windSpeed, state.rng.next(), windDrift, windMean);
 }
 
 function drift(

@@ -171,5 +171,15 @@ export const BALANCE = {
     /** How fast cloud cover drifts (per tick). */
     cloudDrift: 0.003,
     windDrift: 0.002,
+    /**
+     * Multi-day pressure systems ("fronts") slowly shift the mean the
+     * short-term weather noise reverts to. Two incommensurate periods per
+     * quantity so calm sunny spells and dark doldrums (Dunkelflaute)
+     * emerge naturally when the waves align. Periods in in-game days.
+     */
+    fronts: {
+      cloud: { periodsDays: [2.6, 4.3] as const, amplitudes: [0.28, 0.12] as const, base: 0.45 },
+      wind: { periodsDays: [3.4, 5.7] as const, amplitudes: [0.3, 0.1] as const, base: 0.5 },
+    },
   },
 } as const;

@@ -1,7 +1,9 @@
 import { describe, expect, it } from 'vitest';
 import { nightFactor } from '../shared/daylight.ts';
+import { TICKS_PER_DAY } from '../shared/constants.ts';
 import { createSimState } from './state.ts';
 import {
+  frontMeans,
   solarFactor,
   sunIntensity,
   SUNRISE,
@@ -65,6 +67,64 @@ describe('windFactor', () => {
     expect(windFactor(0.3)).toBeGreaterThan(0);
     expect(windFactor(0.3)).toBeLessThan(windFactor(0.5));
     expect(windFactor(1)).toBe(1);
+  });
+});
+
+describe('frontMeans (multi-day pressure systems)', () => {
+  it('stays within sane bounds', () => {
+    for (let day = 0; day < 40; day++) {
+      const { cloudMean, windMean } = frontMeans(123, day * TICKS_PER_DAY);
+      expect(cloudMean).toBeGreaterThanOrEqual(0.05);
+      expect(cloudMean).toBeLessThanOrEqual(0.95);
+      expect(windMean).toBeGreaterThanOrEqual(0.05);
+      expect(windMean).toBeLessThanOrEqual(0.95);
+    }
+  });
+
+  it('produces both sunny spells and overcast fronts over weeks', () => {
+    let minCloud = 1;
+    let maxCloud = 0;
+    let minWind = 1;
+    let maxWind = 0;
+    for (let t = 0; t < 30 * TICKS_PER_DAY; t += 60) {
+      const { cloudMean, windMean } = frontMeans(77, t);
+      minCloud = Math.min(minCloud, cloudMean);
+      maxCloud = Math.max(maxCloud, cloudMean);
+      minWind = Math.min(minWind, windMean);
+      maxWind = Math.max(maxWind, windMean);
+    }
+    expect(maxCloud - minCloud).toBeGreaterThan(0.4);
+    expect(maxWind - minWind).toBeGreaterThan(0.4);
+  });
+
+  it('changes slowly within a single day', () => {
+    const a = frontMeans(9, 0);
+    const b = frontMeans(9, TICKS_PER_DAY / 4);
+    expect(Math.abs(a.cloudMean - b.cloudMean)).toBeLessThan(0.3);
+  });
+
+  it('is deterministic and seed-dependent', () => {
+    expect(frontMeans(5, 1000)).toEqual(frontMeans(5, 1000));
+    const a = frontMeans(5, 1000);
+    const b = frontMeans(6, 1000);
+    expect(a.cloudMean === b.cloudMean && a.windMean === b.windMean).toBe(false);
+  });
+
+  it('the weather walk follows the fronts', () => {
+    const state = createSimState(31, 8);
+    let error = 0;
+    let samples = 0;
+    for (let t = 0; t < 10 * TICKS_PER_DAY; t++) {
+      state.tick = t;
+      updateWeather(state);
+      if (t % 200 === 0) {
+        const { cloudMean } = frontMeans(state.seed, t);
+        error += Math.abs(state.weather.cloudCover - cloudMean);
+        samples++;
+      }
+    }
+    // On average the walk stays reasonably close to the front mean.
+    expect(error / samples).toBeLessThan(0.25);
   });
 });
 
