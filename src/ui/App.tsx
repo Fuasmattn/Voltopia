@@ -77,7 +77,7 @@ function Game({ save }: { save: SaveGame | null }) {
   });
   const callbacksRef = useRef<RendererCallbacks>({});
   const rendererRef = useRef<GameRenderer | null>(null);
-  const { tool, setTool } = useTools(bridge, callbacksRef, rendererRef);
+  const { tool, setTool, costPreview } = useTools(bridge, callbacksRef, rendererRef);
   const [overlay, setOverlay] = useState<OverlayMode>(OverlayMode.None);
   const [page, setPage] = useState<'help' | 'imprint' | null>(null);
 
@@ -223,6 +223,11 @@ function Game({ save }: { save: SaveGame | null }) {
       {rejection && (
         <div className="rejection-toast" data-testid="rejection">
           {rejection}
+        </div>
+      )}
+      {costPreview && (
+        <div className="cost-preview" data-testid="cost-preview">
+          {costPreview.tiles} ▦ · {costPreview.cost.toLocaleString('en-US')} ⌁
         </div>
       )}
       {stats && <GoalsPanel goals={stats.goals} />}

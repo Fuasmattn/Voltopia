@@ -24,6 +24,26 @@ const ZONE_BY_TOOL: Partial<Record<ToolId, Zone>> = {
   'zone-retail': Zone.Retail,
 };
 
+/** Keyboard shortcuts for tools (digits row + B for the bulldozer). */
+export const TOOL_HOTKEYS: Record<string, ToolId> = {
+  '1': 'select',
+  '2': 'road',
+  '3': 'zone-residential',
+  '4': 'zone-commercial',
+  '5': 'zone-retail',
+  '6': 'plant-solar',
+  '7': 'plant-wind',
+  '8': 'plant-battery',
+  '9': 'plant-biogas',
+  '0': 'plant-hub',
+  b: 'bulldoze',
+};
+
+export interface DragCostPreview {
+  tiles: number;
+  cost: number;
+}
+
 export const PLANT_BY_TOOL: Partial<Record<ToolId, PlantType>> = {
   'plant-solar': PlantType.SolarFarm,
   'plant-wind': PlantType.WindTurbine,
@@ -41,8 +61,14 @@ export function useTools(
   bridge: SimBridge,
   callbacksRef: React.RefObject<RendererCallbacks>,
   rendererRef: React.RefObject<GameRenderer | null>,
-): { tool: ToolId; setTool: (tool: ToolId) => void } {
+): {
+  tool: ToolId;
+  setTool: (tool: ToolId) => void;
+  /** Tile count and cost of the pending drag (road/zone), else null. */
+  costPreview: DragCostPreview | null;
+} {
   const [tool, setTool] = useState<ToolId>('select');
+  const [costPreview, setCostPreview] = useState<DragCostPreview | null>(null);
   // Depend on the stable send callback, not the bridge object — the
   // bridge changes identity on every stats tick, which would re-run this
   // effect 4x/s and reset the drag anchor mid-drag.
@@ -62,6 +88,11 @@ export function useTools(
       anchor = null;
       rendererRef.current?.setPreviewTiles([]);
       rendererRef.current?.setHoverRadius(0);
+      setCostPreview(null);
+    };
+
+    const showCost = (tileCount: number, perTile: number): void => {
+      setCostPreview({ tiles: tileCount, cost: tileCount * perTile });
     };
 
     const callbacks: RendererCallbacks = {};
@@ -70,11 +101,13 @@ export function useTools(
         anchor = tile;
         path = [tile.index];
         rendererRef.current?.setPreviewTiles(path);
+        showCost(1, BALANCE.costs.roadPerTile);
       };
       callbacks.onBuildDrag = (tile) => {
         if (!anchor) return;
         path = lShapedPath(anchor.x, anchor.y, tile.x, tile.y, GRID_SIZE);
         rendererRef.current?.setPreviewTiles(path);
+        showCost(path.length, BALANCE.costs.roadPerTile);
       };
       callbacks.onBuildEnd = (tile) => {
         if (anchor && tile) {
@@ -89,11 +122,13 @@ export function useTools(
         anchor = tile;
         path = [tile.index];
         rendererRef.current?.setPreviewTiles(path);
+        showCost(1, BALANCE.costs.zonePerTile);
       };
       callbacks.onBuildDrag = (tile) => {
         if (!anchor) return;
         path = rectTiles(anchor.x, anchor.y, tile.x, tile.y, GRID_SIZE);
         rendererRef.current?.setPreviewTiles(path);
+        showCost(path.length, BALANCE.costs.zonePerTile);
       };
       callbacks.onBuildEnd = (tile) => {
         if (anchor && tile) {
@@ -121,5 +156,23 @@ export function useTools(
     return clearPreview;
   }, [tool, send, callbacksRef, rendererRef]);
 
-  return { tool, setTool };
+  // Tool hotkeys: digits + B, Escape returns to select.
+  useEffect(() => {
+    const onKeyDown = (e: KeyboardEvent): void => {
+      const target = e.target as HTMLElement | null;
+      if (target && ['INPUT', 'TEXTAREA', 'SELECT'].includes(target.tagName)) {
+        return;
+      }
+      if (e.key === 'Escape') {
+        setTool('select');
+        return;
+      }
+      const mapped = TOOL_HOTKEYS[e.key.toLowerCase()];
+      if (mapped) setTool(mapped);
+    };
+    window.addEventListener('keydown', onKeyDown);
+    return () => window.removeEventListener('keydown', onKeyDown);
+  }, []);
+
+  return { tool, setTool, costPreview };
 }

@@ -1,7 +1,11 @@
 import { BALANCE } from '../shared/constants.ts';
 import { PlantType } from '../shared/types.ts';
 import { useI18n, type TranslationKey } from './i18n.tsx';
-import type { ToolId } from './useTools.ts';
+import { TOOL_HOTKEYS, type ToolId } from './useTools.ts';
+
+const HOTKEY_BY_TOOL: Partial<Record<ToolId, string>> = Object.fromEntries(
+  Object.entries(TOOL_HOTKEYS).map(([key, tool]) => [tool, key.toUpperCase()]),
+);
 
 interface ToolButton {
   id: ToolId;
@@ -64,11 +68,15 @@ export function Toolbar({
             : entry.perTile
               ? t('tool.perTile', { cost: entry.cost })
               : String(entry.cost);
+        const hotkey = HOTKEY_BY_TOOL[entry.id];
+        const titleParts = [label];
+        if (cost) titleParts.push(`(${cost})`);
+        if (hotkey) titleParts.push(`[${hotkey}]`);
         return (
           <button
             key={entry.id}
             type="button"
-            title={cost ? `${label} (${cost})` : label}
+            title={titleParts.join(' ')}
             className={`toolbar-button ${tool === entry.id ? 'active' : ''}`}
             data-testid={`tool-${entry.id}`}
             onClick={() => onSelectTool(entry.id)}
