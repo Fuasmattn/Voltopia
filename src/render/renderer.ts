@@ -87,6 +87,10 @@ export class GameRenderer {
   private hoveredIndex: number | null = null;
   private buildPointerActive = false;
   private panPointer: { x: number; y: number } | null = null;
+  /** All currently pressed pointers (for two-finger touch gestures). */
+  private readonly activePointers = new Map<number, { x: number; y: number }>();
+  private pinchState: { distance: number; centerX: number; centerY: number } | null =
+    null;
   private animationFrame = 0;
   private lastFrameTime = 0;
   private frameListeners: Array<(deltaSeconds: number, nowSeconds: number) => void> = [];
@@ -282,6 +286,19 @@ export class GameRenderer {
 
     el.addEventListener('pointerdown', (e) => {
       el.setPointerCapture(e.pointerId);
+      this.activePointers.set(e.pointerId, { x: e.clientX, y: e.clientY });
+
+      // A second finger turns the interaction into a pinch/pan gesture
+      // and cancels any pending build drag.
+      if (this.activePointers.size === 2) {
+        if (this.buildPointerActive) {
+          this.buildPointerActive = false;
+          this.callbacks.onBuildEnd?.(null);
+        }
+        this.pinchState = this.computePinch();
+        return;
+      }
+
       if (e.button === 0) {
         const tile = this.pick(e);
         if (tile) {
@@ -294,6 +311,22 @@ export class GameRenderer {
     });
 
     el.addEventListener('pointermove', (e) => {
+      if (this.activePointers.has(e.pointerId)) {
+        this.activePointers.set(e.pointerId, { x: e.clientX, y: e.clientY });
+      }
+      if (this.pinchState && this.activePointers.size >= 2) {
+        const pinch = this.computePinch();
+        if (pinch && this.pinchState.distance > 0) {
+          this.isoCamera.zoomByFactor(pinch.distance / this.pinchState.distance);
+          this.isoCamera.pan(
+            pinch.centerX - this.pinchState.centerX,
+            pinch.centerY - this.pinchState.centerY,
+            el.clientHeight,
+          );
+          this.pinchState = pinch;
+        }
+        return;
+      }
       if (this.panPointer) {
         this.isoCamera.pan(
           e.clientX - this.panPointer.x,
@@ -314,6 +347,11 @@ export class GameRenderer {
     });
 
     const endPointer = (e: PointerEvent): void => {
+      this.activePointers.delete(e.pointerId);
+      if (this.pinchState) {
+        if (this.activePointers.size < 2) this.pinchState = null;
+        return;
+      }
       if (this.panPointer && e.button !== 0) {
         this.panPointer = null;
         return;
@@ -324,7 +362,9 @@ export class GameRenderer {
       }
     };
     el.addEventListener('pointerup', endPointer);
-    el.addEventListener('pointercancel', () => {
+    el.addEventListener('pointercancel', (e) => {
+      this.activePointers.delete(e.pointerId);
+      if (this.activePointers.size < 2) this.pinchState = null;
       this.panPointer = null;
       this.buildPointerActive = false;
     });
@@ -339,6 +379,22 @@ export class GameRenderer {
     );
 
     window.addEventListener('keydown', this.handleKeyDown);
+  }
+
+  /** Distance and centroid of the first two active pointers. */
+  private computePinch(): {
+    distance: number;
+    centerX: number;
+    centerY: number;
+  } | null {
+    const points = [...this.activePointers.values()];
+    if (points.length < 2) return null;
+    const [a, b] = points;
+    return {
+      distance: Math.hypot(a.x - b.x, a.y - b.y),
+      centerX: (a.x + b.x) / 2,
+      centerY: (a.y + b.y) / 2,
+    };
   }
 
   private handleKeyDown = (e: KeyboardEvent): void => {

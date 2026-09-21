@@ -39,7 +39,11 @@ export class IsoCamera {
   }
 
   zoomBy(wheelDeltaY: number): void {
-    const factor = Math.exp(-wheelDeltaY * ZOOM_WHEEL_FACTOR);
+    this.zoomByFactor(Math.exp(-wheelDeltaY * ZOOM_WHEEL_FACTOR));
+  }
+
+  /** Multiply the zoom level, e.g. by a pinch-gesture distance ratio. */
+  zoomByFactor(factor: number): void {
     this.camera.zoom = THREE.MathUtils.clamp(
       this.camera.zoom * factor,
       MIN_ZOOM,
