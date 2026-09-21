@@ -10,6 +10,7 @@ import { BuildingsMesh } from './buildingsMesh.ts';
 import { PlantsMesh } from './plantsMesh.ts';
 import { VehiclesMesh } from './vehiclesMesh.ts';
 import { OverlaysMesh } from './overlays.ts';
+import { IconsMesh } from './iconsMesh.ts';
 import type { OverlayMode } from '../shared/types.ts';
 import { ZoneTilesMesh } from './zoneTilesMesh.ts';
 
@@ -145,6 +146,7 @@ export class GameRenderer {
     scene.add(this.previewMesh);
 
     this.isoCamera = new IsoCamera(gridSize);
+    this.addDiffLayer(new IconsMesh(scene, gridSize, this.isoCamera.camera));
 
     this.webgl = new THREE.WebGLRenderer({ antialias: true });
     this.webgl.shadowMap.enabled = true;
