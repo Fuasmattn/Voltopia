@@ -92,6 +92,7 @@ export function buildStats(state: SimState): GlobalStats {
   const { population, jobs } = countPopulationAndJobs(state);
   const e = state.lastEnergy;
   return {
+    seed: state.seed,
     tick: state.tick,
     money: state.money,
     population,

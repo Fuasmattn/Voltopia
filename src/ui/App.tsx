@@ -22,6 +22,7 @@ import { StatsPage } from './StatsPage.tsx';
 import { loadSettings, persistSettings, type AppSettings } from './settings.ts';
 import { sound } from './sound.ts';
 import { isTutorialDone, Tutorial } from './Tutorial.tsx';
+import { WinScreen } from './WinScreen.tsx';
 import { useSimBridge } from './useSimBridge.ts';
 import { useTools } from './useTools.ts';
 
@@ -275,6 +276,7 @@ function Game({ save, options }: { save: SaveGame | null; options: NewGameOption
       {showTutorial && stats && (
         <Tutorial stats={stats} onFinished={() => setShowTutorial(false)} />
       )}
+      {stats && <WinScreen stats={stats} onCelebrate={() => sound.play('achievement')} />}
       <OverlayToggle mode={overlay} onChange={setOverlay} />
       <footer className="hud-footer">
         <span className="hud-footer-hint">{t('footer.hint')}</span>

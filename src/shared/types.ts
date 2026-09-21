@@ -111,6 +111,8 @@ export interface DemandStats {
 }
 
 export interface GlobalStats {
+  /** World seed (identifies the city, e.g. for per-city UI flags). */
+  seed: number;
   tick: number;
   money: number;
   population: number;

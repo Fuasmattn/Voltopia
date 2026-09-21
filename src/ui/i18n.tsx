@@ -139,6 +139,10 @@ const en = {
   'tutorial.skip': 'Skip tutorial',
   'tutorial.waiting': '… waiting',
 
+  'win.title': 'Voltopia shines!',
+  'win.body':
+    'Every goal achieved: your city runs on sun, wind and clever planning. Keep building — or start a bigger map and do it again on hard.',
+  'win.continue': 'Keep playing',
   'stats.title': 'City statistics',
   'stats.empty': 'Come back after your first full day — statistics are recorded daily.',
   'stats.population': 'Population & jobs',
@@ -318,6 +322,10 @@ const de: Record<TranslationKey, string> = {
   'tutorial.skip': 'Tutorial überspringen',
   'tutorial.waiting': '… warte',
 
+  'win.title': 'Voltopia strahlt!',
+  'win.body':
+    'Alle Ziele erreicht: Deine Stadt läuft mit Sonne, Wind und kluger Planung. Bau weiter — oder starte eine größere Karte auf Schwer.',
+  'win.continue': 'Weiterspielen',
   'stats.title': 'Stadtstatistik',
   'stats.empty':
     'Schau nach dem ersten vollen Tag wieder vorbei — Statistiken werden täglich erfasst.',
