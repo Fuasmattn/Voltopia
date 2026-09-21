@@ -246,3 +246,12 @@ body,
   color: rgba(255, 255, 255, 0.8);
   pointer-events: none;
 }
+
+.hud-weather {
+  display: flex;
+  flex-direction: column;
+  font-size: 11px;
+  color: var(--hud-muted);
+  line-height: 1.4;
+  font-variant-numeric: tabular-nums;
+}

@@ -1,11 +1,14 @@
 import * as THREE from 'three';
 import type { TileDiff } from '../shared/types.ts';
 import { TileType, Zone } from '../shared/types.ts';
-import type { DiffLayer } from './renderer.ts';
+import type { DiffLayer, RenderEnvironment } from './renderer.ts';
 
 /** Max boxes composing one building. */
 const PARTS_PER_TILE = 3;
 const GROW_ANIMATION_SECONDS = 0.45;
+/** Max lit window quads per building (two faces). */
+const WINDOWS_PER_TILE = 16;
+const WINDOW_COLOR = 0xffc978;
 
 interface BuildingPart {
   /** Footprint size (tile fractions) and height. */
@@ -112,6 +115,8 @@ function part(
  */
 export class BuildingsMesh implements DiffLayer {
   readonly mesh: THREE.InstancedMesh;
+  private readonly windowsMesh: THREE.InstancedMesh;
+  private readonly windowsMaterial: THREE.MeshBasicMaterial;
   private readonly gridSize: number;
   private readonly buildings = new Map<number, TileBuilding>();
   private readonly animations = new Map<number, number>(); // tile -> elapsed
@@ -132,6 +137,30 @@ export class BuildingsMesh implements DiffLayer {
     this.mesh.receiveShadow = true;
     this.mesh.count = 0;
     scene.add(this.mesh);
+
+    const windowGeometry = new THREE.PlaneGeometry(0.09, 0.11);
+    this.windowsMaterial = new THREE.MeshBasicMaterial({
+      color: WINDOW_COLOR,
+      transparent: true,
+      opacity: 0,
+      side: THREE.DoubleSide,
+      depthWrite: false,
+    });
+    this.windowsMesh = new THREE.InstancedMesh(
+      windowGeometry,
+      this.windowsMaterial,
+      gridSize * gridSize * WINDOWS_PER_TILE,
+    );
+    this.windowsMesh.count = 0;
+    this.windowsMesh.visible = false;
+    scene.add(this.windowsMesh);
+  }
+
+  /** Warm window lights fade in with the night. */
+  setEnvironment(environment: RenderEnvironment): void {
+    const opacity = Math.max(0, environment.nightFactor - 0.25) / 0.75;
+    this.windowsMaterial.opacity = opacity * 0.95;
+    this.windowsMesh.visible = opacity > 0.02;
   }
 
   applyDiffs(diffs: TileDiff[]): void {
@@ -200,6 +229,45 @@ export class BuildingsMesh implements DiffLayer {
     this.mesh.count = slot;
     this.mesh.instanceMatrix.needsUpdate = true;
     if (this.mesh.instanceColor) this.mesh.instanceColor.needsUpdate = true;
+    this.rebuildWindows();
+  }
+
+  /**
+   * Lit window quads on the ±z faces of each building's main box. A
+   * deterministic pattern keeps some windows dark for variety.
+   */
+  private rebuildWindows(): void {
+    const matrix = new THREE.Matrix4();
+    const rotationBack = new THREE.Matrix4().makeRotationY(Math.PI);
+    let slot = 0;
+    for (const [index, building] of this.buildings) {
+      const main = buildingParts(building.zone, building.density, building.variant)[0];
+      if (!main) continue;
+      const cx = (index % this.gridSize) + 0.5 + main.ox;
+      const cz = Math.floor(index / this.gridSize) + 0.5 + main.oz;
+      const cols = Math.min(3, Math.max(1, Math.round(main.sx / 0.24)));
+      const rows = Math.min(4, Math.max(1, Math.round(main.sy / 0.28)));
+      let windowId = 0;
+      for (const face of [1, -1]) {
+        for (let col = 0; col < cols; col++) {
+          for (let row = 0; row < rows; row++) {
+            windowId++;
+            // Deterministically leave ~1/3 of windows dark.
+            if ((index * 7 + windowId * 13 + building.variant) % 3 === 0) continue;
+            if (slot >= this.windowsMesh.instanceMatrix.count) break;
+            const x = cx + ((col + 0.5) / cols - 0.5) * main.sx * 0.8;
+            const y = main.oy + ((row + 0.55) / rows) * main.sy * 0.82;
+            const z = cz + face * (main.sz / 2 + 0.012);
+            if (face === 1) matrix.identity();
+            else matrix.copy(rotationBack);
+            matrix.setPosition(x, y, z);
+            this.windowsMesh.setMatrixAt(slot++, matrix);
+          }
+        }
+      }
+    }
+    this.windowsMesh.count = slot;
+    this.windowsMesh.instanceMatrix.needsUpdate = true;
   }
 
   private writeTileMatrices(index: number, scale: number): void {

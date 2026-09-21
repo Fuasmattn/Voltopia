@@ -1,4 +1,4 @@
-import { useRef } from 'react';
+import { useEffect, useRef } from 'react';
 import type { GameRenderer, RendererCallbacks } from '../render/renderer.ts';
 import type { Speed } from '../shared/types.ts';
 import { Clock } from './Clock.tsx';
@@ -18,6 +18,10 @@ export function App() {
   const { tool, setTool } = useTools(bridge, callbacksRef, rendererRef);
 
   const stats = bridge.stats;
+
+  useEffect(() => {
+    if (stats) rendererRef.current?.setStats(stats);
+  }, [stats]);
 
   return (
     <div className="app">
@@ -42,6 +46,14 @@ export function App() {
             </div>
             <DemandBars demand={stats.demand} />
             <Clock timeOfDay={stats.timeOfDay} day={stats.day} />
+            <div
+              className="hud-weather"
+              data-testid="weather"
+              title="Cloud cover / wind speed"
+            >
+              <span>☁️ {Math.round(stats.weather.cloudCover * 100)}%</span>
+              <span>💨 {Math.round(stats.weather.windSpeed * 100)}%</span>
+            </div>
             <SpeedControls
               speed={stats.speed as Speed}
               onChange={(speed) => bridge.send({ type: 'setSpeed', speed })}

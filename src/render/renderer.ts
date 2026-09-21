@@ -2,7 +2,8 @@ import * as THREE from 'three';
 import type { GlobalStats, TileDiff, VehicleState } from '../shared/types.ts';
 import { IsoCamera } from './camera.ts';
 import { pickTile } from './picking.ts';
-import { createScene, type SceneLights } from './scene.ts';
+import { nightFactor, SUNRISE, SUNSET, sunIntensity } from '../shared/daylight.ts';
+import { createScene, PALETTE, type SceneLights } from './scene.ts';
 import { createTerrain } from './terrain.ts';
 import { RoadsMesh } from './roadsMesh.ts';
 import { BuildingsMesh } from './buildingsMesh.ts';
@@ -25,14 +26,40 @@ export interface RendererCallbacks {
   onBuildEnd?: (tile: PickedTile | null) => void;
 }
 
+/** Stats-derived visual environment shared with render layers. */
+export interface RenderEnvironment {
+  /** 0 = bright day .. 1 = full night. */
+  nightFactor: number;
+  /** Sun intensity 0..1. */
+  sunFactor: number;
+  /** Current wind factor 0..1 (drives rotor speed). */
+  windFactor: number;
+  /** Battery state of charge 0..1. */
+  stateOfCharge: number;
+}
+
 /** A renderable layer that reacts to sim tile diffs (roads, buildings, ...). */
 export interface DiffLayer {
   applyDiffs(diffs: TileDiff[]): void;
   /** Optional per-frame hook for animations. */
   update?(deltaSeconds: number, nowSeconds: number): void;
+  /** Optional hook for day/night and weather driven visuals. */
+  setEnvironment?(environment: RenderEnvironment): void;
 }
 
 const HOVER_COLOR = 0xffffff;
+const SKY_DAY_COLOR = new THREE.Color(PALETTE.skyDay);
+const SKY_NIGHT_COLOR = new THREE.Color(PALETTE.skyNight);
+const SKY_DUSK_COLOR = new THREE.Color(0xf2a05e);
+const SUN_DAY_COLOR = new THREE.Color(0xfff2dd);
+const SUN_DUSK_COLOR = new THREE.Color(0xff9e5e);
+const AMBIENT_DAY_COLOR = new THREE.Color(0xdfeef5);
+const AMBIENT_NIGHT_COLOR = new THREE.Color(0x46557a);
+
+/** Warm dusk tint peaks when the sun is low but not gone. */
+function duskAmount(sunFactor: number, night: number): number {
+  return Math.max(0, Math.min(1, sunFactor * 4)) * Math.min(1, night * 2);
+}
 
 export class GameRenderer {
   readonly scene: THREE.Scene;
@@ -126,9 +153,49 @@ export class GameRenderer {
     for (const layer of this.diffLayers) layer.applyDiffs(diffs);
   }
 
-  /** Hook for stats-driven visuals (day/night lighting from M4 on). */
-  setStats(_stats: GlobalStats): void {
-    // extended in later milestones
+  /** Update day/night lighting and layer environments from sim stats. */
+  setStats(stats: GlobalStats): void {
+    const sunFactor = sunIntensity(stats.timeOfDay);
+    const night = nightFactor(stats.timeOfDay);
+    const environment: RenderEnvironment = {
+      nightFactor: night,
+      sunFactor,
+      windFactor: Math.min(1, stats.weather.windSpeed),
+      stateOfCharge:
+        stats.energy.storageCapacity > 0
+          ? stats.energy.storedEnergy / stats.energy.storageCapacity
+          : 0,
+    };
+
+    // Sun travels east -> west across the grid during the day.
+    const dayPhase = THREE.MathUtils.clamp(
+      (stats.timeOfDay - SUNRISE) / (SUNSET - SUNRISE),
+      0,
+      1,
+    );
+    const azimuth = Math.PI * (1 - dayPhase);
+    const elevation = 0.25 + 0.9 * Math.sin(Math.PI * dayPhase);
+    const center = this.gridSize / 2;
+    const radius = this.gridSize * 1.2;
+    this.lights.sun.position.set(
+      center + radius * Math.cos(elevation) * Math.cos(azimuth),
+      Math.max(6, radius * Math.sin(elevation) * sunFactor + 6),
+      center + radius * Math.cos(elevation) * Math.sin(azimuth) * 0.5,
+    );
+    this.lights.sun.target.position.set(center, 0, center);
+    const cloudDimming = 1 - 0.45 * stats.weather.cloudCover;
+    this.lights.sun.intensity = (0.15 + 1.6 * sunFactor) * cloudDimming;
+    this.lights.sun.color.copy(SUN_DAY_COLOR).lerp(SUN_DUSK_COLOR, duskAmount(sunFactor, night));
+    this.lights.ambient.intensity = 0.35 + 0.65 * sunFactor;
+    this.lights.ambient.color.copy(AMBIENT_DAY_COLOR).lerp(AMBIENT_NIGHT_COLOR, night);
+
+    const background = this.scene.background as THREE.Color;
+    background
+      .copy(SKY_DAY_COLOR)
+      .lerp(SKY_NIGHT_COLOR, night)
+      .lerp(SKY_DUSK_COLOR, duskAmount(sunFactor, night) * 0.5);
+
+    for (const layer of this.diffLayers) layer.setEnvironment?.(environment);
   }
 
   setVehicles(_vehicles: VehicleState[]): void {

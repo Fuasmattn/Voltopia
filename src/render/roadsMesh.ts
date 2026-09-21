@@ -3,7 +3,7 @@ import { DIRECTIONS } from '../shared/grid.ts';
 import type { TileDiff } from '../shared/types.ts';
 import { TileType } from '../shared/types.ts';
 import { PALETTE } from './scene.ts';
-import type { DiffLayer } from './renderer.ts';
+import type { DiffLayer, RenderEnvironment } from './renderer.ts';
 
 const ROAD_HEIGHT = 0.05;
 const CENTER_SIZE = 0.62;
@@ -18,6 +18,9 @@ const INSTANCES_PER_TILE = 5;
  */
 export class RoadsMesh implements DiffLayer {
   readonly mesh: THREE.InstancedMesh;
+  private readonly lampPoles: THREE.InstancedMesh;
+  private readonly lampHeads: THREE.InstancedMesh;
+  private readonly lampHeadMaterial: THREE.MeshBasicMaterial;
   private readonly gridSize: number;
   private readonly roadMasks: Int16Array; // -1 = no road, else mask 0..15
   private readonly matrix = new THREE.Matrix4();
@@ -35,6 +38,39 @@ export class RoadsMesh implements DiffLayer {
     this.mesh.receiveShadow = true;
     this.mesh.count = 0;
     scene.add(this.mesh);
+
+    const poleGeometry = new THREE.BoxGeometry(0.035, 0.3, 0.035);
+    poleGeometry.translate(0, 0.15, 0);
+    const poleMaterial = new THREE.MeshLambertMaterial({ color: 0x3a4048 });
+    this.lampPoles = new THREE.InstancedMesh(
+      poleGeometry,
+      poleMaterial,
+      gridSize * gridSize,
+    );
+    this.lampPoles.count = 0;
+    scene.add(this.lampPoles);
+
+    const headGeometry = new THREE.SphereGeometry(0.045, 6, 4);
+    this.lampHeadMaterial = new THREE.MeshBasicMaterial({
+      color: 0xffe3a1,
+      transparent: true,
+      opacity: 0.25,
+    });
+    this.lampHeads = new THREE.InstancedMesh(
+      headGeometry,
+      this.lampHeadMaterial,
+      gridSize * gridSize,
+    );
+    this.lampHeads.count = 0;
+    scene.add(this.lampHeads);
+  }
+
+  /** Streetlamps glow warmly at night. */
+  setEnvironment(environment: RenderEnvironment): void {
+    this.lampHeadMaterial.opacity = 0.25 + 0.75 * environment.nightFactor;
+    this.lampHeadMaterial.color.setHex(
+      environment.nightFactor > 0.4 ? 0xffcf6e : 0xffe3a1,
+    );
   }
 
   applyDiffs(diffs: TileDiff[]): void {
@@ -72,6 +108,30 @@ export class RoadsMesh implements DiffLayer {
     }
     this.mesh.count = count;
     this.mesh.instanceMatrix.needsUpdate = true;
+    this.rebuildLamps();
+  }
+
+  /** One streetlamp on every other road tile, at a fixed corner. */
+  private rebuildLamps(): void {
+    let count = 0;
+    for (let index = 0; index < this.roadMasks.length; index++) {
+      if (this.roadMasks[index] < 0) continue;
+      const x = index % this.gridSize;
+      const y = Math.floor(index / this.gridSize);
+      if ((x + y) % 2 !== 0) continue;
+      const px = x + 0.88;
+      const pz = y + 0.88;
+      this.matrix.identity();
+      this.matrix.setPosition(px, 0, pz);
+      this.lampPoles.setMatrixAt(count, this.matrix);
+      this.matrix.setPosition(px, 0.33, pz);
+      this.lampHeads.setMatrixAt(count, this.matrix);
+      count++;
+    }
+    this.lampPoles.count = count;
+    this.lampHeads.count = count;
+    this.lampPoles.instanceMatrix.needsUpdate = true;
+    this.lampHeads.instanceMatrix.needsUpdate = true;
   }
 
   private setInstance(

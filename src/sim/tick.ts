@@ -1,6 +1,7 @@
 import { TICKS_PER_DAY } from '../shared/constants.ts';
 import type { GlobalStats } from '../shared/types.ts';
 import { computeDemand, growthStep } from './growth.ts';
+import { updateWeather } from './weather.ts';
 import {
   countPopulationAndJobs,
   totalStorageCapacity,
@@ -19,6 +20,7 @@ export function dayNumber(tick: number): number {
 /** Advance the simulation by exactly one tick. */
 export function stepTick(state: SimState): void {
   state.tick++;
+  updateWeather(state);
   state.lastDemand = computeDemand(state);
   growthStep(state, state.lastDemand);
 }
