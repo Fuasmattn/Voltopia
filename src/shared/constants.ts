@@ -164,6 +164,14 @@ export const BALANCE = {
      */
     parksAndLightsBonus: 0.08,
     parkRadius: 6,
+    /**
+     * Commute penalty: when the average commute takes this factor
+     * longer than free flow, happiness starts to suffer (scaled by
+     * weight, capped).
+     */
+    commuteCongestionThreshold: 1.25,
+    commutePenaltyWeight: 0.25,
+    commuteMaxPenalty: 0.15,
     /** Below this happiness, growth stops entirely. */
     growthMinimum: 0.35,
   },

@@ -38,6 +38,10 @@ export interface Vehicle {
   departureOffset: number;
   /** Battery state of charge, 0..1. Drains while driving. */
   charge: number;
+  /** Ticks spent on the current trip (congestion measurement). */
+  tripTicks: number;
+  /** Ticks the current trip would take with free-flowing traffic. */
+  tripFreeFlowTicks: number;
   /** True while plugged in this tick (drives the charging load). */
   charging: boolean;
 }
@@ -98,6 +102,11 @@ export interface SimState {
   goalProgress: { cleanDayTicks: number; exportedTotal: number };
   /** Monotonic id source for vehicles (not persisted). */
   nextVehicleId: number;
+  /**
+   * Smoothed ratio of actual to free-flow commute time (1 = no jams).
+   * Feeds the commute happiness penalty.
+   */
+  commuteCongestion: number;
   /** Set by the energy step; consumed by growth/happiness. */
   lastEnergy: {
     solar: number;
@@ -154,6 +163,7 @@ export function createSimState(
     goalsAchieved: new Set(),
     goalProgress: { cleanDayTicks: 0, exportedTotal: 0 },
     nextVehicleId: 1,
+    commuteCongestion: 1,
     lastEnergy: {
       solar: 0,
       wind: 0,

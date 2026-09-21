@@ -134,6 +134,8 @@ export function vehiclesStep(state: SimState): void {
       pathIndex: 0,
       departureOffset: state.rng.nextInt(Math.max(1, windowTicks)),
       charge: state.rng.nextRange(0.5, 0.9),
+      tripTicks: 0,
+      tripFreeFlowTicks: 0,
       charging: false,
     });
   }
@@ -189,6 +191,7 @@ export function vehiclesStep(state: SimState): void {
             vehicle.path = path;
             vehicle.pathIndex = 0;
             vehicle.phase = VehiclePhase.ToWork;
+            startTripClock(vehicle, step);
           } else {
             // Not connected (yet): try again tomorrow.
             vehicle.departureOffset = state.rng.nextInt(Math.max(1, windowTicks));
@@ -204,12 +207,14 @@ export function vehiclesStep(state: SimState): void {
             vehicle.path = path;
             vehicle.pathIndex = 0;
             vehicle.phase = VehiclePhase.ToHome;
+            startTripClock(vehicle, step);
           }
         }
         break;
       }
       case VehiclePhase.ToWork:
       case VehiclePhase.ToHome: {
+        vehicle.tripTicks++;
         driveAlongPath(state, vehicle, step, occupancy);
         break;
       }
@@ -308,10 +313,27 @@ function driveAlongPath(
       const arrivedAtWork = vehicle.phase === VehiclePhase.ToWork;
       vehicle.phase = arrivedAtWork ? VehiclePhase.ParkedWork : VehiclePhase.ParkedHome;
       occupancy.set(nextTile, Math.max(0, (occupancy.get(nextTile) ?? 1) - 1));
+      recordCommute(state, vehicle);
       vehicle.path = [];
       vehicle.pathIndex = 0;
     }
   }
+}
+
+/** Reset a vehicle's trip clock and note its free-flow duration. */
+function startTripClock(vehicle: Vehicle, step: number): void {
+  vehicle.tripTicks = 0;
+  vehicle.tripFreeFlowTicks = Math.max(1, Math.ceil(vehicle.path.length / step));
+}
+
+/** Congestion smoothing factor per completed commute. */
+const COMMUTE_EMA = 0.05;
+
+/** Fold a finished trip into the city's smoothed congestion ratio. */
+function recordCommute(state: SimState, vehicle: Vehicle): void {
+  if (vehicle.tripFreeFlowTicks <= 0) return;
+  const ratio = vehicle.tripTicks / vehicle.tripFreeFlowTicks;
+  state.commuteCongestion += (ratio - state.commuteCongestion) * COMMUTE_EMA;
 }
 
 /** Vehicles currently on the road (parked ones are not rendered). */

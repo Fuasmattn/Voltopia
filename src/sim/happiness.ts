@@ -56,7 +56,15 @@ export function happinessStep(state: SimState): void {
     Math.max(0, state.taxRate - BALANCE.tax.happinessNeutralRate) * config.taxPenaltyWeight;
   const supplyPenalty = troubledShare * config.undersupplyPenaltyWeight;
   const parkBonus = parkCoverage(state) * config.parksAndLightsBonus;
+  const commutePenalty = Math.min(
+    config.commuteMaxPenalty,
+    Math.max(0, state.commuteCongestion - config.commuteCongestionThreshold) *
+      config.commutePenaltyWeight,
+  );
 
-  const target = Math.min(1, Math.max(0, config.base + parkBonus - taxPenalty - supplyPenalty));
+  const target = Math.min(
+    1,
+    Math.max(0, config.base + parkBonus - taxPenalty - supplyPenalty - commutePenalty),
+  );
   state.happiness += (target - state.happiness) * config.smoothing;
 }

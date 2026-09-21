@@ -298,6 +298,8 @@ describe('congestion', () => {
       pathIndex: 0,
       departureOffset: 0,
       charge: 0.8,
+      tripTicks: 0,
+      tripFreeFlowTicks: 0,
       charging: false,
     });
   }
@@ -347,5 +349,39 @@ describe('congestion', () => {
     }
     expect(sawWaiting).toBe(true);
     expect(state.vehicles.every((v) => v.phase === VehiclePhase.ParkedWork)).toBe(true);
+  });
+});
+
+describe('commute congestion metric', () => {
+  it('stays near 1 with free-flowing traffic', () => {
+    const state = commuterTown(5, 120);
+    setHour(state, 6);
+    runDays(state, 1);
+    expect(state.commuteCongestion).toBeGreaterThan(0.8);
+    expect(state.commuteCongestion).toBeLessThan(1.3);
+  });
+
+  it('rises when a bottleneck jams the commute', () => {
+    const state = createSimState(2, SIZE);
+    buildRoads(
+      state,
+      Array.from({ length: 14 }, (_, x) => at(x + 3, 10)),
+    );
+    for (let i = 0; i < 8; i++) {
+      state.layers.zone[at(3 + i, 9)] = Zone.Residential;
+      state.layers.density[at(3 + i, 9)] = 3;
+    }
+    state.layers.zone[at(16, 9)] = Zone.Commercial;
+    state.layers.density[at(16, 9)] = 3;
+    setHour(state, 6);
+    vehiclesStep(state);
+    for (const v of state.vehicles) v.departureOffset = 0; // rush together
+    runDays(state, 1);
+    const jammed = state.commuteCongestion;
+
+    const calm = commuterTown(2, 120);
+    setHour(calm, 6);
+    runDays(calm, 1);
+    expect(jammed).toBeGreaterThan(calm.commuteCongestion);
   });
 });

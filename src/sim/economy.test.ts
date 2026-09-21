@@ -127,6 +127,15 @@ describe('happinessStep', () => {
     expect(state.goalsAchieved.has('firstPower')).toBe(false);
   });
 
+  it('jammed commutes lower happiness', () => {
+    const state = withBuildings(SupplyStatus.Supplied);
+    for (let i = 0; i < 2000; i++) happinessStep(state);
+    const calm = state.happiness;
+    state.commuteCongestion = 3; // heavy jams
+    for (let i = 0; i < 2000; i++) happinessStep(state);
+    expect(state.happiness).toBeLessThan(calm - 0.05);
+  });
+
   it('changes smoothly, not abruptly', () => {
     const state = withBuildings(SupplyStatus.Undersupplied);
     const before = state.happiness;
