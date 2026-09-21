@@ -54,6 +54,7 @@ export class IconsMesh implements DiffLayer {
   private readonly gridSize: number;
   private readonly icons = new Map<number, IconEntry>();
   private nowSeconds = 0;
+  private reducedMotion = false;
   private readonly matrix = new THREE.Matrix4();
   private readonly position = new THREE.Vector3();
   private readonly scale = new THREE.Vector3(ICON_SIZE, ICON_SIZE, ICON_SIZE);
@@ -76,6 +77,10 @@ export class IconsMesh implements DiffLayer {
     this.mesh.renderOrder = 3;
     this.mesh.count = 0;
     scene.add(this.mesh);
+  }
+
+  setReducedMotion(reduced: boolean): void {
+    this.reducedMotion = reduced;
   }
 
   applyDiffs(diffs: TileDiff[]): void {
@@ -116,7 +121,9 @@ export class IconsMesh implements DiffLayer {
         continue;
       }
       if (slot >= MAX_ICONS) break;
-      const bob = Math.sin(nowSeconds * 3 + index * 0.7) * 0.07;
+      const bob = this.reducedMotion
+        ? 0
+        : Math.sin(nowSeconds * 3 + index * 0.7) * 0.07;
       this.position.set(
         (index % this.gridSize) + 0.5,
         ICON_HEIGHT + bob,

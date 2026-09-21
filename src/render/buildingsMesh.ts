@@ -154,6 +154,7 @@ export class BuildingsMesh implements DiffLayer {
   private readonly animations = new Map<number, number>(); // tile -> elapsed
   private tileSlots = new Map<number, { start: number; count: number }>();
   private windowsDirty = false;
+  private reducedMotion = false;
   private readonly matrix = new THREE.Matrix4();
 
   constructor(scene: THREE.Scene, gridSize: number) {
@@ -195,6 +196,17 @@ export class BuildingsMesh implements DiffLayer {
     scene.add(this.windowsMesh);
   }
 
+  setReducedMotion(reduced: boolean): void {
+    this.reducedMotion = reduced;
+    if (reduced && this.animations.size > 0) {
+      for (const index of [...this.animations.keys()]) {
+        this.animations.delete(index);
+        this.writeTileMatrices(index, 1);
+      }
+      this.mesh.instanceMatrix.needsUpdate = true;
+    }
+  }
+
   /** Warm window lights fade in with the night. */
   setEnvironment(environment: RenderEnvironment): void {
     const opacity = Math.max(0, environment.nightFactor - 0.25) / 0.75;
@@ -220,7 +232,7 @@ export class BuildingsMesh implements DiffLayer {
             variant: diff.variant,
             supplied: diff.supplied,
           });
-          this.animations.set(diff.index, 0);
+          if (!this.reducedMotion) this.animations.set(diff.index, 0);
           changed = true;
         } else if (existing.supplied !== diff.supplied) {
           // Supply flips only affect the lit windows (flicker/dark), so a

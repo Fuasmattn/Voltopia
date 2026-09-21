@@ -15,6 +15,8 @@ import { GameView } from './GameView.tsx';
 import { GoalsPanel } from './GoalsPanel.tsx';
 import { SpeedControls } from './SpeedControls.tsx';
 import { Toolbar } from './Toolbar.tsx';
+import { SettingsPage } from './SettingsPage.tsx';
+import { loadSettings, persistSettings, type AppSettings } from './settings.ts';
 import { sound } from './sound.ts';
 import { useSimBridge } from './useSimBridge.ts';
 import { useTools } from './useTools.ts';
@@ -80,7 +82,8 @@ function Game({ save }: { save: SaveGame | null }) {
   const rendererRef = useRef<GameRenderer | null>(null);
   const { tool, setTool, costPreview } = useTools(bridge, callbacksRef, rendererRef);
   const [overlay, setOverlay] = useState<OverlayMode>(OverlayMode.None);
-  const [page, setPage] = useState<'help' | 'imprint' | null>(null);
+  const [page, setPage] = useState<'help' | 'imprint' | 'settings' | null>(null);
+  const [settings, setSettings] = useState<AppSettings>(loadSettings);
 
   const stats = bridge.stats;
 
@@ -130,6 +133,26 @@ function Game({ save }: { save: SaveGame | null }) {
   useEffect(() => {
     if (stats) rendererRef.current?.setStats(stats);
   }, [stats]);
+
+  // Apply settings to sound and renderer; re-applied once the renderer
+  // exists (stats implies the app is fully booted).
+  const rendererReady = stats !== null;
+  useEffect(() => {
+    persistSettings(settings);
+    sound.enabled = settings.soundEnabled;
+    sound.volume = settings.soundVolume;
+    rendererRef.current?.setShadows(settings.shadows);
+    rendererRef.current?.setReducedMotion(settings.reducedMotion);
+  }, [settings, rendererReady]);
+
+  const requestSnapshot = (): Promise<SaveGame> =>
+    new Promise((resolve) => {
+      const unsubscribe = onSaveData((save) => {
+        unsubscribe();
+        resolve(save);
+      });
+      send({ type: 'requestSave' });
+    });
 
   useEffect(() => {
     if (bridge.rejection) sound.play('reject');
@@ -261,10 +284,26 @@ function Game({ save }: { save: SaveGame | null }) {
         >
           {t('footer.imprint')}
         </button>
+        <button
+          type="button"
+          data-testid="open-settings"
+          onClick={() => setPage('settings')}
+        >
+          {t('footer.settings')}
+        </button>
         <LanguageSwitch />
       </footer>
       {page === 'help' && <HelpPage onClose={() => setPage(null)} />}
       {page === 'imprint' && <ImprintPage onClose={() => setPage(null)} />}
+      {page === 'settings' && (
+        <SettingsPage
+          settings={settings}
+          onSettingsChange={setSettings}
+          storage={storage}
+          requestSnapshot={requestSnapshot}
+          onClose={() => setPage(null)}
+        />
+      )}
     </div>
   );
 }

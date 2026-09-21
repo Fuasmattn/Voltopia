@@ -1,11 +1,10 @@
 import { SAVE_VERSION } from '../shared/constants.ts';
 import type { SaveGame } from '../shared/types.ts';
-import type { SaveStorage } from './storage.ts';
+import { AUTOSAVE_SLOT, type SaveStorage } from './storage.ts';
 
 const DB_NAME = 'voltopia';
 const DB_VERSION = 1;
 const STORE_NAME = 'saves';
-const SAVE_KEY = 'autosave';
 
 function openDatabase(): Promise<IDBDatabase> {
   return new Promise((resolve, reject) => {
@@ -29,12 +28,12 @@ function requestToPromise<T>(request: IDBRequest<T>): Promise<T> {
 
 /** IndexedDB-backed save storage (ArrayBuffers persist natively). */
 export class IndexedDbStorage implements SaveStorage {
-  async load(): Promise<SaveGame | null> {
+  async load(slot: string = AUTOSAVE_SLOT): Promise<SaveGame | null> {
     try {
       const db = await openDatabase();
       const transaction = db.transaction(STORE_NAME, 'readonly');
       const result = await requestToPromise(
-        transaction.objectStore(STORE_NAME).get(SAVE_KEY) as IDBRequest<
+        transaction.objectStore(STORE_NAME).get(slot) as IDBRequest<
           SaveGame | undefined
         >,
       );
@@ -47,10 +46,10 @@ export class IndexedDbStorage implements SaveStorage {
     }
   }
 
-  async save(game: SaveGame): Promise<void> {
+  async save(game: SaveGame, slot: string = AUTOSAVE_SLOT): Promise<void> {
     const db = await openDatabase();
     const transaction = db.transaction(STORE_NAME, 'readwrite');
-    transaction.objectStore(STORE_NAME).put(game, SAVE_KEY);
+    transaction.objectStore(STORE_NAME).put(game, slot);
     await new Promise<void>((resolve, reject) => {
       transaction.oncomplete = () => resolve();
       transaction.onerror = () =>
@@ -59,10 +58,10 @@ export class IndexedDbStorage implements SaveStorage {
     db.close();
   }
 
-  async clear(): Promise<void> {
+  async clear(slot: string = AUTOSAVE_SLOT): Promise<void> {
     const db = await openDatabase();
     const transaction = db.transaction(STORE_NAME, 'readwrite');
-    transaction.objectStore(STORE_NAME).delete(SAVE_KEY);
+    transaction.objectStore(STORE_NAME).delete(slot);
     await new Promise<void>((resolve, reject) => {
       transaction.oncomplete = () => resolve();
       transaction.onerror = () =>

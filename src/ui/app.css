@@ -650,3 +650,62 @@ body,
   font-variant-numeric: tabular-nums;
   pointer-events: none;
 }
+
+.settings-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 6px 0;
+}
+
+.settings-row input[type='range'] {
+  flex: 1;
+  accent-color: var(--accent);
+}
+
+.settings-row input[type='checkbox'] {
+  accent-color: var(--accent);
+}
+
+.settings-slot {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  margin: 6px 0;
+}
+
+.settings-slot-buttons {
+  display: flex;
+  gap: 6px;
+}
+
+.settings-slot button,
+.settings-import {
+  background: transparent;
+  border: 1px solid var(--hud-border);
+  border-radius: 8px;
+  color: var(--hud-text);
+  padding: 4px 10px;
+  cursor: pointer;
+  font-size: 12px;
+}
+
+.settings-slot button:disabled {
+  opacity: 0.35;
+  cursor: default;
+}
+
+.settings-import {
+  display: inline-block;
+}
+
+.settings-import input {
+  display: none;
+}
+
+.settings-message {
+  margin-top: 10px;
+  color: var(--accent);
+  font-size: 12px;
+}

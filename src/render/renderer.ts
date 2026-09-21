@@ -52,6 +52,8 @@ export interface DiffLayer {
   update?(deltaSeconds: number, nowSeconds: number): void;
   /** Optional hook for day/night and weather driven visuals. */
   setEnvironment?(environment: RenderEnvironment): void;
+  /** Optional hook to disable non-essential animations. */
+  setReducedMotion?(reduced: boolean): void;
 }
 
 const HOVER_COLOR = 0xffffff;
@@ -260,6 +262,28 @@ export class GameRenderer {
 
   setOverlayMode(mode: OverlayMode): void {
     this.overlays.setMode(mode);
+  }
+
+  /** Toggle shadow mapping (quality setting). */
+  setShadows(enabled: boolean): void {
+    if (this.webgl.shadowMap.enabled === enabled) return;
+    this.webgl.shadowMap.enabled = enabled;
+    this.lights.sun.castShadow = enabled;
+    // Materials must recompile for the shadow-map change to apply.
+    this.scene.traverse((object) => {
+      const mesh = object as THREE.Mesh;
+      if (mesh.material) {
+        const materials = Array.isArray(mesh.material)
+          ? mesh.material
+          : [mesh.material];
+        for (const material of materials) material.needsUpdate = true;
+      }
+    });
+  }
+
+  /** Disable non-essential animations (accessibility setting). */
+  setReducedMotion(reduced: boolean): void {
+    for (const layer of this.diffLayers) layer.setReducedMotion?.(reduced);
   }
 
   /**
