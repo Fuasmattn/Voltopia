@@ -176,6 +176,16 @@ export const BALANCE = {
     speedTilesPerSecond: 1.6,
     /** Peak charging demand per vehicle per tick. */
     chargingEnergyPerVehicle: 0.9,
+    /**
+     * Commuting: vehicles drive home -> workplace in the morning and
+     * back in the evening (hours of the in-game day). Departures are
+     * spread over the window so traffic ramps up naturally.
+     */
+    commute: {
+      morningStartHour: 6.5,
+      eveningStartHour: 17.25,
+      departureWindowHours: 1.5,
+    },
     /** Vehicles one charging hub can shift into its daytime window. */
     vehiclesPerHub: 25,
     /**

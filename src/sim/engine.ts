@@ -3,6 +3,7 @@ import type { SimCommand, SimEvent } from '../shared/messages.ts';
 import type { VehicleState } from '../shared/types.ts';
 import { buildRoads, bulldozeTiles, undoLastAction, type BuildResult } from './roads.ts';
 import { placePlant } from './energy.ts';
+import { drivingVehicles } from './vehicles.ts';
 import { paintZones } from './zones.ts';
 import {
   collectDiffs,
@@ -90,6 +91,12 @@ export class SimEngine {
   }
 
   private collectVehicles(): VehicleState[] {
-    return this.state.vehicles.map((v) => ({ x: v.x, y: v.y, angle: v.angle }));
+    // Only vehicles on the road are rendered; parked ones stay hidden.
+    return drivingVehicles(this.state).map((v) => ({
+      id: v.id,
+      x: v.x,
+      y: v.y,
+      angle: v.angle,
+    }));
   }
 }

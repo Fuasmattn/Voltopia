@@ -10,15 +10,32 @@ import type {
 } from '../shared/types.ts';
 import { PlantType, SupplyStatus, TileType, Zone } from '../shared/types.ts';
 
+/** Commute phases of a vehicle. */
+export const VehiclePhase = {
+  ParkedHome: 0,
+  ToWork: 1,
+  ParkedWork: 2,
+  ToHome: 3,
+} as const;
+export type VehiclePhase = (typeof VehiclePhase)[keyof typeof VehiclePhase];
+
 /** One simulated vehicle. Continuous position in tile space. */
 export interface Vehicle {
+  /** Stable id so the renderer can interpolate across updates. */
+  id: number;
+  /** Road tile next to the home building (-1 = unassigned). */
+  homeRoad: number;
+  /** Road tile next to the workplace (-1 = no workplace found). */
+  workRoad: number;
   x: number;
   y: number;
   angle: number;
-  /** Tile index the vehicle is currently driving toward. */
-  targetTile: number;
-  /** Tile index the vehicle came from (avoids immediate U-turns). */
-  previousTile: number;
+  phase: VehiclePhase;
+  /** Road tiles of the current trip (empty while parked). */
+  path: number[];
+  pathIndex: number;
+  /** Departure offset in ticks within the commute window. */
+  departureOffset: number;
 }
 
 /** A reversible build action for the undo tool. */
@@ -75,6 +92,8 @@ export interface SimState {
   goalsAchieved: Set<string>;
   /** Transient goal progress counters. */
   goalProgress: { cleanDayTicks: number; exportedTotal: number };
+  /** Monotonic id source for vehicles (not persisted). */
+  nextVehicleId: number;
   /** Set by the energy step; consumed by growth/happiness. */
   lastEnergy: {
     solar: number;
@@ -130,6 +149,7 @@ export function createSimState(
     lastDemand: { residential: 0, commercial: 0, retail: 0 },
     goalsAchieved: new Set(),
     goalProgress: { cleanDayTicks: 0, exportedTotal: 0 },
+    nextVehicleId: 1,
     lastEnergy: {
       solar: 0,
       wind: 0,

@@ -25,7 +25,7 @@ export class VehiclesMesh {
   private readonly mesh: THREE.InstancedMesh;
   private readonly headlights: THREE.InstancedMesh;
   private readonly headlightMaterial: THREE.MeshBasicMaterial;
-  private previous: VehicleState[] = [];
+  private previous = new Map<number, VehicleState>();
   private current: VehicleState[] = [];
   private lastUpdateSeconds = 0;
   /** Expected seconds between sim updates (changes with game speed). */
@@ -70,7 +70,7 @@ export class VehiclesMesh {
 
   /** New authoritative vehicle states from the simulation. */
   setVehicles(vehicles: VehicleState[], nowSeconds: number): void {
-    this.previous = this.current;
+    this.previous = new Map(this.current.map((v) => [v.id, v]));
     this.current = vehicles;
     if (this.lastUpdateSeconds > 0) {
       const measured = nowSeconds - this.lastUpdateSeconds;
@@ -95,7 +95,9 @@ export class VehiclesMesh {
     );
     for (let i = 0; i < count; i++) {
       const target = this.current[i];
-      const source = this.previous[i] ?? target;
+      // Match by stable id: vehicles enter/leave the visible set when
+      // they start or finish trips, so indices don't line up.
+      const source = this.previous.get(target.id) ?? target;
       // Teleports (respawns) should not slide across the map.
       const jump = Math.hypot(target.x - source.x, target.y - source.y) > 2;
       const x = jump ? target.x : source.x + (target.x - source.x) * blend;

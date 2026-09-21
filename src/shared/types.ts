@@ -137,6 +137,8 @@ export interface TileDiff {
 
 /** Position and heading of one vehicle, interpolated by the renderer. */
 export interface VehicleState {
+  /** Stable id so the renderer can track vehicles across updates. */
+  id: number;
   /** Tile-space continuous position. */
   x: number;
   y: number;
