@@ -43,6 +43,10 @@ export function useTools(
   rendererRef: React.RefObject<GameRenderer | null>,
 ): { tool: ToolId; setTool: (tool: ToolId) => void } {
   const [tool, setTool] = useState<ToolId>('select');
+  // Depend on the stable send callback, not the bridge object — the
+  // bridge changes identity on every stats tick, which would re-run this
+  // effect 4x/s and reset the drag anchor mid-drag.
+  const send = bridge.send;
 
   useEffect(() => {
     const renderer = rendererRef.current;
@@ -76,7 +80,7 @@ export function useTools(
         if (anchor && tile) {
           path = lShapedPath(anchor.x, anchor.y, tile.x, tile.y, GRID_SIZE);
         }
-        if (path.length > 0) bridge.send({ type: 'buildRoad', tiles: path });
+        if (path.length > 0) send({ type: 'buildRoad', tiles: path });
         clearPreview();
       };
     } else if (ZONE_BY_TOOL[tool] !== undefined) {
@@ -95,7 +99,7 @@ export function useTools(
         if (anchor && tile) {
           path = rectTiles(anchor.x, anchor.y, tile.x, tile.y, GRID_SIZE);
         }
-        if (path.length > 0) bridge.send({ type: 'paintZone', tiles: path, zone });
+        if (path.length > 0) send({ type: 'paintZone', tiles: path, zone });
         clearPreview();
       };
     } else if (PLANT_BY_TOOL[tool] !== undefined) {
@@ -105,17 +109,17 @@ export function useTools(
         renderer?.setHoverRadius(BALANCE.energy.supplyRadius);
       }
       callbacks.onBuildStart = (tile) =>
-        bridge.send({ type: 'placePlant', tile: tile.index, plant });
+        send({ type: 'placePlant', tile: tile.index, plant });
     } else if (tool === 'bulldoze') {
       callbacks.onBuildStart = (tile) =>
-        bridge.send({ type: 'bulldoze', tiles: [tile.index] });
+        send({ type: 'bulldoze', tiles: [tile.index] });
       callbacks.onBuildDrag = (tile) =>
-        bridge.send({ type: 'bulldoze', tiles: [tile.index] });
+        send({ type: 'bulldoze', tiles: [tile.index] });
     }
 
     callbacksRef.current = callbacks;
     return clearPreview;
-  }, [tool, bridge, callbacksRef, rendererRef]);
+  }, [tool, send, callbacksRef, rendererRef]);
 
   return { tool, setTool };
 }

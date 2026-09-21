@@ -69,6 +69,18 @@ test('game state persists across a reload', async ({ page }) => {
   expect(await readTick(page)).toBeGreaterThanOrEqual(beforeSave);
 });
 
+test('autosave persists without the quick-save key', async ({ page }) => {
+  await page.getByTestId('speed-3').click();
+  // Wait past the autosave interval (10s) so a periodic save must fire.
+  await page.waitForTimeout(11_500);
+  const beforeReload = await readTick(page);
+  expect(beforeReload).toBeGreaterThan(50);
+  await page.reload();
+  await expect(page.getByTestId('tick-counter')).toBeVisible({ timeout: 15_000 });
+  // The reloaded city continues from a recent snapshot, not from zero.
+  expect(await readTick(page)).toBeGreaterThan(beforeReload / 2);
+});
+
 test('help and imprint pages work in both languages', async ({ page }) => {
   // Default (non-German browser) is English.
   await page.getByTestId('open-help').click();

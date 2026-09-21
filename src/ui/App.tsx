@@ -17,7 +17,7 @@ import { Toolbar } from './Toolbar.tsx';
 import { useSimBridge } from './useSimBridge.ts';
 import { useTools } from './useTools.ts';
 
-const AUTOSAVE_INTERVAL_MS = 30_000;
+const AUTOSAVE_INTERVAL_MS = 10_000;
 
 const storage = new IndexedDbStorage();
 
@@ -86,26 +86,36 @@ function Game({ save }: { save: SaveGame | null }) {
     rendererRef.current?.setOverlayMode(overlay);
   }, [overlay]);
 
-  // Autosave: periodically request a snapshot and persist it.
+  // Autosave: periodically request a snapshot and persist it. The deps
+  // must be the stable callbacks, NOT the bridge object — that changes
+  // identity on every stats tick and would reset the interval before it
+  // ever fires.
+  const { send, onSaveData } = bridge;
   useEffect(() => {
-    const unsubscribe = bridge.onSaveData((save) => {
+    const unsubscribe = onSaveData((save) => {
       storage.save(save).catch((error) => console.warn('Autosave failed', error));
     });
     const timer = setInterval(
-      () => bridge.send({ type: 'requestSave' }),
+      () => send({ type: 'requestSave' }),
       AUTOSAVE_INTERVAL_MS,
     );
     // Quick-save on "s" (autosave covers the rest).
     const onKeyDown = (e: KeyboardEvent): void => {
-      if (e.key === 's' || e.key === 'S') bridge.send({ type: 'requestSave' });
+      if (e.key === 's' || e.key === 'S') send({ type: 'requestSave' });
+    };
+    // Best-effort save when the tab is hidden (switch, reload, close).
+    const onVisibilityChange = (): void => {
+      if (document.visibilityState === 'hidden') send({ type: 'requestSave' });
     };
     window.addEventListener('keydown', onKeyDown);
+    document.addEventListener('visibilitychange', onVisibilityChange);
     return () => {
       unsubscribe();
       clearInterval(timer);
       window.removeEventListener('keydown', onKeyDown);
+      document.removeEventListener('visibilitychange', onVisibilityChange);
     };
-  }, [bridge]);
+  }, [send, onSaveData]);
 
   const startNewGame = async (): Promise<void> => {
     if (!window.confirm(t('newCity.confirm'))) {
