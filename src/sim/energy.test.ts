@@ -360,3 +360,100 @@ describe('energyStep', () => {
     }
   });
 });
+
+describe('hydro and pumped storage', () => {
+  function riverState(): SimState {
+    const state = makeState();
+    state.tick = 0; // midnight: no solar
+    state.weather.cloudCover = 0;
+    state.weather.windSpeed = 0;
+    state.layers.terrain[at(5, 5)] = Terrain.River;
+    state.layers.terrain[at(8, 8)] = Terrain.Lake;
+    return state;
+  }
+
+  it('run-of-river generates day and night, scaled by river flow', () => {
+    const state = riverState();
+    placePlant(state, at(5, 5), PlantType.RunOfRiver);
+    state.weather.riverFlow = 1;
+    energyStep(state, { chargingDemand: 0 });
+    expect(state.lastEnergy.hydro).toBeCloseTo(BALANCE.energy.hydroPeakOutput, 6);
+    state.weather.riverFlow = 0;
+    energyStep(state, { chargingDemand: 0 });
+    expect(state.lastEnergy.hydro).toBeCloseTo(
+      BALANCE.energy.hydroPeakOutput * BALANCE.water.minFlowFactor,
+      6,
+    );
+  });
+
+  it('charges batteries before pumped storage and exports the rest', () => {
+    const state = riverState();
+    placePlant(state, at(5, 5), PlantType.RunOfRiver);
+    placePlant(state, at(8, 7), PlantType.PumpedStorage);
+    placePlant(state, at(2, 2), PlantType.Battery);
+    state.weather.riverFlow = 1;
+    state.money = 1e9;
+    // Batteries take up to their power limit first.
+    energyStep(state, { chargingDemand: 0 });
+    const hydro = BALANCE.energy.hydroPeakOutput;
+    const batteryTake = Math.min(hydro, BALANCE.energy.batteryPowerLimit);
+    expect(state.storedEnergy).toBeCloseTo(batteryTake * BALANCE.energy.batteryChargeEfficiency, 6);
+    expect(state.pumpedStorageEnergy).toBeCloseTo(
+      (hydro - batteryTake) * BALANCE.energy.pumpedStorageChargeEfficiency,
+      6,
+    );
+    // Fill the battery; the pumped pool absorbs the whole surplus next.
+    state.storedEnergy = BALANCE.energy.batteryCapacity;
+    const pumpedBefore = state.pumpedStorageEnergy;
+    energyStep(state, { chargingDemand: 0 });
+    expect(state.pumpedStorageEnergy).toBeCloseTo(
+      pumpedBefore + hydro * BALANCE.energy.pumpedStorageChargeEfficiency,
+      6,
+    );
+    expect(state.lastEnergy.gridExport).toBe(0);
+    expect(state.lastEnergy.curtailment).toBe(0);
+  });
+
+  it('discharges batteries before pumped storage before biogas', () => {
+    const state = riverState();
+    placePlant(state, at(8, 7), PlantType.PumpedStorage);
+    placePlant(state, at(2, 2), PlantType.Battery);
+    placePlant(state, at(3, 2), PlantType.BiogasPlant);
+    addBuilding(state, at(4, 2), Zone.Commercial, 3);
+    state.storedEnergy = 10;
+    state.pumpedStorageEnergy = 1_000;
+    energyStep(state, { chargingDemand: 300 });
+    expect(state.storedEnergy).toBe(0);
+    expect(state.pumpedStorageEnergy).toBeLessThan(1_000);
+    expect(state.pumpedStorageEnergy).toBeGreaterThanOrEqual(
+      1_000 - BALANCE.energy.pumpedStoragePowerLimit,
+    );
+    expect(state.lastEnergy.biogas).toBeGreaterThan(0);
+  });
+
+  it('clamps pumped storage to installed capacity', () => {
+    const state = riverState();
+    placePlant(state, at(8, 7), PlantType.PumpedStorage);
+    state.pumpedStorageEnergy = 1e9;
+    energyStep(state, { chargingDemand: 0 });
+    expect(state.pumpedStorageEnergy).toBeLessThanOrEqual(BALANCE.energy.pumpedStorageCapacity);
+    const noPlants = makeState();
+    noPlants.pumpedStorageEnergy = 500;
+    energyStep(noPlants, { chargingDemand: 0 });
+    expect(noPlants.pumpedStorageEnergy).toBe(0);
+  });
+
+  it('history state of charge combines both pools', () => {
+    const state = riverState();
+    placePlant(state, at(8, 7), PlantType.PumpedStorage);
+    placePlant(state, at(2, 2), PlantType.Battery);
+    state.storedEnergy = BALANCE.energy.batteryCapacity;
+    state.pumpedStorageEnergy = 0;
+    state.tick = TICKS_PER_DAY; // multiple of the history sample interval, midnight
+    energyStep(state, { chargingDemand: 0 });
+    const last = state.energyHistory[state.energyHistory.length - 1];
+    const combined =
+      state.storedEnergy / (BALANCE.energy.batteryCapacity + BALANCE.energy.pumpedStorageCapacity);
+    expect(last.stateOfCharge).toBeCloseTo(combined, 6);
+  });
+});

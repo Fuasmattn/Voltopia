@@ -66,17 +66,21 @@ export interface EnergyHistoryPoint {
   generation: number;
   /** Total consumption in energy units per tick. */
   consumption: number;
-  /** Battery state of charge, 0..1 of installed capacity. */
+  /** Combined state of charge of batteries and pumped storage, 0..1. */
   stateOfCharge: number;
 }
 
 export interface EnergyStats {
-  generation: { solar: number; wind: number; biogas: number; rooftop: number };
+  generation: { solar: number; wind: number; biogas: number; rooftop: number; hydro: number };
   consumption: { buildings: number; charging: number };
   /** Absolute stored energy across all batteries. */
   storedEnergy: number;
   /** Total installed battery capacity. */
   storageCapacity: number;
+  /** Energy stored in pumped storage plants (second pool). */
+  pumpedStoredEnergy: number;
+  /** Installed pumped storage capacity. */
+  pumpedCapacity: number;
   /** Generation that had to be curtailed this tick (storage full, no demand). */
   curtailment: number;
   /** Consumption that could not be served this tick. */

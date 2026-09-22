@@ -10,6 +10,7 @@ import { updateWeather } from './weather.ts';
 import {
   countPopulationAndJobs,
   TileType,
+  totalPumpedStorageCapacity,
   totalStorageCapacity,
   Zone,
   type SimState,
@@ -47,7 +48,7 @@ const MAX_LIFETIME_SAMPLES = 365;
 function recordLifetime(state: SimState, population: number, jobs: number): void {
   const e = state.lastEnergy;
   const sums = state.lifetime.daySums;
-  sums.generation += e.solar + e.wind + e.rooftop + e.biogas;
+  sums.generation += e.solar + e.wind + e.rooftop + e.hydro + e.biogas;
   sums.consumption += e.buildingConsumption + e.chargingConsumption;
   sums.ticks++;
 
@@ -108,6 +109,7 @@ export function buildStats(state: SimState): GlobalStats {
         wind: e.wind,
         biogas: e.biogas,
         rooftop: e.rooftop,
+        hydro: e.hydro,
       },
       consumption: {
         buildings: e.buildingConsumption,
@@ -115,6 +117,8 @@ export function buildStats(state: SimState): GlobalStats {
       },
       storedEnergy: state.storedEnergy,
       storageCapacity: totalStorageCapacity(state),
+      pumpedStoredEnergy: state.pumpedStorageEnergy,
+      pumpedCapacity: totalPumpedStorageCapacity(state),
       curtailment: e.curtailment,
       deficit: e.deficit,
       gridImport: e.gridImport,

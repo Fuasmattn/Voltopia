@@ -13,7 +13,7 @@ import {
   type UndoEntry,
 } from './state.ts';
 import { timeOfDay } from './tick.ts';
-import { currentSolarFactor, currentWindFactor } from './weather.ts';
+import { currentSolarFactor, currentWindFactor, riverFlowFactor } from './weather.ts';
 
 /** Plants that provide grid connection within the supply radius. */
 const SUPPLY_SOURCES: ReadonlySet<PlantType> = new Set<PlantType>([
@@ -173,11 +173,37 @@ export interface EnergyTickInput {
   chargingDemand: number;
 }
 
+/** Absorb surplus into a storage pool within its power limit and headroom. */
+function chargePool(
+  stored: number,
+  capacity: number,
+  powerLimit: number,
+  efficiency: number,
+  surplus: number,
+): { stored: number; absorbed: number } {
+  const headroom = Math.max(0, capacity - stored);
+  const absorbed = Math.max(0, Math.min(surplus, powerLimit, headroom / efficiency));
+  return { stored: stored + absorbed * efficiency, absorbed };
+}
+
+/** Release stored energy toward a shortfall within the power limit. */
+function dischargePool(
+  stored: number,
+  powerLimit: number,
+  shortfall: number,
+): { stored: number; released: number } {
+  const released = Math.max(0, Math.min(shortfall, powerLimit, stored));
+  return { stored: stored - released, released };
+}
+
 /**
  * One tick of the energy balance:
- * 1. renewable generation (solar + wind) covers consumption,
- * 2. surplus charges batteries, anything beyond is curtailed,
- * 3. deficit discharges batteries, then dispatches biogas,
+ * 1. renewable generation (solar + wind + rooftop + hydro) covers
+ *    consumption,
+ * 2. surplus charges batteries, then pumped storage, anything beyond is
+ *    exported over the transmission link or curtailed,
+ * 3. deficit discharges batteries, then pumped storage, then dispatches
+ *    biogas, then imports over the transmission link,
  * 4. remaining deficit becomes undersupply: a matching share of connected
  *    buildings is flagged undersupplied (deterministic flicker).
  */
@@ -188,6 +214,7 @@ export function energyStep(state: SimState, input: EnergyTickInput): void {
 
   const solar = census.solarFarms * BALANCE.energy.solarPeakOutput * currentSolarFactor(state);
   const wind = census.windTurbines * BALANCE.energy.windPeakOutput * currentWindFactor(state);
+  const hydro = census.runOfRiverPlants * BALANCE.energy.hydroPeakOutput * riverFlowFactor(state);
 
   // Consumption of all connected buildings, plus their rooftop PV
   // feed-in (rooftop capacity grows automatically with density).
@@ -209,11 +236,14 @@ export function energyStep(state: SimState, input: EnergyTickInput): void {
 
   const chargingDemand = Math.max(0, input.chargingDemand);
   const totalDemand = buildingDemand + chargingDemand;
-  const generation = solar + wind + rooftop;
+  const generation = solar + wind + rooftop + hydro;
 
   const storageCapacity = census.batteries * BALANCE.energy.batteryCapacity;
   const powerLimit = census.batteries * BALANCE.energy.batteryPowerLimit;
   state.storedEnergy = Math.min(state.storedEnergy, storageCapacity);
+  const pumpedCapacity = census.pumpedStoragePlants * BALANCE.energy.pumpedStorageCapacity;
+  const pumpedPowerLimit = census.pumpedStoragePlants * BALANCE.energy.pumpedStoragePowerLimit;
+  state.pumpedStorageEnergy = Math.min(state.pumpedStorageEnergy, pumpedCapacity);
 
   let curtailment = 0;
   let biogas = 0;
@@ -223,17 +253,34 @@ export function energyStep(state: SimState, input: EnergyTickInput): void {
 
   const net = generation - totalDemand;
   if (net >= 0) {
-    const headroom = storageCapacity - state.storedEnergy;
-    const charge = Math.min(net, powerLimit, headroom / BALANCE.energy.batteryChargeEfficiency);
-    state.storedEnergy += charge * BALANCE.energy.batteryChargeEfficiency;
-    // Sell what the batteries cannot absorb; curtail beyond the link.
-    gridExport = Math.min(net - charge, BALANCE.market.exportCapacity);
-    curtailment = net - charge - gridExport;
+    const battery = chargePool(
+      state.storedEnergy,
+      storageCapacity,
+      powerLimit,
+      BALANCE.energy.batteryChargeEfficiency,
+      net,
+    );
+    state.storedEnergy = battery.stored;
+    const pumped = chargePool(
+      state.pumpedStorageEnergy,
+      pumpedCapacity,
+      pumpedPowerLimit,
+      BALANCE.energy.pumpedStorageChargeEfficiency,
+      net - battery.absorbed,
+    );
+    state.pumpedStorageEnergy = pumped.stored;
+    const remaining = net - battery.absorbed - pumped.absorbed;
+    // Sell what storage cannot absorb; curtail beyond the link.
+    gridExport = Math.min(remaining, BALANCE.market.exportCapacity);
+    curtailment = remaining - gridExport;
   } else {
     let shortfall = -net;
-    const discharge = Math.min(shortfall, powerLimit, state.storedEnergy);
-    state.storedEnergy -= discharge;
-    shortfall -= discharge;
+    const battery = dischargePool(state.storedEnergy, powerLimit, shortfall);
+    state.storedEnergy = battery.stored;
+    shortfall -= battery.released;
+    const pumped = dischargePool(state.pumpedStorageEnergy, pumpedPowerLimit, shortfall);
+    state.pumpedStorageEnergy = pumped.stored;
+    shortfall -= pumped.released;
     biogas = Math.min(shortfall, census.biogasPlants * BALANCE.energy.biogasMaxOutput);
     shortfall -= biogas;
     // Expensive imports over the limited transmission link come last.
@@ -254,7 +301,7 @@ export function energyStep(state: SimState, input: EnergyTickInput): void {
     solar,
     wind,
     biogas,
-    hydro: 0,
+    hydro,
     rooftop,
     buildingConsumption: buildingDemand,
     chargingConsumption: chargingDemand,
@@ -265,10 +312,12 @@ export function energyStep(state: SimState, input: EnergyTickInput): void {
   };
 
   if (state.tick % TICKS_PER_HISTORY_SAMPLE === 0) {
+    const totalCapacity = storageCapacity + pumpedCapacity;
     pushEnergyHistory(state, {
       generation: generation + biogas,
       consumption: totalDemand,
-      stateOfCharge: storageCapacity > 0 ? state.storedEnergy / storageCapacity : 0,
+      stateOfCharge:
+        totalCapacity > 0 ? (state.storedEnergy + state.pumpedStorageEnergy) / totalCapacity : 0,
     });
   }
 }
