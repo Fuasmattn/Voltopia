@@ -1,5 +1,6 @@
 import * as THREE from 'three';
 import type { GlobalStats, TileDiff, VehicleState } from '../shared/types.ts';
+import { Terrain } from '../shared/types.ts';
 import { IsoCamera } from './camera.ts';
 import { pickTile } from './picking.ts';
 import { nightFactor, SUNRISE, SUNSET, sunIntensity } from '../shared/daylight.ts';
@@ -82,6 +83,8 @@ export class GameRenderer {
   private readonly gridSize: number;
   private readonly callbacks: RendererCallbacks;
   private readonly diffLayers: DiffLayer[] = [];
+  /** Per-tile terrain, tracked from diffs so tools can price bridges vs. roads. */
+  private readonly terrain: Uint8Array;
   private readonly hoverMarker: THREE.Mesh;
   private previewMesh!: THREE.InstancedMesh;
   private radiusRing!: THREE.Mesh;
@@ -112,6 +115,7 @@ export class GameRenderer {
     this.container = container;
     this.gridSize = gridSize;
     this.callbacks = callbacks;
+    this.terrain = new Uint8Array(gridSize * gridSize);
 
     const { scene, lights } = createScene();
     this.scene = scene;
@@ -204,7 +208,13 @@ export class GameRenderer {
   }
 
   applyDiffs(diffs: TileDiff[]): void {
+    for (const diff of diffs) this.terrain[diff.index] = diff.terrain;
     for (const layer of this.diffLayers) layer.applyDiffs(diffs);
+  }
+
+  /** Terrain of the given tile, tracked from diffs (build tools price bridges vs. roads). */
+  terrainAt(index: number): Terrain {
+    return this.terrain[index] as Terrain;
   }
 
   /** Update day/night lighting and layer environments from sim stats. */

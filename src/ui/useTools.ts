@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import type { GameRenderer, PickedTile, RendererCallbacks } from '../render/renderer.ts';
 import { lShapedPath, rectTiles } from '../shared/grid.ts';
 import { BALANCE } from '../shared/constants.ts';
-import { PlantType, Zone } from '../shared/types.ts';
+import { PlantType, Terrain, Zone } from '../shared/types.ts';
 import { sound } from './sound.ts';
 import type { SimBridge } from './useSimBridge.ts';
 
@@ -106,19 +106,34 @@ export function useTools(
       setCostPreview({ tiles: tileCount, cost: tileCount * perTile });
     };
 
+    // Mirrors the sim's per-tile road pricing (src/sim/roads.ts): river
+    // tiles are bridges and cost more. Falls back to flat road pricing
+    // when the renderer isn't mounted yet.
+    const showRoadCost = (tiles: number[]): void => {
+      const renderer = rendererRef.current;
+      const cost = tiles.reduce((sum, index) => {
+        const perTile =
+          renderer?.terrainAt(index) === Terrain.River
+            ? BALANCE.costs.bridgePerTile
+            : BALANCE.costs.roadPerTile;
+        return sum + perTile;
+      }, 0);
+      setCostPreview({ tiles: tiles.length, cost });
+    };
+
     const callbacks: RendererCallbacks = {};
     if (tool === 'road') {
       callbacks.onBuildStart = (tile) => {
         anchor = tile;
         path = [tile.index];
         rendererRef.current?.setPreviewTiles(path);
-        showCost(1, BALANCE.costs.roadPerTile);
+        showRoadCost(path);
       };
       callbacks.onBuildDrag = (tile) => {
         if (!anchor) return;
         path = lShapedPath(anchor.x, anchor.y, tile.x, tile.y, gridSize);
         rendererRef.current?.setPreviewTiles(path);
-        showCost(path.length, BALANCE.costs.roadPerTile);
+        showRoadCost(path);
       };
       callbacks.onBuildEnd = (tile) => {
         if (anchor && tile) {
