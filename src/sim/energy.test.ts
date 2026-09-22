@@ -8,6 +8,7 @@ import {
   loadProfileFactor,
   placePlant,
 } from './energy.ts';
+import { buildPowerLines } from './powerLines.ts';
 import { undoLastAction } from './roads.ts';
 import {
   createSimState,
@@ -80,8 +81,6 @@ describe('placePlant', () => {
     expect(census.batteries).toBe(1);
     expect(census.biogasPlants).toBe(1);
     expect(census.chargingHubs).toBe(1);
-    // charging hubs do not provide grid connection
-    expect(census.supplySources).toHaveLength(4);
   });
 
   it('places run-of-river only on river tiles', () => {
@@ -112,7 +111,6 @@ describe('placePlant', () => {
     const census = censusPlants(state);
     expect(census.runOfRiverPlants).toBe(1);
     expect(census.pumpedStoragePlants).toBe(1);
-    expect(census.supplySources).toEqual([at(5, 5), at(8, 7)]);
   });
 });
 
@@ -248,8 +246,10 @@ describe('energyStep', () => {
     placePlant(state, at(6, 5), PlantType.WindTurbine); // provides connection
     state.weather.windSpeed = 0; // ...but no output
     const buildings = 20;
+    // 7 columns x 3 rows, all strictly north of the plant's row so none
+    // land on the plant tile itself, and all within lineSupplyRadius.
     for (let i = 0; i < buildings; i++) {
-      addBuilding(state, at(8 + (i % 10), 5 + Math.floor(i / 10)), Zone.Commercial, 3);
+      addBuilding(state, at(3 + (i % 7), 2 + Math.floor(i / 7)), Zone.Commercial, 3);
     }
     state.tick = TICKS_PER_DAY / 2;
     state.weather.cloudCover = 1;
@@ -265,7 +265,7 @@ describe('energyStep', () => {
     // A majority of connected buildings flicker into undersupply.
     let undersupplied = 0;
     for (let i = 0; i < buildings; i++) {
-      const tile = at(8 + (i % 10), 5 + Math.floor(i / 10));
+      const tile = at(3 + (i % 7), 2 + Math.floor(i / 7));
       if (state.layers.supplied[tile] === SupplyStatus.Undersupplied) {
         undersupplied++;
       }
@@ -286,11 +286,11 @@ describe('energyStep', () => {
     expect(state.layers.supplied[at(8, 5)]).toBe(SupplyStatus.Supplied);
   });
 
-  it('marks buildings outside the supply radius as not connected', () => {
+  it('marks buildings beyond the connection radius of any plant as not connected', () => {
     const state = makeState();
     placePlant(state, at(0, 0), PlantType.WindTurbine);
-    const inside = at(BALANCE.energy.supplyRadius, 0);
-    const outside = at(BALANCE.energy.supplyRadius + 2, 0);
+    const inside = at(BALANCE.energy.lineSupplyRadius, 0);
+    const outside = at(BALANCE.energy.lineSupplyRadius + 2, 0);
     addBuilding(state, inside, Zone.Residential, 1);
     addBuilding(state, outside, Zone.Residential, 1);
     state.weather.windSpeed = 1; // plenty of power
@@ -302,6 +302,23 @@ describe('energyStep', () => {
       buildingConsumption(Zone.Residential, 1, 0),
       3,
     );
+  });
+
+  it('a power line from the plant connects a distant building', () => {
+    const state = makeState();
+    placePlant(state, at(0, 0), PlantType.WindTurbine);
+    const far = at(12, 0);
+    addBuilding(state, far, Zone.Residential, 1);
+    state.weather.windSpeed = 1;
+    energyStep(state, { chargingDemand: 0 });
+    expect(state.layers.supplied[far]).toBe(SupplyStatus.NotConnected);
+    state.money = 1e9;
+    buildPowerLines(
+      state,
+      Array.from({ length: 9 }, (_, i) => at(1 + i, 0)),
+    ); // x 1..9
+    energyStep(state, { chargingDemand: 0 });
+    expect(state.layers.supplied[far]).toBe(SupplyStatus.Supplied);
   });
 
   it('serves charging demand and accounts it separately', () => {
@@ -338,7 +355,7 @@ describe('energyStep', () => {
   it('unconnected buildings do not feed rooftop PV into the grid', () => {
     const state = makeState();
     placePlant(state, at(0, 0), PlantType.WindTurbine);
-    const outside = at(BALANCE.energy.supplyRadius + 3, 20);
+    const outside = at(BALANCE.energy.lineSupplyRadius + 3, 20);
     addBuilding(state, outside, Zone.Residential, 3);
     setNoonClearSky(state);
     energyStep(state, { chargingDemand: 0 });

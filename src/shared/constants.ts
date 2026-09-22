@@ -89,8 +89,6 @@ export const BALANCE = {
     pumpedStorageCapacity: 12_000,
     pumpedStoragePowerLimit: 200,
     pumpedStorageChargeEfficiency: 0.78,
-    /** Tiles around a plant that receive supply (Chebyshev distance). */
-    supplyRadius: 14,
     /**
      * Tiles around an energised line tile or a supply plant that count as
      * connected (Chebyshev distance).

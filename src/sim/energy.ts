@@ -1,6 +1,6 @@
 import { BALANCE, TICKS_PER_HISTORY_SAMPLE } from '../shared/constants.ts';
-import { tileX, tileY } from '../shared/grid.ts';
 import { PlantType, Zone } from '../shared/types.ts';
+import { isSupplySource, recomputeGrid } from './powerGrid.ts';
 import type { BuildResult } from './roads.ts';
 import {
   BuildIntent,
@@ -17,23 +17,13 @@ import {
 import { timeOfDay } from './tick.ts';
 import { currentSolarFactor, currentWindFactor, riverFlowFactor } from './weather.ts';
 
-/** Plants that provide grid connection within the supply radius. */
-const SUPPLY_SOURCES: ReadonlySet<PlantType> = new Set<PlantType>([
-  PlantType.SolarFarm,
-  PlantType.WindTurbine,
-  PlantType.Battery,
-  PlantType.BiogasPlant,
-  PlantType.RunOfRiver,
-  PlantType.PumpedStorage,
-]);
-
 /** True once any power-related plant exists (parks don't count). */
 export function hasPowerInfrastructure(state: SimState): boolean {
   const { tileType, plantType } = state.layers;
   for (let i = 0; i < tileType.length; i++) {
     if (tileType[i] !== TileType.Plant) continue;
     const plant = plantType[i] as PlantType;
-    if (SUPPLY_SOURCES.has(plant) || plant === PlantType.ChargingHub) {
+    if (isSupplySource(plant) || plant === PlantType.ChargingHub) {
       return true;
     }
   }
@@ -72,8 +62,6 @@ interface PlantCensus {
   parks: number;
   runOfRiverPlants: number;
   pumpedStoragePlants: number;
-  /** Tile indices of plants that provide grid connection. */
-  supplySources: number[];
 }
 
 export function censusPlants(state: SimState): PlantCensus {
@@ -87,7 +75,6 @@ export function censusPlants(state: SimState): PlantCensus {
     parks: 0,
     runOfRiverPlants: 0,
     pumpedStoragePlants: 0,
-    supplySources: [],
   };
   for (let i = 0; i < tileType.length; i++) {
     if (tileType[i] !== TileType.Plant) continue;
@@ -120,7 +107,6 @@ export function censusPlants(state: SimState): PlantCensus {
       case PlantType.None:
         break;
     }
-    if (SUPPLY_SOURCES.has(plant)) census.supplySources.push(i);
   }
   return census;
 }
@@ -140,22 +126,6 @@ export function loadProfileFactor(zone: Zone, time: number): number {
 export function buildingConsumption(zone: Zone, density: number, time: number): number {
   const base = BALANCE.energy.consumptionByZoneAndDensity[zone]?.[density] ?? 0;
   return base * loadProfileFactor(zone, time);
-}
-
-/**
- * Is a tile within the supply radius (Chebyshev distance) of any
- * grid-connected plant?
- */
-function isConnected(state: SimState, index: number, supplySources: number[]): boolean {
-  const radius = BALANCE.energy.supplyRadius;
-  const x = tileX(index, state.size);
-  const y = tileY(index, state.size);
-  for (const source of supplySources) {
-    const dx = Math.abs(x - tileX(source, state.size));
-    const dy = Math.abs(y - tileY(source, state.size));
-    if (Math.max(dx, dy) <= radius) return true;
-  }
-  return false;
 }
 
 export interface EnergyTickInput {
@@ -195,10 +165,11 @@ function dischargePool(
  * 3. deficit discharges batteries, then pumped storage, then dispatches
  *    biogas, then imports over the transmission link,
  * 4. remaining deficit becomes undersupply: a matching share of connected
- *    buildings is flagged undersupplied (deterministic flicker).
+ *    (energised) buildings is flagged undersupplied (deterministic flicker).
  */
 export function energyStep(state: SimState, input: EnergyTickInput): void {
   const { layers } = state;
+  recomputeGrid(state);
   const census = censusPlants(state);
   const time = timeOfDay(state.tick);
 
@@ -214,7 +185,7 @@ export function energyStep(state: SimState, input: EnergyTickInput): void {
   const connectedBuildings: number[] = [];
   for (let i = 0; i < layers.tileType.length; i++) {
     if (layers.tileType[i] !== TileType.Empty || layers.density[i] === 0) continue;
-    const connected = isConnected(state, i, census.supplySources);
+    const connected = layers.energized[i] === 1;
     if (!connected) {
       setSupplied(state, i, SupplyStatus.NotConnected);
       continue;

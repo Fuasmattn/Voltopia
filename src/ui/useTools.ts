@@ -171,14 +171,15 @@ export function useTools(
       };
     } else if (PLANT_BY_TOOL[tool] !== undefined) {
       const plant = PLANT_BY_TOOL[tool]!;
-      // Show the relevant radius while placing: supply for power plants,
-      // the happiness radius for parks, the service radius for hubs.
+      // Show the relevant radius while placing: the connection radius for
+      // supply plants, the happiness radius for parks, the service radius
+      // for hubs.
       if (plant === PlantType.Park) {
         renderer?.setHoverRadius(BALANCE.happiness.parkRadius);
       } else if (plant === PlantType.ChargingHub) {
         renderer?.setHoverRadius(BALANCE.vehicles.hubRadius);
       } else {
-        renderer?.setHoverRadius(BALANCE.energy.supplyRadius);
+        renderer?.setHoverRadius(BALANCE.energy.lineSupplyRadius);
       }
       callbacks.onBuildStart = (tile) => {
         send({ type: 'placePlant', tile: tile.index, plant });

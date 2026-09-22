@@ -38,6 +38,16 @@ describe('full gameplay integration', () => {
     engine.applyCommand({ type: 'placePlant', tile: at(16, 13), plant: PlantType.Battery });
     engine.applyCommand({ type: 'placePlant', tile: at(18, 13), plant: PlantType.BiogasPlant });
 
+    // Grid: from the solar farm west along row 12, up column 3, then along
+    // the main street. The street row energises the zones on both sides.
+    const trunk = [
+      ...Array.from({ length: 8 }, (_, i) => at(10 - i, 12)), // (10,12) … (3,12)
+      at(3, 11),
+      at(3, 10),
+      ...Array.from({ length: 16 }, (_, x) => at(x + 4, 10)), // main street
+    ];
+    engine.applyCommand({ type: 'buildPowerLine', tiles: trunk });
+
     let sawStorageCharge = false;
     let sawSolar = false;
     for (let i = 0; i < TICKS_PER_DAY * 4; i++) {
