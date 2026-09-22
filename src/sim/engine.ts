@@ -3,6 +3,7 @@ import type { SimCommand, SimEvent } from '../shared/messages.ts';
 import type { VehicleState } from '../shared/types.ts';
 import { buildRoads, bulldozeTiles, undoLastAction, type BuildResult } from './roads.ts';
 import { placePlant } from './energy.ts';
+import { buildPowerLines } from './powerLines.ts';
 import { drivingVehicles } from './vehicles.ts';
 import { paintZones } from './zones.ts';
 import {
@@ -61,6 +62,8 @@ export class SimEngine {
         ];
       case 'buildRoad':
         return this.toEvents(buildRoads(state, command.tiles));
+      case 'buildPowerLine':
+        return this.toEvents(buildPowerLines(state, command.tiles));
       case 'bulldoze':
         return this.toEvents(bulldozeTiles(state, command.tiles));
       case 'undo':

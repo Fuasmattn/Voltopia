@@ -73,6 +73,29 @@ describe('buildRejection', () => {
     );
     expect(isBuildable(state, at(8, 7), BuildIntent.Plant, PlantType.PumpedStorage)).toBe(true);
   });
+
+  it('accepts power lines on land, roads, river and lake but not on plants or buildings', () => {
+    const state = makeState();
+    expect(buildRejection(state, at(1, 1), BuildIntent.PowerLine)).toBeNull();
+    expect(buildRejection(state, at(5, 5), BuildIntent.PowerLine)).toBeNull(); // river
+    expect(buildRejection(state, at(8, 8), BuildIntent.PowerLine)).toBeNull(); // lake
+    state.layers.tileType[at(2, 2)] = TileType.Road;
+    expect(buildRejection(state, at(2, 2), BuildIntent.PowerLine)).toBeNull();
+    state.layers.tileType[at(3, 3)] = TileType.Plant;
+    expect(buildRejection(state, at(3, 3), BuildIntent.PowerLine)).toBe('needsLineSite');
+    state.layers.density[at(4, 4)] = 1;
+    expect(buildRejection(state, at(4, 4), BuildIntent.PowerLine)).toBe('needsLineSite');
+  });
+
+  it('keeps zones and plants off line tiles while roads may share them', () => {
+    const state = makeState();
+    state.layers.powerLine[at(1, 1)] = 16;
+    expect(buildRejection(state, at(1, 1), BuildIntent.Road)).toBeNull();
+    expect(buildRejection(state, at(1, 1), BuildIntent.Zone)).toBe('tileOccupied');
+    expect(buildRejection(state, at(1, 1), BuildIntent.Plant, PlantType.SolarFarm)).toBe(
+      'tileOccupied',
+    );
+  });
 });
 
 describe('save round trip', () => {

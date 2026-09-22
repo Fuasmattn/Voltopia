@@ -25,6 +25,9 @@ export const BALANCE = {
   costs: {
     roadPerTile: 10,
     bridgePerTile: 40,
+    /** Power line per tile on land; over river or lake it is an overhead crossing. */
+    powerLinePerTile: 4,
+    powerLineWaterPerTile: 12,
     zonePerTile: 5,
     plant: {
       [PlantType.SolarFarm]: 1_200,
@@ -40,6 +43,7 @@ export const BALANCE = {
 
   upkeepPerTick: {
     roadPerTile: 0.005,
+    powerLinePerTile: 0.0005,
     plant: {
       [PlantType.SolarFarm]: 0.05,
       [PlantType.WindTurbine]: 0.08,
@@ -87,6 +91,11 @@ export const BALANCE = {
     pumpedStorageChargeEfficiency: 0.78,
     /** Tiles around a plant that receive supply (Chebyshev distance). */
     supplyRadius: 14,
+    /**
+     * Tiles around an energised line tile or a supply plant that count as
+     * connected (Chebyshev distance).
+     */
+    lineSupplyRadius: 3,
     /**
      * Rooftop PV grows automatically with density: peak output per
      * building by density level 1..3 (only connected buildings feed in).

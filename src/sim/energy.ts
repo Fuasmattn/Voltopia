@@ -5,8 +5,10 @@ import type { BuildResult } from './roads.ts';
 import {
   BuildIntent,
   buildRejection,
+  bumpGridVersion,
   markDirty,
   pushEnergyHistory,
+  snapshotTile,
   SupplyStatus,
   TileType,
   type SimState,
@@ -49,26 +51,14 @@ export function placePlant(state: SimState, tile: number, plant: PlantType): Bui
     return { rejected: 'notEnoughMoney' };
   }
 
-  const undo: UndoEntry = {
-    moneyDelta: cost,
-    tiles: [
-      {
-        index: tile,
-        tileType: layers.tileType[tile],
-        roadMask: layers.roadMask[tile],
-        zone: layers.zone[tile],
-        density: layers.density[tile],
-        variant: layers.variant[tile],
-        plantType: layers.plantType[tile],
-      },
-    ],
-  };
+  const undo: UndoEntry = { moneyDelta: cost, tiles: [snapshotTile(state, tile)] };
 
   state.money -= cost;
   layers.tileType[tile] = TileType.Plant;
   layers.zone[tile] = Zone.None;
   layers.plantType[tile] = plant;
   markDirty(state, tile);
+  bumpGridVersion(state);
   state.undoStack.push(undo);
   return {};
 }

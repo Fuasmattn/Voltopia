@@ -76,10 +76,18 @@ function countTiles(state: SimState): {
   zonedTiles: number;
   plantTiles: number;
   buildingTiles: number;
+  powerLineTiles: number;
 } {
-  const { tileType, zone, density } = state.layers;
-  const counts = { roadTiles: 0, zonedTiles: 0, plantTiles: 0, buildingTiles: 0 };
+  const { tileType, zone, density, powerLine } = state.layers;
+  const counts = {
+    roadTiles: 0,
+    zonedTiles: 0,
+    plantTiles: 0,
+    buildingTiles: 0,
+    powerLineTiles: 0,
+  };
   for (let i = 0; i < tileType.length; i++) {
+    if (powerLine[i] !== 0) counts.powerLineTiles++;
     if (tileType[i] === TileType.Road) counts.roadTiles++;
     else if (tileType[i] === TileType.Plant) counts.plantTiles++;
     else {

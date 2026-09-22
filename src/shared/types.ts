@@ -120,6 +120,7 @@ export interface TileCounts {
   zonedTiles: number;
   plantTiles: number;
   buildingTiles: number;
+  powerLineTiles: number;
 }
 
 export interface DemandStats {
@@ -160,6 +161,8 @@ export interface TileDiff {
   tileType: TileType;
   /** 4-bit connection mask for roads (N=1, E=2, S=4, W=8). */
   roadMask: number;
+  /** Power line mask: 0 = none, else LINE_PRESENT | connection bits (N=1, E=2, S=4, W=8). */
+  powerLine: number;
   zone: Zone;
   /** 0 = no building, 1..3 = density level. */
   density: number;
@@ -209,5 +212,7 @@ export interface SaveGame {
     plantType: ArrayBuffer;
     /** Terrain layer; absent in older saves (all land). */
     terrain?: ArrayBuffer;
+    /** Power line layer; absent in saves from before power lines. */
+    powerLine?: ArrayBuffer;
   };
 }

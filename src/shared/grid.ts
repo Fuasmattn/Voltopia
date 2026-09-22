@@ -22,6 +22,12 @@ export const DIR_E = 2;
 export const DIR_S = 4;
 export const DIR_W = 8;
 
+/**
+ * Power line presence bit. A line tile's mask is LINE_PRESENT | connection
+ * bits (DIR_*), so an isolated line tile (no connections) is still != 0.
+ */
+export const LINE_PRESENT = 16;
+
 /** Neighbor offsets in bit order N, E, S, W (N = -y). */
 export const DIRECTIONS: ReadonlyArray<{ dx: number; dy: number; bit: number }> = [
   { dx: 0, dy: -1, bit: DIR_N },

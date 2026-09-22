@@ -1,45 +1,19 @@
 import { BALANCE } from '../shared/constants.ts';
 import { DIRECTIONS, inBounds, tileIndex, tileX, tileY } from '../shared/grid.ts';
+import { clearPowerLines } from './powerLines.ts';
 import {
   BuildIntent,
+  bumpGridVersion,
   isBuildable,
   markDirty,
+  snapshotTile,
   Terrain,
   TileType,
+  withNeighbors,
   Zone,
   type SimState,
   type UndoEntry,
 } from './state.ts';
-
-/** Snapshot one tile's buildable layers for undo. */
-function snapshotTile(state: SimState, index: number): UndoEntry['tiles'][number] {
-  const { layers } = state;
-  return {
-    index,
-    tileType: layers.tileType[index],
-    roadMask: layers.roadMask[index],
-    zone: layers.zone[index],
-    density: layers.density[index],
-    variant: layers.variant[index],
-    plantType: layers.plantType[index],
-  };
-}
-
-/** Collect the given tiles plus their 4-neighbors (deduplicated). */
-function withNeighbors(state: SimState, tiles: number[]): Set<number> {
-  const affected = new Set<number>();
-  for (const index of tiles) {
-    affected.add(index);
-    const x = tileX(index, state.size);
-    const y = tileY(index, state.size);
-    for (const { dx, dy } of DIRECTIONS) {
-      if (inBounds(x + dx, y + dy, state.size)) {
-        affected.add(tileIndex(x + dx, y + dy, state.size));
-      }
-    }
-  }
-  return affected;
-}
 
 /** Recompute the 4-bit connection mask of a tile (0 for non-roads). */
 export function recomputeRoadMask(state: SimState, index: number): void {
@@ -103,23 +77,30 @@ export function buildRoads(state: SimState, tiles: number[]): BuildResult {
   return {};
 }
 
-/** Remove roads, zones, buildings and plants from the given tiles. */
+/**
+ * Remove roads, zones, buildings and plants from the given tiles. A tile
+ * that carries a power line loses only the line; whatever else stands
+ * there survives for a second pass.
+ */
 export function bulldozeTiles(state: SimState, tiles: number[]): BuildResult {
   const { layers } = state;
+  const lineTiles = tiles.filter((index) => layers.powerLine[index] !== 0);
   const clearable = tiles.filter(
     (index) =>
-      layers.tileType[index] !== TileType.Empty ||
-      layers.zone[index] !== Zone.None ||
-      layers.density[index] !== 0,
+      layers.powerLine[index] === 0 &&
+      (layers.tileType[index] !== TileType.Empty ||
+        layers.zone[index] !== Zone.None ||
+        layers.density[index] !== 0),
   );
-  if (clearable.length === 0) return {};
+  if (lineTiles.length === 0 && clearable.length === 0) return {};
 
-  const affected = withNeighbors(state, clearable);
+  const affected = withNeighbors(state, [...lineTiles, ...clearable]);
   const undo: UndoEntry = {
     moneyDelta: 0,
     tiles: [...affected].map((index) => snapshotTile(state, index)),
   };
 
+  if (lineTiles.length > 0) clearPowerLines(state, lineTiles);
   for (const index of clearable) {
     layers.tileType[index] = TileType.Empty;
     layers.zone[index] = Zone.None;
@@ -130,6 +111,8 @@ export function bulldozeTiles(state: SimState, tiles: number[]): BuildResult {
     markDirty(state, index);
   }
   for (const index of affected) recomputeRoadMask(state, index);
+  // A cleared tile may have been a plant: connectivity must be recomputed.
+  if (clearable.length > 0) bumpGridVersion(state);
 
   state.undoStack.push(undo);
   return {};
@@ -145,11 +128,13 @@ export function undoLastAction(state: SimState): BuildResult {
   for (const tile of entry.tiles) {
     layers.tileType[tile.index] = tile.tileType;
     layers.roadMask[tile.index] = tile.roadMask;
+    layers.powerLine[tile.index] = tile.powerLine;
     layers.zone[tile.index] = tile.zone;
     layers.density[tile.index] = tile.density;
     layers.variant[tile.index] = tile.variant;
     layers.plantType[tile.index] = tile.plantType;
     markDirty(state, tile.index);
   }
+  bumpGridVersion(state);
   return {};
 }

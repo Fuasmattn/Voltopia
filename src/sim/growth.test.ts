@@ -4,6 +4,7 @@ import { tileIndex } from '../shared/grid.ts';
 import { computeDemand, decayStep, growthStep } from './growth.ts';
 import { placePlant } from './energy.ts';
 import { PlantType } from '../shared/types.ts';
+import { buildPowerLines } from './powerLines.ts';
 import { buildRoads } from './roads.ts';
 import { createSimState, SupplyStatus, TileType, Zone, type SimState } from './state.ts';
 import { paintZones } from './zones.ts';
@@ -222,5 +223,19 @@ describe('growthStep', () => {
     paintZones(state, [at(4, 6), at(5, 6)], Zone.Commercial);
     runGrowth(state, 4000);
     expect(totalDensity(state, Zone.Commercial)).toBeGreaterThan(0);
+  });
+
+  it('never spawns a building on a tile that carries a power line', () => {
+    const state = cityWithRoad();
+    paintZones(state, [at(4, 4), at(5, 4), at(6, 4)], Zone.Residential);
+    const zoned: number[] = [];
+    for (let i = 0; i < state.layers.zone.length; i++) {
+      if (state.layers.zone[i] !== Zone.None) zoned.push(i);
+    }
+    expect(zoned.length).toBeGreaterThan(0);
+    state.money = 1e9;
+    buildPowerLines(state, zoned);
+    runGrowth(state, 500);
+    expect(totalDensity(state, Zone.Residential)).toBe(0);
   });
 });

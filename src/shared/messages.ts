@@ -21,6 +21,7 @@ export type SimCommand =
     }
   | { type: 'setSpeed'; speed: Speed }
   | { type: 'buildRoad'; tiles: number[] }
+  | { type: 'buildPowerLine'; tiles: number[] }
   | { type: 'paintZone'; tiles: number[]; zone: Zone }
   | { type: 'placePlant'; tile: number; plant: PlantType }
   | { type: 'bulldoze'; tiles: number[] }

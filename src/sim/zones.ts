@@ -1,7 +1,14 @@
 import { BALANCE } from '../shared/constants.ts';
 import type { Zone } from '../shared/types.ts';
 import type { BuildResult } from './roads.ts';
-import { BuildIntent, isBuildable, markDirty, type SimState, type UndoEntry } from './state.ts';
+import {
+  BuildIntent,
+  isBuildable,
+  markDirty,
+  snapshotTile,
+  type SimState,
+  type UndoEntry,
+} from './state.ts';
 
 /**
  * Paint a zone onto empty tiles. Tiles that already carry a building,
@@ -21,15 +28,7 @@ export function paintZones(state: SimState, tiles: number[], zone: Zone): BuildR
 
   const undo: UndoEntry = {
     moneyDelta: cost,
-    tiles: paintable.map((index) => ({
-      index,
-      tileType: layers.tileType[index],
-      roadMask: layers.roadMask[index],
-      zone: layers.zone[index],
-      density: layers.density[index],
-      variant: layers.variant[index],
-      plantType: layers.plantType[index],
-    })),
+    tiles: paintable.map((index) => snapshotTile(state, index)),
   };
 
   state.money -= cost;

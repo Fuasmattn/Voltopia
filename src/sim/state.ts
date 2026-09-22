@@ -57,6 +57,7 @@ export interface UndoEntry {
     index: number;
     tileType: number;
     roadMask: number;
+    powerLine: number;
     zone: number;
     density: number;
     variant: number;
@@ -74,6 +75,10 @@ export interface TileLayers {
   plantType: Uint8Array;
   /** Immutable ground type (land / river / lake), generated per map. */
   terrain: Uint8Array;
+  /** Power line mask per tile (0 = none, else LINE_PRESENT | connection bits). */
+  powerLine: Uint8Array;
+  /** 1 when the tile is within lineSupplyRadius of an energised line or supply plant. Derived, not persisted. */
+  energized: Uint8Array;
   /** Ticks since the building on this tile last changed (not persisted). */
   buildingAge: Uint32Array;
   /** Consecutive ticks without full supply (not persisted). */
@@ -93,6 +98,10 @@ export interface SimState {
   storedEnergy: number;
   /** Energy stored in pumped storage plants (separate pool from batteries). */
   pumpedStorageEnergy: number;
+  /** Incremented whenever plants or power lines change; drives recomputeGrid. */
+  gridVersion: number;
+  /** gridVersion the energized layer was last computed for (-1 = never). */
+  gridComputedVersion: number;
   weather: Weather;
   layers: TileLayers;
   vehicles: Vehicle[];
@@ -145,6 +154,8 @@ export function createTileLayers(size: number): TileLayers {
     supplied: new Uint8Array(tiles),
     plantType: new Uint8Array(tiles),
     terrain: new Uint8Array(tiles),
+    powerLine: new Uint8Array(tiles),
+    energized: new Uint8Array(tiles),
     buildingAge: new Uint32Array(tiles),
     troubledTicks: new Uint32Array(tiles),
   };
@@ -167,6 +178,8 @@ export function createSimState(
     happiness: BALANCE.happiness.base,
     storedEnergy: 0,
     pumpedStorageEnergy: 0,
+    gridVersion: 0,
+    gridComputedVersion: -1,
     weather: { cloudCover: 0.3, windSpeed: 0.5, riverFlow: BALANCE.water.initialFlow },
     layers: createTileLayers(size),
     vehicles: [],
@@ -199,6 +212,36 @@ export function markDirty(state: SimState, index: number): void {
   state.dirty.add(index);
 }
 
+/** Plants or lines changed: the energized layer must be recomputed. */
+export function bumpGridVersion(state: SimState): void {
+  state.gridVersion++;
+}
+
+/** Snapshot one tile's buildable layers for undo. */
+export function snapshotTile(state: SimState, index: number): UndoEntry['tiles'][number] {
+  const { layers } = state;
+  return {
+    index,
+    tileType: layers.tileType[index],
+    roadMask: layers.roadMask[index],
+    powerLine: layers.powerLine[index],
+    zone: layers.zone[index],
+    density: layers.density[index],
+    variant: layers.variant[index],
+    plantType: layers.plantType[index],
+  };
+}
+
+/** The given tiles plus their 4-neighbours (deduplicated). */
+export function withNeighbors(state: SimState, tiles: number[]): Set<number> {
+  const affected = new Set<number>();
+  for (const index of tiles) {
+    affected.add(index);
+    for (const neighbor of neighbors4(index, state.size)) affected.add(neighbor);
+  }
+  return affected;
+}
+
 /** Collect and clear the pending tile diffs. */
 export function collectDiffs(state: SimState): TileDiff[] {
   const { layers } = state;
@@ -208,6 +251,7 @@ export function collectDiffs(state: SimState): TileDiff[] {
       index,
       tileType: layers.tileType[index] as TileDiff['tileType'],
       roadMask: layers.roadMask[index],
+      powerLine: layers.powerLine[index],
       zone: layers.zone[index] as TileDiff['zone'],
       density: layers.density[index],
       variant: layers.variant[index],
@@ -228,7 +272,7 @@ export function markAllDirty(state: SimState): void {
 }
 
 /** What a placement is trying to do; decides which terrain accepts it. */
-export const BuildIntent = { Road: 0, Zone: 1, Plant: 2 } as const;
+export const BuildIntent = { Road: 0, Zone: 1, Plant: 2, PowerLine: 3 } as const;
 export type BuildIntent = (typeof BuildIntent)[keyof typeof BuildIntent];
 
 /** True when any 4-neighbour is a lake tile. */
@@ -241,7 +285,9 @@ export function isLakeShore(state: SimState, index: number): boolean {
  * Why a tile cannot be built on with the given intent, or null when it
  * can. Land accepts everything (except run-of-river, which needs the
  * river); river tiles accept bridges and run-of-river plants; lakes
- * accept nothing. Pumped storage additionally needs a lake shore.
+ * accept nothing. Pumped storage additionally needs a lake shore. Power
+ * lines are accepted on any terrain and on roads, but not on buildings or
+ * plants; zones and plants are rejected on line tiles.
  */
 export function buildRejection(
   state: SimState,
@@ -250,7 +296,18 @@ export function buildRejection(
   plant: PlantType = PlantType.None,
 ): string | null {
   const { layers } = state;
+  if (intent === BuildIntent.PowerLine) {
+    // Lines share tiles with roads and water but never with buildings or plants.
+    if (layers.density[index] !== 0 || layers.tileType[index] === TileType.Plant) {
+      return 'needsLineSite';
+    }
+    return null;
+  }
   if (layers.tileType[index] !== TileType.Empty || layers.density[index] !== 0) {
+    return 'tileOccupied';
+  }
+  // Zones and plants would collide with a line; roads may share the tile.
+  if (intent !== BuildIntent.Road && layers.powerLine[index] !== 0) {
     return 'tileOccupied';
   }
   const terrain = layers.terrain[index] as Terrain;

@@ -6,6 +6,7 @@ import { placePlant } from './energy.ts';
 import { goalsStep } from './goals.ts';
 import { energySystemActive } from './growth.ts';
 import { happinessStep } from './happiness.ts';
+import { buildPowerLines } from './powerLines.ts';
 import { buildRoads } from './roads.ts';
 import { createSimState, PlantType, SupplyStatus, Zone } from './state.ts';
 
@@ -69,6 +70,13 @@ describe('economyStep', () => {
       before + breakdown.gridExportRevenue - breakdown.gridImportCost,
       6,
     );
+  });
+
+  it('charges upkeep per power line tile alongside road upkeep', () => {
+    const state = createSimState(1, SIZE);
+    buildPowerLines(state, [at(1, 1), at(2, 1)]);
+    const breakdown = economyStep(state, 0, 0);
+    expect(breakdown.roadUpkeep).toBeCloseTo(2 * BALANCE.upkeepPerTick.powerLinePerTile, 9);
   });
 });
 
