@@ -102,13 +102,15 @@ export function saveFromJson(text: string): SaveGame {
     }
     layers[name] = buffer;
   }
-  const terrainEncoded = parsed.layers.terrain;
-  if (typeof terrainEncoded === 'string') {
-    const buffer = base64ToBuffer(terrainEncoded);
+  const optionalLayers = ['terrain', 'powerLine'] as const;
+  for (const name of optionalLayers) {
+    const encoded = parsed.layers[name];
+    if (typeof encoded !== 'string') continue;
+    const buffer = base64ToBuffer(encoded);
     if (buffer.byteLength !== expectedBytes) {
-      throw new Error('Layer "terrain" has the wrong size');
+      throw new Error(`Layer "${name}" has the wrong size`);
     }
-    layers.terrain = buffer;
+    layers[name] = buffer;
   }
   return {
     version: parsed.version,

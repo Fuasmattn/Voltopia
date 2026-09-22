@@ -11,6 +11,7 @@ import type {
   Weather,
 } from '../shared/types.ts';
 import { PlantType, SupplyStatus, Terrain, TileType, Zone } from '../shared/types.ts';
+import { grantLegacyNetwork } from './powerGrid.ts';
 
 /** Commute phases of a vehicle. */
 export const VehiclePhase = {
@@ -365,6 +366,7 @@ export function serializeState(state: SimState): SaveGame {
       supplied: copyBuffer(layers.supplied),
       plantType: copyBuffer(layers.plantType),
       terrain: copyBuffer(layers.terrain),
+      powerLine: copyBuffer(layers.powerLine),
     },
   };
 }
@@ -388,6 +390,11 @@ export function deserializeState(save: SaveGame): SimState {
   state.pumpedStorageEnergy = save.pumpedStorageEnergy ?? 0;
   state.weather.riverFlow = save.riverFlow ?? BALANCE.water.dryBaselineFlow;
   if (save.layers.terrain) state.layers.terrain.set(new Uint8Array(save.layers.terrain));
+  if (save.layers.powerLine) {
+    state.layers.powerLine.set(new Uint8Array(save.layers.powerLine));
+  } else {
+    grantLegacyNetwork(state);
+  }
   // Advance the RNG deterministically past the founding state so a loaded
   // game does not replay the exact random sequence from tick zero.
   state.rng.setState(save.seed ^ save.tick);

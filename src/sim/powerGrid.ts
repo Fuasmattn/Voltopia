@@ -1,6 +1,7 @@
 import { BALANCE } from '../shared/constants.ts';
-import { neighbors4, tileIndex, tileX, tileY } from '../shared/grid.ts';
+import { LINE_PRESENT, neighbors4, tileIndex, tileX, tileY } from '../shared/grid.ts';
 import { PlantType, TileType } from '../shared/types.ts';
+import { recomputePowerLineMask } from './powerLines.ts';
 import type { SimState } from './state.ts';
 
 /** Plants that feed the grid and seed the line network (hubs and parks do not). */
@@ -72,4 +73,44 @@ export function recomputeGrid(state: SimState): void {
     if (reached[i] === 1) stampRadius(energized, i, size, radius);
   }
   state.gridComputedVersion = state.gridVersion;
+}
+
+/**
+ * One-time migration for saves from before power lines: put a line on
+ * every road tile reachable (over roads) from a road tile next to a
+ * supply plant, so the loaded city stays supplied and shows a network.
+ */
+export function grantLegacyNetwork(state: SimState): void {
+  const { layers } = state;
+  const size = state.size;
+  const { tileType, plantType, powerLine } = layers;
+  const seen = new Uint8Array(size * size);
+  const queue: number[] = [];
+  for (let i = 0; i < tileType.length; i++) {
+    if (tileType[i] !== TileType.Plant || !isSupplySource(plantType[i] as PlantType)) continue;
+    for (const n of neighbors4(i, size)) {
+      if (tileType[n] === TileType.Road && seen[n] === 0) {
+        seen[n] = 1;
+        queue.push(n);
+      }
+    }
+  }
+  while (queue.length > 0) {
+    const index = queue.pop()!;
+    for (const n of neighbors4(index, size)) {
+      if (tileType[n] === TileType.Road && seen[n] === 0) {
+        seen[n] = 1;
+        queue.push(n);
+      }
+    }
+  }
+  for (let i = 0; i < seen.length; i++) {
+    if (seen[i] === 1) powerLine[i] = LINE_PRESENT;
+  }
+  for (let i = 0; i < seen.length; i++) {
+    if (seen[i] === 1) recomputePowerLineMask(state, i);
+  }
+  // Inline instead of bumpGridVersion(): keeps this module's import of
+  // state.ts type-only (state.ts imports this module for the migration).
+  state.gridVersion++;
 }

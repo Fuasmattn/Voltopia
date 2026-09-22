@@ -132,6 +132,31 @@ describe('SimEngine basics', () => {
     if (event.type !== 'tick') throw new Error('expected tick event');
     expect(event.stats.energy.biogasCapacity).toBe(BALANCE.energy.biogasMaxOutput);
   });
+
+  it('a legacy save loads into a supplied city', () => {
+    const engine = new SimEngine(3, 16);
+    engine.applyCommand({ type: 'init', seed: 3, size: 16 });
+    engine.state.money = 1e9;
+    const road = Array.from({ length: 8 }, (_, x) => tileIndex(x + 2, 8, 16));
+    engine.applyCommand({ type: 'buildRoad', tiles: road });
+    engine.applyCommand({
+      type: 'placePlant',
+      tile: tileIndex(2, 7, 16),
+      plant: PlantType.WindTurbine,
+    });
+    engine.state.layers.zone[tileIndex(9, 9, 16)] = 1;
+    engine.state.layers.density[tileIndex(9, 9, 16)] = 1;
+    const events = engine.applyCommand({ type: 'requestSave' });
+    const save = events[0].type === 'saveData' ? events[0].save : null;
+    if (!save) throw new Error('expected save data');
+    delete save.layers.powerLine;
+
+    const restored = new SimEngine(0, 4);
+    restored.applyCommand({ type: 'init', seed: 3, size: 16, save });
+    restored.state.weather.windSpeed = 1;
+    restored.tick();
+    expect(restored.state.layers.supplied[tileIndex(9, 9, 16)]).not.toBe(0); // not NotConnected
+  });
 });
 
 describe('time helpers', () => {

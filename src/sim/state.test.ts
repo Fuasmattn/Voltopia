@@ -1,7 +1,8 @@
 import { describe, expect, it } from 'vitest';
 import { BALANCE } from '../shared/constants.ts';
-import { tileIndex } from '../shared/grid.ts';
+import { LINE_PRESENT, tileIndex } from '../shared/grid.ts';
 import { Terrain } from '../shared/types.ts';
+import { buildRoads } from './roads.ts';
 import {
   BuildIntent,
   buildRejection,
@@ -120,5 +121,38 @@ describe('save round trip', () => {
     expect(restored.layers.terrain.every((t) => t === Terrain.Land)).toBe(true);
     expect(restored.weather.riverFlow).toBe(BALANCE.water.dryBaselineFlow);
     expect(restored.pumpedStorageEnergy).toBe(0);
+  });
+
+  it('persists the power line layer', () => {
+    const state = makeState();
+    state.layers.powerLine[at(1, 1)] = LINE_PRESENT;
+    const restored = deserializeState(serializeState(state));
+    expect(restored.layers.powerLine[at(1, 1)]).toBe(LINE_PRESENT);
+    expect(restored.gridComputedVersion).toBe(-1);
+  });
+
+  it('grants lines along plant-connected roads to saves without the layer', () => {
+    const state = makeState();
+    state.money = 1e9;
+    buildRoads(state, [at(1, 2), at(2, 2), at(3, 2)]);
+    state.layers.tileType[at(1, 1)] = TileType.Plant;
+    state.layers.plantType[at(1, 1)] = PlantType.WindTurbine; // touches road (1,2)
+    buildRoads(state, [at(10, 10), at(11, 10)]); // no plant nearby
+    const save = serializeState(state);
+    delete save.layers.powerLine;
+    const restored = deserializeState(save);
+    expect(restored.layers.powerLine[at(1, 2)]).not.toBe(0);
+    expect(restored.layers.powerLine[at(3, 2)]).not.toBe(0);
+    expect(restored.layers.powerLine[at(10, 10)]).toBe(0);
+  });
+
+  it('leaves a save that has an all-zero line layer alone', () => {
+    const state = makeState();
+    state.money = 1e9;
+    buildRoads(state, [at(1, 2)]);
+    state.layers.tileType[at(1, 1)] = TileType.Plant;
+    state.layers.plantType[at(1, 1)] = PlantType.WindTurbine;
+    const restored = deserializeState(serializeState(state));
+    expect(restored.layers.powerLine[at(1, 2)]).toBe(0);
   });
 });

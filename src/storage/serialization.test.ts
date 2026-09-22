@@ -73,4 +73,24 @@ describe('save game JSON export/import', () => {
     const restored = saveFromJson(saveToJson(save));
     expect(restored.layers.terrain).toBeUndefined();
   });
+
+  it('round-trips the optional power line layer', () => {
+    const save = makeSave();
+    save.layers.powerLine = new Uint8Array(save.size * save.size).fill(16).buffer as ArrayBuffer;
+    const restored = saveFromJson(saveToJson(save));
+    expect(new Uint8Array(restored.layers.powerLine!)).toEqual(
+      new Uint8Array(save.layers.powerLine),
+    );
+  });
+
+  it('accepts exports without the power line layer', () => {
+    const restored = saveFromJson(saveToJson(makeSave()));
+    expect(restored.layers.powerLine).toBeUndefined();
+  });
+
+  it('rejects a wrongly sized power line layer', () => {
+    const save = makeSave();
+    save.layers.powerLine = new Uint8Array(3).buffer as ArrayBuffer;
+    expect(() => saveFromJson(saveToJson(save))).toThrow(/powerLine/);
+  });
 });
