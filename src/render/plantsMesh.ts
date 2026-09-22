@@ -1,7 +1,7 @@
 import * as THREE from 'three';
 import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
 import type { TileDiff } from '../shared/types.ts';
-import { PlantType, TileType } from '../shared/types.ts';
+import { PlantType, Terrain, TileType } from '../shared/types.ts';
 import type { DiffLayer, RenderEnvironment } from './renderer.ts';
 
 const MAX_BOX_PARTS_PER_PLANT = 8;
@@ -35,10 +35,23 @@ const COLORS = {
   treeTrunk: 0x6e4f36,
   treeFoliage: 0x3f7d46,
   treeFoliageLight: 0x549a54,
+  weir: 0x9aa3ad,
+  powerhouse: 0x5d6b7a,
+  penstock: 0x7a8593,
+  waterLight: 0x7fb6dd,
 } as const;
 
+/** Where a plant stands: which neighbours are water (for hydro shapes). */
+interface PlantSite {
+  /** River continues north/south of the tile (else east/west). */
+  riverAlongZ: boolean;
+  /** Direction to the nearest lake neighbour (0,0 when none). */
+  lakeDx: number;
+  lakeDz: number;
+}
+
 /** Static box parts per plant type (rotors/domes/fills are separate). */
-function plantBoxParts(plant: PlantType): BoxPart[] {
+function plantBoxParts(plant: PlantType, site: PlantSite): BoxPart[] {
   switch (plant) {
     case PlantType.SolarFarm: {
       const rows: BoxPart[] = [];
@@ -111,6 +124,65 @@ function plantBoxParts(plant: PlantType): BoxPart[] {
         { sx: 0.05, sy: 0.13, sz: 0.05, ox: -0.05, oy: 0.03, oz: 0.28, color: COLORS.treeTrunk },
         { sx: 0.18, sy: 0.2, sz: 0.18, ox: -0.05, oy: 0.14, oz: 0.28, color: COLORS.treeFoliage },
       ];
+    case PlantType.RunOfRiver: {
+      // A weir across the river with a small powerhouse at one bank.
+      const across = site.riverAlongZ;
+      return [
+        {
+          sx: across ? 0.96 : 0.3,
+          sy: 0.2,
+          sz: across ? 0.3 : 0.96,
+          ox: 0,
+          oy: 0,
+          oz: 0,
+          color: COLORS.weir,
+        },
+        {
+          sx: across ? 0.9 : 0.08,
+          sy: 0.26,
+          sz: across ? 0.08 : 0.9,
+          ox: 0,
+          oy: 0,
+          oz: 0,
+          color: COLORS.waterLight,
+        },
+        {
+          sx: 0.3,
+          sy: 0.34,
+          sz: 0.3,
+          ox: across ? 0.3 : 0,
+          oy: 0,
+          oz: across ? 0 : 0.3,
+          color: COLORS.powerhouse,
+        },
+      ];
+    }
+    case PlantType.PumpedStorage: {
+      // Powerhouse with a penstock pipe running toward the lake.
+      const alongX = site.lakeDx !== 0;
+      return [
+        { sx: 0.6, sy: 0.45, sz: 0.5, ox: 0, oy: 0, oz: 0, color: COLORS.powerhouse },
+        { sx: 0.66, sy: 0.05, sz: 0.56, ox: 0, oy: 0.45, oz: 0, color: COLORS.batteryFrame },
+        {
+          sx: alongX ? 0.5 : 0.12,
+          sy: 0.1,
+          sz: alongX ? 0.12 : 0.5,
+          ox: site.lakeDx * 0.3,
+          oy: 0.3,
+          oz: site.lakeDz * 0.3,
+          color: COLORS.penstock,
+        },
+        {
+          sx: alongX ? 0.5 : 0.12,
+          sy: 0.1,
+          sz: alongX ? 0.12 : 0.5,
+          ox: site.lakeDx * 0.3,
+          oy: 0.16,
+          oz: site.lakeDz * 0.3,
+          color: COLORS.penstock,
+        },
+      ];
+    }
     default:
       return [];
   }
@@ -143,6 +215,7 @@ export class PlantsMesh implements DiffLayer {
   private readonly socFillMesh: THREE.InstancedMesh;
   private readonly gridSize: number;
   private readonly plants = new Map<number, PlantType>();
+  private readonly terrain: Uint8Array;
   private readonly rotorPositions: THREE.Vector3[] = [];
   private rotorAngle = 0;
   private rotorSpeedFactor = 0;
@@ -156,6 +229,7 @@ export class PlantsMesh implements DiffLayer {
   constructor(scene: THREE.Scene, gridSize: number) {
     this.gridSize = gridSize;
     const capacity = gridSize * gridSize;
+    this.terrain = new Uint8Array(capacity);
 
     const boxGeometry = new THREE.BoxGeometry(1, 1, 1);
     boxGeometry.translate(0, 0.5, 0);
@@ -212,6 +286,10 @@ export class PlantsMesh implements DiffLayer {
   applyDiffs(diffs: TileDiff[]): void {
     let changed = false;
     for (const diff of diffs) {
+      if (this.terrain[diff.index] !== diff.terrain) {
+        this.terrain[diff.index] = diff.terrain;
+        changed = true;
+      }
       const plant = diff.tileType === TileType.Plant ? diff.plantType : PlantType.None;
       const existing = this.plants.get(diff.index) ?? PlantType.None;
       if (plant !== existing) {
@@ -251,7 +329,8 @@ export class PlantsMesh implements DiffLayer {
     for (const [index, plant] of this.plants) {
       const cx = (index % this.gridSize) + 0.5;
       const cz = Math.floor(index / this.gridSize) + 0.5;
-      for (const part of plantBoxParts(plant)) {
+      const site = this.siteOf(index);
+      for (const part of plantBoxParts(plant, site)) {
         this.position.set(cx + part.ox, part.oy, cz + part.oz);
         this.quaternion.setFromEuler(new THREE.Euler(part.rotX ?? 0, 0, 0));
         this.scale.set(part.sx, part.sy, part.sz);
@@ -278,6 +357,31 @@ export class PlantsMesh implements DiffLayer {
     this.domeMesh.instanceMatrix.needsUpdate = true;
     this.writeRotors();
     this.writeSocFills();
+  }
+
+  private siteOf(index: number): PlantSite {
+    const size = this.gridSize;
+    const x = index % size;
+    const y = Math.floor(index / size);
+    const terrainAt = (tx: number, ty: number): number =>
+      tx < 0 || ty < 0 || tx >= size || ty >= size ? Terrain.Land : this.terrain[ty * size + tx];
+    const riverAlongZ =
+      terrainAt(x, y - 1) === Terrain.River || terrainAt(x, y + 1) === Terrain.River;
+    let lakeDx = 0;
+    let lakeDz = 0;
+    for (const [dx, dz] of [
+      [1, 0],
+      [-1, 0],
+      [0, 1],
+      [0, -1],
+    ] as const) {
+      if (terrainAt(x + dx, y + dz) === Terrain.Lake) {
+        lakeDx = dx;
+        lakeDz = dz;
+        break;
+      }
+    }
+    return { riverAlongZ, lakeDx, lakeDz };
   }
 
   private writeRotors(): void {
