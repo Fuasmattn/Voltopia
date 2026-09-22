@@ -1,6 +1,15 @@
 import { BALANCE } from '../shared/constants.ts';
 import { DIRECTIONS, inBounds, tileIndex, tileX, tileY } from '../shared/grid.ts';
-import { markDirty, TileType, Zone, type SimState, type UndoEntry } from './state.ts';
+import {
+  BuildIntent,
+  isBuildable,
+  markDirty,
+  Terrain,
+  TileType,
+  Zone,
+  type SimState,
+  type UndoEntry,
+} from './state.ts';
 
 /** Snapshot one tile's buildable layers for undo. */
 function snapshotTile(state: SimState, index: number): UndoEntry['tiles'][number] {
@@ -62,12 +71,14 @@ export interface BuildResult {
  */
 export function buildRoads(state: SimState, tiles: number[]): BuildResult {
   const { layers } = state;
-  const buildable = tiles.filter(
-    (index) => layers.tileType[index] === TileType.Empty && layers.density[index] === 0,
-  );
+  const buildable = tiles.filter((index) => isBuildable(state, index, BuildIntent.Road));
   if (buildable.length === 0) return {};
 
-  const cost = buildable.length * BALANCE.costs.roadPerTile;
+  const { roadPerTile, bridgePerTile } = BALANCE.costs;
+  const cost = buildable.reduce(
+    (sum, index) => sum + (layers.terrain[index] === Terrain.River ? bridgePerTile : roadPerTile),
+    0,
+  );
   if (cost > state.money) {
     return { rejected: 'notEnoughMoney' };
   }

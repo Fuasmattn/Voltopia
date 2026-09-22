@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { BALANCE } from '../shared/constants.ts';
 import { DIR_E, DIR_N, DIR_S, DIR_W, tileIndex } from '../shared/grid.ts';
+import { Terrain } from '../shared/types.ts';
 import { buildRoads, bulldozeTiles, undoLastAction } from './roads.ts';
 import { createSimState, TileType, Zone } from './state.ts';
 
@@ -152,5 +153,33 @@ describe('undoLastAction', () => {
     undoLastAction(state);
     expect(state.layers.tileType[at(2, 2)]).toBe(TileType.Empty);
     expect(state.layers.tileType[at(1, 1)]).toBe(TileType.Road);
+  });
+});
+
+describe('bridges', () => {
+  it('charges the bridge price on river tiles and keeps the terrain', () => {
+    const state = makeState();
+    state.layers.terrain[at(5, 5)] = Terrain.River;
+    const before = state.money;
+    buildRoads(state, [at(4, 5), at(5, 5), at(6, 5)]);
+    expect(state.layers.tileType[at(5, 5)]).toBe(TileType.Road);
+    expect(state.money).toBe(before - 2 * BALANCE.costs.roadPerTile - BALANCE.costs.bridgePerTile);
+    expect(state.layers.terrain[at(5, 5)]).toBe(Terrain.River);
+  });
+
+  it('never paves lake tiles', () => {
+    const state = makeState();
+    state.layers.terrain[at(5, 5)] = Terrain.Lake;
+    buildRoads(state, [at(5, 5)]);
+    expect(state.layers.tileType[at(5, 5)]).toBe(TileType.Empty);
+  });
+
+  it('bulldozing a bridge leaves a river tile', () => {
+    const state = makeState();
+    state.layers.terrain[at(5, 5)] = Terrain.River;
+    buildRoads(state, [at(5, 5)]);
+    bulldozeTiles(state, [at(5, 5)]);
+    expect(state.layers.tileType[at(5, 5)]).toBe(TileType.Empty);
+    expect(state.layers.terrain[at(5, 5)]).toBe(Terrain.River);
   });
 });

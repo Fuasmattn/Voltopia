@@ -3,6 +3,8 @@ import { tileX, tileY } from '../shared/grid.ts';
 import { PlantType, Zone } from '../shared/types.ts';
 import type { BuildResult } from './roads.ts';
 import {
+  BuildIntent,
+  buildRejection,
   markDirty,
   pushEnergyHistory,
   SupplyStatus,
@@ -19,6 +21,8 @@ const SUPPLY_SOURCES: ReadonlySet<PlantType> = new Set<PlantType>([
   PlantType.WindTurbine,
   PlantType.Battery,
   PlantType.BiogasPlant,
+  PlantType.RunOfRiver,
+  PlantType.PumpedStorage,
 ]);
 
 /** True once any power-related plant exists (parks don't count). */
@@ -38,9 +42,8 @@ export function hasPowerInfrastructure(state: SimState): boolean {
 export function placePlant(state: SimState, tile: number, plant: PlantType): BuildResult {
   const { layers } = state;
   if (plant === PlantType.None) return { rejected: 'noPlantSelected' };
-  if (layers.tileType[tile] !== TileType.Empty || layers.density[tile] !== 0) {
-    return { rejected: 'tileOccupied' };
-  }
+  const rejection = buildRejection(state, tile, BuildIntent.Plant, plant);
+  if (rejection) return { rejected: rejection };
   const cost = BALANCE.costs.plant[plant];
   if (cost > state.money) {
     return { rejected: 'notEnoughMoney' };
@@ -77,6 +80,8 @@ interface PlantCensus {
   biogasPlants: number;
   chargingHubs: number;
   parks: number;
+  runOfRiverPlants: number;
+  pumpedStoragePlants: number;
   /** Tile indices of plants that provide grid connection. */
   supplySources: number[];
 }
@@ -90,6 +95,8 @@ export function censusPlants(state: SimState): PlantCensus {
     biogasPlants: 0,
     chargingHubs: 0,
     parks: 0,
+    runOfRiverPlants: 0,
+    pumpedStoragePlants: 0,
     supplySources: [],
   };
   for (let i = 0; i < tileType.length; i++) {
@@ -113,6 +120,12 @@ export function censusPlants(state: SimState): PlantCensus {
         break;
       case PlantType.Park:
         census.parks++;
+        break;
+      case PlantType.RunOfRiver:
+        census.runOfRiverPlants++;
+        break;
+      case PlantType.PumpedStorage:
+        census.pumpedStoragePlants++;
         break;
       case PlantType.None:
         break;

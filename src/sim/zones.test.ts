@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { BALANCE } from '../shared/constants.ts';
 import { tileIndex } from '../shared/grid.ts';
+import { Terrain } from '../shared/types.ts';
 import { buildRoads, undoLastAction } from './roads.ts';
 import { createSimState, TileType, Zone } from './state.ts';
 import { paintZones } from './zones.ts';
@@ -52,5 +53,17 @@ describe('paintZones', () => {
     undoLastAction(state);
     expect(state.layers.zone[at(5, 5)]).toBe(Zone.None);
     expect(state.money).toBe(before);
+  });
+
+  it('skips water tiles', () => {
+    const state = createSimState(1, SIZE);
+    state.layers.terrain[at(3, 3)] = Terrain.River;
+    state.layers.terrain[at(4, 4)] = Terrain.Lake;
+    const before = state.money;
+    paintZones(state, [at(3, 3), at(4, 4), at(5, 5)], Zone.Residential);
+    expect(state.layers.zone[at(3, 3)]).toBe(Zone.None);
+    expect(state.layers.zone[at(4, 4)]).toBe(Zone.None);
+    expect(state.layers.zone[at(5, 5)]).toBe(Zone.Residential);
+    expect(state.money).toBe(before - BALANCE.costs.zonePerTile);
   });
 });

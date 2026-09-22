@@ -9,7 +9,15 @@ import {
   placePlant,
 } from './energy.ts';
 import { undoLastAction } from './roads.ts';
-import { createSimState, PlantType, SupplyStatus, TileType, Zone, type SimState } from './state.ts';
+import {
+  createSimState,
+  PlantType,
+  SupplyStatus,
+  Terrain,
+  TileType,
+  Zone,
+  type SimState,
+} from './state.ts';
 
 const SIZE = 32;
 const at = (x: number, y: number) => tileIndex(x, y, SIZE);
@@ -74,6 +82,37 @@ describe('placePlant', () => {
     expect(census.chargingHubs).toBe(1);
     // charging hubs do not provide grid connection
     expect(census.supplySources).toHaveLength(4);
+  });
+
+  it('places run-of-river only on river tiles', () => {
+    const state = makeState();
+    expect(placePlant(state, at(5, 5), PlantType.RunOfRiver).rejected).toBe('needsRiverTile');
+    state.layers.terrain[at(5, 5)] = Terrain.River;
+    expect(placePlant(state, at(5, 5), PlantType.RunOfRiver).rejected).toBeUndefined();
+    expect(state.layers.plantType[at(5, 5)]).toBe(PlantType.RunOfRiver);
+  });
+
+  it('places pumped storage only on the lake shore and never on water', () => {
+    const state = makeState();
+    state.layers.terrain[at(8, 8)] = Terrain.Lake;
+    expect(placePlant(state, at(2, 2), PlantType.PumpedStorage).rejected).toBe('needsLakeShore');
+    expect(placePlant(state, at(8, 8), PlantType.PumpedStorage).rejected).toBe(
+      'cannotBuildOnWater',
+    );
+    expect(placePlant(state, at(8, 7), PlantType.PumpedStorage).rejected).toBeUndefined();
+    expect(placePlant(state, at(8, 8), PlantType.SolarFarm).rejected).toBe('cannotBuildOnWater');
+  });
+
+  it('census counts hydro plants as supply sources', () => {
+    const state = makeState();
+    state.layers.terrain[at(5, 5)] = Terrain.River;
+    state.layers.terrain[at(8, 8)] = Terrain.Lake;
+    placePlant(state, at(5, 5), PlantType.RunOfRiver);
+    placePlant(state, at(8, 7), PlantType.PumpedStorage);
+    const census = censusPlants(state);
+    expect(census.runOfRiverPlants).toBe(1);
+    expect(census.pumpedStoragePlants).toBe(1);
+    expect(census.supplySources).toEqual([at(5, 5), at(8, 7)]);
   });
 });
 

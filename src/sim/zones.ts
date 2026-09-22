@@ -1,7 +1,7 @@
 import { BALANCE } from '../shared/constants.ts';
 import type { Zone } from '../shared/types.ts';
 import type { BuildResult } from './roads.ts';
-import { markDirty, TileType, type SimState, type UndoEntry } from './state.ts';
+import { BuildIntent, isBuildable, markDirty, type SimState, type UndoEntry } from './state.ts';
 
 /**
  * Paint a zone onto empty tiles. Tiles that already carry a building,
@@ -10,10 +10,7 @@ import { markDirty, TileType, type SimState, type UndoEntry } from './state.ts';
 export function paintZones(state: SimState, tiles: number[], zone: Zone): BuildResult {
   const { layers } = state;
   const paintable = tiles.filter(
-    (index) =>
-      layers.tileType[index] === TileType.Empty &&
-      layers.density[index] === 0 &&
-      layers.zone[index] !== zone,
+    (index) => isBuildable(state, index, BuildIntent.Zone) && layers.zone[index] !== zone,
   );
   if (paintable.length === 0) return {};
 

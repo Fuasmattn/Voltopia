@@ -6,6 +6,7 @@ import {
   countPopulationAndJobs,
   markDirty,
   SupplyStatus,
+  Terrain,
   TileType,
   Zone,
   type SimState,
@@ -98,6 +99,7 @@ export function growthStep(state: SimState, demand: DemandStats): void {
     const zone = layers.zone[index] as Zone;
     if (zone === Zone.None) continue;
     if (layers.tileType[index] !== TileType.Empty) continue;
+    if (layers.terrain[index] !== Terrain.Land) continue;
     if (demandFor(demand, zone) < BALANCE.growth.growthDemandThreshold) continue;
     if (!hasRoadAccess(state, index)) continue;
 
