@@ -87,6 +87,16 @@ describe('SimEngine basics', () => {
     expect(engine.state.tick).toBe(0);
     expect(engine.state.seed).toBe(2);
   });
+
+  it('generates water on a fresh init but not when loading a save', () => {
+    const engine = makeEngine(1, 48);
+    engine.applyCommand({ type: 'init', seed: 2, size: 48 });
+    const water = engine.state.layers.terrain.filter((t) => t !== 0).length;
+    expect(water).toBeGreaterThan(40);
+    const first = engine.tick();
+    if (first.type !== 'tick') throw new Error('expected tick');
+    expect(first.diffs.some((d) => d.terrain !== 0)).toBe(true);
+  });
 });
 
 describe('time helpers', () => {

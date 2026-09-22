@@ -13,6 +13,7 @@ import {
   type SimState,
 } from './state.ts';
 import { buildStats, stepTick } from './tick.ts';
+import { generateWater } from './water.ts';
 
 /**
  * The engine owns the simulation state and translates commands/ticks into
@@ -33,9 +34,12 @@ export class SimEngine {
     const { state } = this;
     switch (command.type) {
       case 'init':
-        this.state = command.save
-          ? deserializeState(command.save)
-          : createSimState(command.seed, command.size, command.startingMoney);
+        if (command.save) {
+          this.state = deserializeState(command.save);
+        } else {
+          this.state = createSimState(command.seed, command.size, command.startingMoney);
+          generateWater(this.state);
+        }
         return [];
       case 'setSpeed':
         state.speed = command.speed;
