@@ -9,7 +9,7 @@ import {
   placePlant,
 } from './energy.ts';
 import { buildPowerLines } from './powerLines.ts';
-import { undoLastAction } from './roads.ts';
+import { bulldozeTiles, undoLastAction } from './roads.ts';
 import {
   createSimState,
   PlantType,
@@ -302,6 +302,19 @@ describe('energyStep', () => {
       buildingConsumption(Zone.Residential, 1, 0),
       3,
     );
+  });
+
+  it('drops the supply when the plant is bulldozed', () => {
+    const state = makeState();
+    placePlant(state, at(5, 5), PlantType.WindTurbine);
+    const building = at(6, 5);
+    addBuilding(state, building, Zone.Residential, 1);
+    state.weather.windSpeed = 1;
+    energyStep(state, { chargingDemand: 0 });
+    expect(state.layers.supplied[building]).toBe(SupplyStatus.Supplied);
+    bulldozeTiles(state, [at(5, 5)]);
+    energyStep(state, { chargingDemand: 0 });
+    expect(state.layers.supplied[building]).toBe(SupplyStatus.NotConnected);
   });
 
   it('a power line from the plant connects a distant building', () => {
