@@ -69,12 +69,33 @@ export function updateWeather(state: SimState): void {
   const w = state.weather;
   w.cloudCover = drift(w.cloudCover, state.rng.next(), cloudDrift, cloudMean);
   w.windSpeed = drift(w.windSpeed, state.rng.next(), windDrift, windMean);
+  w.riverFlow = nextRiverFlow(w.riverFlow, w.cloudCover);
 }
 
 function drift(value: number, random: number, step: number, mean: number): number {
   const reversion = (mean - value) * step * 2;
   const noise = (random - 0.5) * 2 * step * 8;
   return Math.min(1, Math.max(0, value + reversion + noise));
+}
+
+/**
+ * River flow rises while it rains (cloud cover above the rain threshold,
+ * faster the heavier the overcast) and otherwise relaxes toward a dry
+ * baseline, so run-of-river output follows multi-day weather.
+ */
+function nextRiverFlow(flow: number, cloudCover: number): number {
+  const { rainCloudThreshold, rainRate, dryRate, dryBaselineFlow } = BALANCE.water;
+  if (cloudCover > rainCloudThreshold) {
+    const intensity = (cloudCover - rainCloudThreshold) / (1 - rainCloudThreshold);
+    return Math.min(1, flow + rainRate * intensity);
+  }
+  return flow + (dryBaselineFlow - flow) * dryRate;
+}
+
+/** Run-of-river output multiplier: a drought halves output, never stops it. */
+export function riverFlowFactor(state: SimState): number {
+  const { minFlowFactor } = BALANCE.water;
+  return minFlowFactor + (1 - minFlowFactor) * state.weather.riverFlow;
 }
 
 /** Convenience: current solar factor of the simulation state. */

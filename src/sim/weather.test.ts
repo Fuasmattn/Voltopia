@@ -1,9 +1,10 @@
 import { describe, expect, it } from 'vitest';
 import { nightFactor } from '../shared/daylight.ts';
-import { TICKS_PER_DAY } from '../shared/constants.ts';
+import { BALANCE, TICKS_PER_DAY } from '../shared/constants.ts';
 import { createSimState } from './state.ts';
 import {
   frontMeans,
+  riverFlowFactor,
   solarFactor,
   sunIntensity,
   SUNRISE,
@@ -168,5 +169,61 @@ describe('updateWeather', () => {
       updateWeather(b);
     }
     expect(a.weather).toEqual(b.weather);
+  });
+});
+
+describe('river flow', () => {
+  function stateWithClouds(cloudCover: number) {
+    const state = createSimState(5, 8);
+    state.weather.cloudCover = cloudCover;
+    return state;
+  }
+
+  it('rises under heavy cloud and is capped at 1', () => {
+    const state = stateWithClouds(1);
+    const start = state.weather.riverFlow;
+    for (let i = 0; i < 100; i++) {
+      state.tick++;
+      updateWeather(state);
+      // Pin the clouds: updateWeather drifts them, this test wants rain.
+      state.weather.cloudCover = 1;
+    }
+    expect(state.weather.riverFlow).toBeGreaterThan(start);
+    for (let i = 0; i < 20_000; i++) {
+      updateWeather(state);
+      state.weather.cloudCover = 1;
+    }
+    expect(state.weather.riverFlow).toBe(1);
+  });
+
+  it('decays toward the dry baseline in clear weather', () => {
+    const state = stateWithClouds(0);
+    state.weather.riverFlow = 1;
+    for (let i = 0; i < 10_000; i++) {
+      updateWeather(state);
+      state.weather.cloudCover = 0;
+    }
+    expect(state.weather.riverFlow).toBeCloseTo(BALANCE.water.dryBaselineFlow, 2);
+    expect(state.weather.riverFlow).toBeGreaterThanOrEqual(BALANCE.water.dryBaselineFlow);
+  });
+
+  it('maps flow to an output factor with a floor', () => {
+    const state = stateWithClouds(0);
+    state.weather.riverFlow = 0;
+    expect(riverFlowFactor(state)).toBeCloseTo(BALANCE.water.minFlowFactor, 6);
+    state.weather.riverFlow = 1;
+    expect(riverFlowFactor(state)).toBeCloseTo(1, 6);
+  });
+
+  it('is deterministic', () => {
+    const a = createSimState(9, 8);
+    const b = createSimState(9, 8);
+    for (let i = 0; i < 500; i++) {
+      a.tick++;
+      b.tick++;
+      updateWeather(a);
+      updateWeather(b);
+    }
+    expect(a.weather.riverFlow).toBe(b.weather.riverFlow);
   });
 });
