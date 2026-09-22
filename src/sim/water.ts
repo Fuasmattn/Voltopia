@@ -54,12 +54,20 @@ export function generateWater(state: SimState): void {
     if (inBounds(x, y, size)) terrain[tileIndex(x, y, size)] = value;
   };
 
-  // River: rasterise the centre line row by row, filling the lateral span
-  // between consecutive rows so the channel stays 4-connected.
+  // River: rasterise the centre line row by row, stepping the lateral
+  // position by at most one tile per row so the channel stays one tile
+  // wide (plus the occasional wide section below).
   let previous = centreLine(0);
   let wideRemaining = 0;
+  const laterals: number[] = Array.from({ length: size }, () => 0);
   for (let along = 0; along < size; along++) {
-    const lateral = centreLine(along / (size - 1));
+    const target = centreLine(along / (size - 1));
+    const lateral =
+      along === 0
+        ? target
+        : Math.abs(target - previous) > 1
+          ? previous + Math.sign(target - previous)
+          : target;
     const lo = Math.min(previous, lateral);
     const hi = Math.max(previous, lateral);
     for (let l = lo; l <= hi; l++) setTerrain(along, l, Terrain.River);
@@ -69,6 +77,7 @@ export function generateWater(state: SimState): void {
     } else if (rng.chance(cfg.wideSectionChance)) {
       wideRemaining = cfg.wideSectionLength;
     }
+    laterals[along] = lateral;
     previous = lateral;
   }
 
@@ -80,7 +89,7 @@ export function generateWater(state: SimState): void {
   for (let i = 0; i < cfg.lakeCandidates; i++) {
     const t = tMin + ((tMax - tMin) * i) / (cfg.lakeCandidates - 1);
     const along = Math.round(t * (size - 1));
-    const lateral = centreLine(t);
+    const lateral = laterals[along];
     const distance = Math.max(Math.abs(along - centre), Math.abs(lateral - centre));
     if (distance >= minDistance) candidates.push(i);
   }
@@ -89,7 +98,7 @@ export function generateWater(state: SimState): void {
   const pick = candidates.length > 0 ? candidates[rng.nextInt(candidates.length)] : 0;
   const tLake = tMin + ((tMax - tMin) * pick) / (cfg.lakeCandidates - 1);
   const lakeAlong = Math.round(tLake * (size - 1));
-  const lakeLateral = centreLine(tLake);
+  const lakeLateral = laterals[lakeAlong];
   const [dMin, dMax] = cfg.lakeDiameter;
   const radiusAlong = rng.nextRange(dMin, dMax) / 2;
   const radiusLateral = rng.nextRange(dMin, dMax) / 2;
