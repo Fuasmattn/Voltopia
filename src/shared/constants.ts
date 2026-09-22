@@ -152,7 +152,7 @@ export const BALANCE = {
     /** Rain falls (and river flow rises) above this cloud cover. */
     rainCloudThreshold: 0.72,
     /** Flow gain per tick at full rain intensity. */
-    rainRate: 0.0006,
+    rainRate: 0.003,
     /** Per-tick fraction of the distance to the dry baseline recovered. */
     dryRate: 0.001,
     dryBaselineFlow: 0.25,
