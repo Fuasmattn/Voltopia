@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { TICKS_PER_DAY } from '../shared/constants.ts';
 import { tileIndex } from '../shared/grid.ts';
-import { PlantType, Zone } from '../shared/types.ts';
+import { PlantType, Terrain, Zone } from '../shared/types.ts';
 import { placePlant } from './energy.ts';
 import { goalsStep, goalStates } from './goals.ts';
 import { createSimState, deserializeState, serializeState } from './state.ts';
@@ -74,5 +74,15 @@ describe('goals', () => {
     goalsStep(state);
     const restored = deserializeState(serializeState(state));
     expect(restored.goalsAchieved.has('firstPower')).toBe(true);
+  });
+
+  it('hydroPower is achieved by the first run-of-river plant', () => {
+    const state = createSimState(1, 16);
+    goalsStep(state);
+    expect(state.goalsAchieved.has('hydroPower')).toBe(false);
+    state.layers.terrain[tileIndex(3, 3, 16)] = Terrain.River;
+    placePlant(state, tileIndex(3, 3, 16), PlantType.RunOfRiver);
+    goalsStep(state);
+    expect(state.goalsAchieved.has('hydroPower')).toBe(true);
   });
 });

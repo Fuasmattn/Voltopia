@@ -180,6 +180,8 @@ const en = {
   'goal.evFleet.body': '30 electric vehicles on your roads.',
   'goal.exporter.title': 'Power exporter',
   'goal.exporter.body': 'Export 20,000 energy units to the grid.',
+  'goal.hydroPower.title': 'Blue power',
+  'goal.hydroPower.body': 'Build a run-of-river plant on the river.',
 } as const;
 
 export type TranslationKey = keyof typeof en;
@@ -364,6 +366,8 @@ const de: Record<TranslationKey, string> = {
   'goal.evFleet.body': '30 Elektroautos auf deinen Straßen.',
   'goal.exporter.title': 'Stromexporteur',
   'goal.exporter.body': 'Speise 20.000 Energieeinheiten ins Netz ein.',
+  'goal.hydroPower.title': 'Wasserkraft',
+  'goal.hydroPower.body': 'Baue ein Laufwasserkraftwerk am Fluss.',
 };
 
 const translations: Record<Locale, Record<TranslationKey, string>> = { en, de };
