@@ -273,6 +273,25 @@ describe('emergent charging', () => {
     expect(chargingDemand(state)).toBeGreaterThan(0);
   });
 
+  it('smart charging counts hydro surplus (run-of-river covers night load too)', () => {
+    const state = commuterTown(5, 200);
+    state.smartCharging = true;
+    setHour(state, 3); // everyone parked at home
+    vehiclesStep(state);
+    for (const v of state.vehicles) v.charge = 0.8; // above the floor
+
+    // Only hydro is generating, but it covers the load: this is a
+    // surplus and smart charging should let vehicles charge past the
+    // floor, same as with solar/wind/rooftop surplus.
+    state.lastEnergy.solar = 0;
+    state.lastEnergy.wind = 0;
+    state.lastEnergy.rooftop = 0;
+    state.lastEnergy.hydro = 500;
+    state.lastEnergy.buildingConsumption = 50;
+    vehiclesStep(state);
+    expect(chargingDemand(state)).toBeGreaterThan(0);
+  });
+
   it('full batteries stop charging', () => {
     const state = commuterTown(5, 200);
     setHour(state, 3);

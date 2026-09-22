@@ -161,7 +161,10 @@ export function vehiclesStep(state: SimState): void {
 
   // Smart charging gate: is there renewable surplus right now (last tick)?
   const surplusAvailable =
-    state.lastEnergy.solar + state.lastEnergy.wind + state.lastEnergy.rooftop >
+    state.lastEnergy.solar +
+      state.lastEnergy.wind +
+      state.lastEnergy.rooftop +
+      state.lastEnergy.hydro >
     state.lastEnergy.buildingConsumption;
 
   for (const vehicle of state.vehicles) {
