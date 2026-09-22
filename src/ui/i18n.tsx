@@ -193,6 +193,8 @@ const en = {
   'goal.exporter.body': 'Export 20,000 energy units to the grid.',
   'goal.hydroPower.title': 'Blue power',
   'goal.hydroPower.body': 'Build a run-of-river plant on the river.',
+  'goal.gridBuilder.title': 'Grid builder',
+  'goal.gridBuilder.body': 'Build your first power line.',
 } as const;
 
 export type TranslationKey = keyof typeof en;
@@ -390,6 +392,8 @@ const de: Record<TranslationKey, string> = {
   'goal.exporter.body': 'Speise 20.000 Energieeinheiten ins Netz ein.',
   'goal.hydroPower.title': 'Wasserkraft',
   'goal.hydroPower.body': 'Baue ein Laufwasserkraftwerk am Fluss.',
+  'goal.gridBuilder.title': 'Unter Strom',
+  'goal.gridBuilder.body': 'Baue deine erste Stromleitung.',
 };
 
 const translations: Record<Locale, Record<TranslationKey, string>> = { en, de };

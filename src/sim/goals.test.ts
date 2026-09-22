@@ -4,6 +4,7 @@ import { tileIndex } from '../shared/grid.ts';
 import { PlantType, Terrain, Zone } from '../shared/types.ts';
 import { placePlant } from './energy.ts';
 import { goalsStep, goalStates } from './goals.ts';
+import { buildPowerLines } from './powerLines.ts';
 import { createSimState, deserializeState, serializeState } from './state.ts';
 
 const SIZE = 16;
@@ -84,5 +85,14 @@ describe('goals', () => {
     placePlant(state, tileIndex(3, 3, 16), PlantType.RunOfRiver);
     goalsStep(state);
     expect(state.goalsAchieved.has('hydroPower')).toBe(true);
+  });
+
+  it('gridBuilder is achieved by the first power line', () => {
+    const state = createSimState(1, SIZE);
+    goalsStep(state);
+    expect(state.goalsAchieved.has('gridBuilder')).toBe(false);
+    buildPowerLines(state, [at(3, 3)]);
+    goalsStep(state);
+    expect(state.goalsAchieved.has('gridBuilder')).toBe(true);
   });
 });

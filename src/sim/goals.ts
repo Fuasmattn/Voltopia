@@ -1,6 +1,7 @@
 import { TICKS_PER_DAY } from '../shared/constants.ts';
 import { PlantType } from '../shared/types.ts';
 import { hasPowerInfrastructure } from './energy.ts';
+import { hasPowerLines } from './powerLines.ts';
 import { countPlants, countPopulationAndJobs, type SimState } from './state.ts';
 
 export const GOAL_IDS = [
@@ -11,6 +12,7 @@ export const GOAL_IDS = [
   'evFleet',
   'exporter',
   'hydroPower',
+  'gridBuilder',
 ] as const;
 export type GoalId = (typeof GOAL_IDS)[number];
 
@@ -67,6 +69,9 @@ export function goalsStep(state: SimState): void {
   }
   if (!achieved.has('hydroPower') && countPlants(state, PlantType.RunOfRiver) > 0) {
     achieved.add('hydroPower');
+  }
+  if (!achieved.has('gridBuilder') && hasPowerLines(state)) {
+    achieved.add('gridBuilder');
   }
 }
 
