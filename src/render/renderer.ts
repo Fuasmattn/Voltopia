@@ -15,6 +15,7 @@ import { WeatherFx } from './weatherFx.ts';
 import { IconsMesh } from './iconsMesh.ts';
 import type { OverlayMode } from '../shared/types.ts';
 import { ZoneTilesMesh } from './zoneTilesMesh.ts';
+import { WaterMesh } from './waterMesh.ts';
 
 export interface PickedTile {
   index: number;
@@ -120,6 +121,7 @@ export class GameRenderer {
     this.setGridVisible = terrain.setGridVisible;
     scene.add(terrain.group);
 
+    this.addDiffLayer(new WaterMesh(scene, gridSize));
     this.addDiffLayer(new RoadsMesh(scene, gridSize));
     this.addDiffLayer(new ZoneTilesMesh(scene, gridSize));
     this.addDiffLayer(new BuildingsMesh(scene, gridSize));

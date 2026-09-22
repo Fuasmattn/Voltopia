@@ -1,5 +1,6 @@
 import * as THREE from 'three';
 import type { TileDiff } from '../shared/types.ts';
+import { BALANCE } from '../shared/constants.ts';
 import type { DiffLayer, RenderEnvironment } from './renderer.ts';
 
 const MAX_CLOUDS = 22;
@@ -7,8 +8,6 @@ const CLOUD_ALTITUDE = 9;
 const CLOUD_DRIFT_TILES_PER_S = 0.7;
 const MAX_RAIN = 400;
 const RAIN_FALL_TILES_PER_S = 14;
-/** Rain appears above this cloud cover. */
-const RAIN_THRESHOLD = 0.72;
 
 /** Soft round sprite texture (white center fading out). */
 function createPuffTexture(): THREE.Texture {
@@ -150,7 +149,10 @@ export class WeatherFx implements DiffLayer {
   }
 
   private writeRain(deltaSeconds: number): void {
-    const intensity = Math.max(0, (this.cloudCover - RAIN_THRESHOLD) / (1 - RAIN_THRESHOLD));
+    const intensity = Math.max(
+      0,
+      (this.cloudCover - BALANCE.water.rainCloudThreshold) / (1 - BALANCE.water.rainCloudThreshold),
+    );
     const count = this.reducedMotion ? 0 : Math.round(intensity * MAX_RAIN);
     if (count === 0) {
       this.rain.count = 0;

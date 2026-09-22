@@ -1,10 +1,12 @@
 import type { TileDiff } from '../shared/types.ts';
-import { PlantType, TileType, Zone } from '../shared/types.ts';
+import { PlantType, Terrain, TileType, Zone } from '../shared/types.ts';
 import type { DiffLayer } from './renderer.ts';
 
 const COLORS = {
   ground: '#8fb573',
   road: '#5a6068',
+  river: '#4d8fc4',
+  lake: '#3f7fb5',
   zoned: {
     [Zone.Residential]: '#a9d3ab',
     [Zone.Commercial]: '#a9c3e0',
@@ -60,6 +62,9 @@ export class MinimapLayer implements DiffLayer {
   }
 
   private tileColor(diff: TileDiff): string {
+    if (diff.tileType === TileType.Empty && diff.terrain !== Terrain.Land) {
+      return diff.terrain === Terrain.River ? COLORS.river : COLORS.lake;
+    }
     if (diff.tileType === TileType.Road) return COLORS.road;
     if (diff.tileType === TileType.Plant) {
       return COLORS.plant[diff.plantType] ?? COLORS.ground;
