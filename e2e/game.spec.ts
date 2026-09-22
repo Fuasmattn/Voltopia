@@ -173,3 +173,26 @@ test('building a road costs money (needs WebGL)', async ({ page }) => {
 
   await expect.poll(moneyText, { timeout: 5_000 }).toBeLessThan(before);
 });
+
+test('drawing a power line costs money (needs WebGL)', async ({ page }) => {
+  test.skip(!(await has3dView(page)), 'WebGL not available in this environment');
+
+  const moneyText = async (): Promise<number> => {
+    const text = await page.getByTestId('money').textContent();
+    return Number(text?.replace(/[^\d]/g, '') ?? '0');
+  };
+  const before = await moneyText();
+
+  await page.getByTestId('tool-power-line').click();
+  const canvas = page.locator('.game-view canvas');
+  const box = await canvas.boundingBox();
+  if (!box) throw new Error('canvas has no bounding box');
+  const centerX = box.x + box.width / 2;
+  const centerY = box.y + box.height / 2;
+  await page.mouse.move(centerX - 60, centerY + 40);
+  await page.mouse.down();
+  await page.mouse.move(centerX + 60, centerY + 40, { steps: 8 });
+  await page.mouse.up();
+
+  await expect.poll(moneyText, { timeout: 5_000 }).toBeLessThan(before);
+});

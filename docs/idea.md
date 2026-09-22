@@ -91,7 +91,9 @@ in balance.
 
 ### Grid & Balance
 
-- Connection via the supply radius of plants (no power lines)
+- Connection via power lines: a bitmask layer over roads and water, a small
+  connection radius around energised tiles and plants, one global balance
+  (added after the MVP; see the power-lines spec)
 - Global energy balance per tick: generation vs. consumption
 - Surplus: charge storage first, then curtail (curtailed energy is displayed)
 - Deficit: discharge storage, then biogas, then undersupply – affected buildings
@@ -130,10 +132,10 @@ in balance.
 
 ## Out of Scope for the MVP
 
-Real pathfinding/traffic simulation, power lines, water, police/fire services,
-disasters, seasons, terrain elevation, sound, multiplayer, electricity
-market/import/export. Design the architecture so that additional layers,
-building types, and energy sources can easily be added later.
+Real pathfinding/traffic simulation, water, police/fire services, disasters,
+seasons, terrain elevation, sound, multiplayer, electricity market/import/
+export. Design the architecture so that additional layers, building types,
+and energy sources can easily be added later.
 
 ## Way of Working
 

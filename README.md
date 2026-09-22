@@ -32,8 +32,9 @@ _Screenshots coming soon — run `pnpm dev`, build a city, and snap away._
 - **Paint zones** — residential, commercial, retail. Buildings appear next
   to roads when there is demand, and densify through three levels.
 - **Power the city** with solar farms, wind turbines, battery storage and a
-  dispatchable (but expensive) biogas plant. Every plant supplies a radius
-  around it.
+  dispatchable (but expensive) biogas plant. Plants only supply what your
+  **power lines** (⚡, key L) connect to them — lines run over roads and
+  across water, and every connected line tile reaches three tiles around it.
 - **Water**: every map has a seeded river and lake. Bridge the river with
   the road tool, build run-of-river plants on it (output follows rain
   and drought) and pumped storage on the lake shore — a big, slow store
@@ -50,7 +51,8 @@ _Screenshots coming soon — run `pnpm dev`, build a city, and snap away._
   automatically.
 - **Economy**: construction costs, taxes (with a slider), upkeep, biogas
   fuel costs.
-- **Overlays** show supply status and growth demand; the energy panel
+- **Overlays** show supply status (connected, undersupplied, not connected
+  to the grid) and growth demand; the energy panel
   tracks generation per source, consumption, state of charge, curtailment
   and the last in-game day.
 
