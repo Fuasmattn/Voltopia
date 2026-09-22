@@ -66,6 +66,19 @@ describe('buildPowerLines', () => {
     expect(state.layers.tileType[at(5, 5)]).toBe(TileType.Road);
   });
 
+  it('explains a drag that is blocked on every tile', () => {
+    const state = makeState();
+    placePlant(state, at(6, 6), PlantType.SolarFarm);
+    state.layers.density[at(7, 6)] = 1; // a building
+    expect(buildPowerLines(state, [at(6, 6), at(7, 6)]).rejected).toBe('needsLineSite');
+  });
+
+  it('stays silent when the drag only retraces existing lines', () => {
+    const state = makeState();
+    buildPowerLines(state, [at(5, 5), at(6, 5)]);
+    expect(buildPowerLines(state, [at(5, 5), at(6, 5)]).rejected).toBeUndefined();
+  });
+
   it('bumps the grid version so connectivity is recomputed', () => {
     const state = makeState();
     const before = state.gridVersion;

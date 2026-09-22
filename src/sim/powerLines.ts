@@ -3,6 +3,7 @@ import { DIRECTIONS, inBounds, LINE_PRESENT, tileIndex, tileX, tileY } from '../
 import type { BuildResult } from './roads.ts';
 import {
   BuildIntent,
+  buildRejection,
   bumpGridVersion,
   isBuildable,
   markDirty,
@@ -50,7 +51,13 @@ export function buildPowerLines(state: SimState, tiles: number[]): BuildResult {
   const buildable = tiles.filter(
     (index) => layers.powerLine[index] === 0 && isBuildable(state, index, BuildIntent.PowerLine),
   );
-  if (buildable.length === 0) return {};
+  if (buildable.length === 0) {
+    // A drag blocked on every tile explains itself; one that only retraces
+    // existing lines (or is partly blocked) stays silent.
+    const blocked = tiles.find((index) => layers.powerLine[index] === 0);
+    if (blocked === undefined) return {};
+    return { rejected: buildRejection(state, blocked, BuildIntent.PowerLine) ?? undefined };
+  }
 
   const cost = buildable.reduce((sum, index) => sum + powerLineTileCost(state, index), 0);
   if (cost > state.money) {
