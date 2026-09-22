@@ -65,8 +65,11 @@ export class PowerLinesMesh implements DiffLayer {
         changed = true;
       }
       if (this.tileTypes[diff.index] !== diff.tileType) {
+        // The tile type only moves a pylon (kerb vs. centre): it matters
+        // when the tile carries a line before or after the change.
+        const hadLine = this.masks[diff.index] !== 0;
         this.tileTypes[diff.index] = diff.tileType;
-        changed = true;
+        if (hadLine) changed = true;
       }
     }
     if (changed) this.rebuild();

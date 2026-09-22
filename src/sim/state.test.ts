@@ -92,7 +92,7 @@ describe('buildRejection', () => {
 
   it('keeps zones and plants off line tiles while roads may share them', () => {
     const state = makeState();
-    state.layers.powerLine[at(1, 1)] = 16;
+    state.layers.powerLine[at(1, 1)] = LINE_PRESENT;
     expect(buildRejection(state, at(1, 1), BuildIntent.Road)).toBeNull();
     expect(buildRejection(state, at(1, 1), BuildIntent.Zone)).toBe('tileOccupied');
     expect(buildRejection(state, at(1, 1), BuildIntent.Plant, PlantType.SolarFarm)).toBe(
@@ -154,12 +154,15 @@ describe('save round trip', () => {
     buildRoads(state, [at(1, 5), at(2, 5), at(3, 5)]);
     state.layers.tileType[at(1, 3)] = TileType.Plant; // two tiles off the road
     state.layers.plantType[at(1, 3)] = PlantType.WindTurbine;
+    state.layers.tileType[at(5, 3)] = TileType.Plant; // a second plant on the same network
+    state.layers.plantType[at(5, 3)] = PlantType.SolarFarm;
     const save = serializeState(state);
     delete save.layers.powerLine;
     const restored = deserializeState(save);
     // Connector from the plant down to the nearest road tile…
     expect(restored.layers.powerLine[at(1, 4)]).not.toBe(0);
     expect(restored.layers.powerLine[at(1, 3)]).toBe(0); // never on the plant itself
+    expect(restored.layers.powerLine[at(3, 4)]).not.toBe(0); // the second plant too
     // …and lines along every road reachable from there.
     expect(restored.layers.powerLine[at(1, 5)]).not.toBe(0);
     expect(restored.layers.powerLine[at(3, 5)]).not.toBe(0);

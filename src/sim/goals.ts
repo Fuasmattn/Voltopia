@@ -6,13 +6,13 @@ import { countPlants, countPopulationAndJobs, type SimState } from './state.ts';
 
 export const GOAL_IDS = [
   'firstPower',
+  'gridBuilder',
   'population100',
   'population500',
   'cleanDay',
   'evFleet',
   'exporter',
   'hydroPower',
-  'gridBuilder',
 ] as const;
 export type GoalId = (typeof GOAL_IDS)[number];
 

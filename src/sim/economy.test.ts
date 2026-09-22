@@ -38,7 +38,7 @@ describe('economyStep', () => {
     buildRoads(state, [at(1, 1), at(2, 1), at(3, 1)]);
     placePlant(state, at(5, 5), PlantType.WindTurbine);
     const breakdown = economyStep(state, 0, 0);
-    expect(breakdown.roadUpkeep).toBeCloseTo(3 * BALANCE.upkeepPerTick.roadPerTile, 6);
+    expect(breakdown.gridUpkeep).toBeCloseTo(3 * BALANCE.upkeepPerTick.roadPerTile, 6);
     expect(breakdown.plantUpkeep).toBeCloseTo(
       BALANCE.upkeepPerTick.plant[PlantType.WindTurbine],
       6,
@@ -76,7 +76,7 @@ describe('economyStep', () => {
     const state = createSimState(1, SIZE);
     buildPowerLines(state, [at(1, 1), at(2, 1)]);
     const breakdown = economyStep(state, 0, 0);
-    expect(breakdown.roadUpkeep).toBeCloseTo(2 * BALANCE.upkeepPerTick.powerLinePerTile, 9);
+    expect(breakdown.gridUpkeep).toBeCloseTo(2 * BALANCE.upkeepPerTick.powerLinePerTile, 9);
   });
 });
 

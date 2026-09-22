@@ -149,8 +149,8 @@ and energy sources can easily be added later.
   M5 Generation, storage, energy balance + economy + HUD
   M6 Electric vehicles + charging load + charging hubs
   M7 Overlays + save/load + PWA
-- Cover the simulation with unit tests (demand, growth, supply radius, energy
-  balance, storage logic, money)
+- Cover the simulation with unit tests (demand, growth, grid connectivity,
+  energy balance, storage logic, money)
 - Code and comments in English, descriptive names, no magic numbers (balancing
   values centralized in a config file)
 - After each milestone: a short summary of what's done and what comes next

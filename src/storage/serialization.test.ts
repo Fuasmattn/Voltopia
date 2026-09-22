@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest';
+import { LINE_PRESENT } from '../shared/grid.ts';
 import { buildRoads } from '../sim/roads.ts';
 import { createSimState, serializeState } from '../sim/state.ts';
 import { SAVE_VERSION } from '../shared/constants.ts';
@@ -76,7 +77,8 @@ describe('save game JSON export/import', () => {
 
   it('round-trips the optional power line layer', () => {
     const save = makeSave();
-    save.layers.powerLine = new Uint8Array(save.size * save.size).fill(16).buffer as ArrayBuffer;
+    save.layers.powerLine = new Uint8Array(save.size * save.size).fill(LINE_PRESENT)
+      .buffer as ArrayBuffer;
     const restored = saveFromJson(saveToJson(save));
     expect(new Uint8Array(restored.layers.powerLine!)).toEqual(
       new Uint8Array(save.layers.powerLine),

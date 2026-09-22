@@ -5,6 +5,7 @@ import { energyStep } from './energy.ts';
 import { goalsStep, goalStates } from './goals.ts';
 import { computeDemand, decayStep, growthStep } from './growth.ts';
 import { happinessStep } from './happiness.ts';
+import { countPowerLineTiles } from './powerLines.ts';
 import { chargingDemand, vehiclesStep } from './vehicles.ts';
 import { updateWeather } from './weather.ts';
 import {
@@ -78,16 +79,15 @@ function countTiles(state: SimState): {
   buildingTiles: number;
   powerLineTiles: number;
 } {
-  const { tileType, zone, density, powerLine } = state.layers;
+  const { tileType, zone, density } = state.layers;
   const counts = {
     roadTiles: 0,
     zonedTiles: 0,
     plantTiles: 0,
     buildingTiles: 0,
-    powerLineTiles: 0,
+    powerLineTiles: countPowerLineTiles(state),
   };
   for (let i = 0; i < tileType.length; i++) {
-    if (powerLine[i] !== 0) counts.powerLineTiles++;
     if (tileType[i] === TileType.Road) counts.roadTiles++;
     else if (tileType[i] === TileType.Plant) counts.plantTiles++;
     else {

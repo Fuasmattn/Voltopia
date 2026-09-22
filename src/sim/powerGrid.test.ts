@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { BALANCE } from '../shared/constants.ts';
-import { LINE_PRESENT, tileIndex } from '../shared/grid.ts';
+import { chebyshevDistance, LINE_PRESENT, tileIndex } from '../shared/grid.ts';
 import { PlantType } from '../shared/types.ts';
 import { placePlant } from './energy.ts';
 import { isSupplySource, recomputeGrid } from './powerGrid.ts';
@@ -45,6 +45,27 @@ describe('recomputeGrid', () => {
     recomputeGrid(state);
     expect(state.layers.energized[at(12 + R, 10)]).toBe(1);
     expect(state.layers.energized[at(12 + R + 1, 10)]).toBe(0);
+  });
+
+  it('two plants joined by a line share one energised set', () => {
+    const state = makeState();
+    placePlant(state, at(2, 10), PlantType.SolarFarm); // plant A
+    placePlant(state, at(12, 10), PlantType.WindTurbine); // plant B
+    buildPowerLines(
+      state,
+      Array.from({ length: 9 }, (_, i) => at(3 + i, 10)), // x 3..11
+    );
+    const far = at(8, 12); // beyond either plant's own radius, next to the line
+    expect(chebyshevDistance(far, at(2, 10), SIZE)).toBeGreaterThan(R);
+    expect(chebyshevDistance(far, at(12, 10), SIZE)).toBeGreaterThan(R);
+    recomputeGrid(state);
+    expect(state.layers.energized[far]).toBe(1);
+    // Plant B only shares the network; removing it changes nothing here.
+    state.layers.tileType[at(12, 10)] = 0;
+    state.layers.plantType[at(12, 10)] = PlantType.None;
+    bumpGridVersion(state);
+    recomputeGrid(state);
+    expect(state.layers.energized[far]).toBe(1);
   });
 
   it('a line that touches no supply plant stays dead', () => {

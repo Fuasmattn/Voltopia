@@ -1,10 +1,11 @@
 import { BALANCE } from '../shared/constants.ts';
 import { PlantType, TileType } from '../shared/types.ts';
+import { countPowerLineTiles } from './powerLines.ts';
 import type { SimState } from './state.ts';
 
 export interface EconomyBreakdown {
   taxIncome: number;
-  roadUpkeep: number;
+  gridUpkeep: number;
   plantUpkeep: number;
   biogasFuelCost: number;
   gridImportCost: number;
@@ -17,35 +18,33 @@ export interface EconomyBreakdown {
  * generated — dispatchable but expensive).
  */
 export function economyStep(state: SimState, population: number, jobs: number): EconomyBreakdown {
-  const { tileType, plantType, powerLine } = state.layers;
+  const { tileType, plantType } = state.layers;
 
   const taxIncome =
     state.taxRate * (population * BALANCE.tax.incomePerResident + jobs * BALANCE.tax.incomePerJob);
 
   let roadTiles = 0;
-  let lineTiles = 0;
   let plantUpkeep = 0;
   for (let i = 0; i < tileType.length; i++) {
-    if (powerLine[i] !== 0) lineTiles++;
     if (tileType[i] === TileType.Road) roadTiles++;
     else if (tileType[i] === TileType.Plant) {
       plantUpkeep += BALANCE.upkeepPerTick.plant[plantType[i] as PlantType] ?? 0;
     }
   }
   // Grid upkeep: roads and power lines share one line item.
-  const roadUpkeep =
+  const gridUpkeep =
     roadTiles * BALANCE.upkeepPerTick.roadPerTile +
-    lineTiles * BALANCE.upkeepPerTick.powerLinePerTile;
+    countPowerLineTiles(state) * BALANCE.upkeepPerTick.powerLinePerTile;
   const biogasFuelCost =
     state.lastEnergy.biogas * BALANCE.upkeepPerTick.biogasFuelCostPerEnergyUnit;
   const gridImportCost = state.lastEnergy.gridImport * BALANCE.market.importCostPerEnergyUnit;
   const gridExportRevenue = state.lastEnergy.gridExport * BALANCE.market.exportRevenuePerEnergyUnit;
 
   state.money +=
-    taxIncome + gridExportRevenue - roadUpkeep - plantUpkeep - biogasFuelCost - gridImportCost;
+    taxIncome + gridExportRevenue - gridUpkeep - plantUpkeep - biogasFuelCost - gridImportCost;
   return {
     taxIncome,
-    roadUpkeep,
+    gridUpkeep,
     plantUpkeep,
     biogasFuelCost,
     gridImportCost,
