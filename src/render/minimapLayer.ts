@@ -7,6 +7,7 @@ const COLORS = {
   road: '#5a6068',
   river: '#4d8fc4',
   lake: '#3f7fb5',
+  powerLine: '#e8d76a',
   zoned: {
     [Zone.Residential]: '#a9d3ab',
     [Zone.Commercial]: '#a9c3e0',
@@ -72,6 +73,7 @@ export class MinimapLayer implements DiffLayer {
       return COLORS.plant[diff.plantType] ?? COLORS.ground;
     }
     if (diff.density > 0) return COLORS.building[diff.zone] ?? COLORS.ground;
+    if (diff.powerLine !== 0) return COLORS.powerLine;
     if (diff.zone !== Zone.None) return COLORS.zoned[diff.zone] ?? COLORS.ground;
     return COLORS.ground;
   }

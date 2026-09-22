@@ -7,6 +7,7 @@ import { nightFactor, SUNRISE, SUNSET, sunIntensity } from '../shared/daylight.t
 import { createScene, PALETTE, type SceneLights } from './scene.ts';
 import { createTerrain } from './terrain.ts';
 import { RoadsMesh } from './roadsMesh.ts';
+import { PowerLinesMesh } from './powerLinesMesh.ts';
 import { BuildingsMesh } from './buildingsMesh.ts';
 import { PlantsMesh } from './plantsMesh.ts';
 import { VehiclesMesh } from './vehiclesMesh.ts';
@@ -127,6 +128,7 @@ export class GameRenderer {
 
     this.addDiffLayer(new WaterMesh(scene, gridSize));
     this.addDiffLayer(new RoadsMesh(scene, gridSize));
+    this.addDiffLayer(new PowerLinesMesh(scene, gridSize));
     this.addDiffLayer(new ZoneTilesMesh(scene, gridSize));
     this.addDiffLayer(new BuildingsMesh(scene, gridSize));
     this.addDiffLayer(new PlantsMesh(scene, gridSize));
