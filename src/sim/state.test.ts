@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { BALANCE } from '../shared/constants.ts';
 import { LINE_PRESENT, tileIndex } from '../shared/grid.ts';
 import { Terrain } from '../shared/types.ts';
+import { recomputeGrid } from './powerGrid.ts';
 import { buildRoads } from './roads.ts';
 import {
   BuildIntent,
@@ -13,6 +14,7 @@ import {
   PlantType,
   serializeState,
   TileType,
+  Zone,
   type SimState,
 } from './state.ts';
 
@@ -144,6 +146,38 @@ describe('save round trip', () => {
     expect(restored.layers.powerLine[at(1, 2)]).not.toBe(0);
     expect(restored.layers.powerLine[at(3, 2)]).not.toBe(0);
     expect(restored.layers.powerLine[at(10, 10)]).toBe(0);
+  });
+
+  it('connects a plant that stands off the street to the road network', () => {
+    const state = makeState();
+    state.money = 1e9;
+    buildRoads(state, [at(1, 5), at(2, 5), at(3, 5)]);
+    state.layers.tileType[at(1, 3)] = TileType.Plant; // two tiles off the road
+    state.layers.plantType[at(1, 3)] = PlantType.WindTurbine;
+    const save = serializeState(state);
+    delete save.layers.powerLine;
+    const restored = deserializeState(save);
+    // Connector from the plant down to the nearest road tile…
+    expect(restored.layers.powerLine[at(1, 4)]).not.toBe(0);
+    expect(restored.layers.powerLine[at(1, 3)]).toBe(0); // never on the plant itself
+    // …and lines along every road reachable from there.
+    expect(restored.layers.powerLine[at(1, 5)]).not.toBe(0);
+    expect(restored.layers.powerLine[at(3, 5)]).not.toBe(0);
+    // A building next to that road is energised again.
+    restored.layers.zone[at(3, 7)] = Zone.Residential;
+    restored.layers.density[at(3, 7)] = 1;
+    recomputeGrid(restored);
+    expect(restored.layers.energized[at(3, 7)]).toBe(1);
+  });
+
+  it('grants nothing for a plant with no road in reach', () => {
+    const state = makeState();
+    state.layers.tileType[at(8, 2)] = TileType.Plant;
+    state.layers.plantType[at(8, 2)] = PlantType.WindTurbine;
+    const save = serializeState(state);
+    delete save.layers.powerLine;
+    const restored = deserializeState(save);
+    expect(restored.layers.powerLine.some((mask) => mask !== 0)).toBe(false);
   });
 
   it('leaves a save that has an all-zero line layer alone', () => {

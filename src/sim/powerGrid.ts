@@ -1,5 +1,13 @@
 import { BALANCE } from '../shared/constants.ts';
-import { LINE_PRESENT, neighbors4, tileIndex, tileX, tileY } from '../shared/grid.ts';
+import {
+  chebyshevDistance,
+  LINE_PRESENT,
+  lShapedPath,
+  neighbors4,
+  tileIndex,
+  tileX,
+  tileY,
+} from '../shared/grid.ts';
 import { PlantType, TileType } from '../shared/types.ts';
 import { recomputePowerLineMask } from './powerLines.ts';
 import type { SimState } from './state.ts';
@@ -76,40 +84,98 @@ export function recomputeGrid(state: SimState): void {
 }
 
 /**
- * One-time migration for saves from before power lines: put a line on
- * every road tile reachable (over roads) from a road tile next to a
- * supply plant, so the loaded city stays supplied and shows a network.
+ * Whether a tile can carry a power line. Mirrors `buildRejection`'s
+ * PowerLine rule in state.ts (lines share tiles with roads and water but
+ * never with buildings or plants); duplicated instead of imported so this
+ * module's import of state.ts stays type-only (state.ts imports this one).
+ */
+function canCarryLine(state: SimState, index: number): boolean {
+  const { density, tileType } = state.layers;
+  return density[index] === 0 && tileType[index] !== TileType.Plant;
+}
+
+/**
+ * The road tile closest to `index` within `radius` (Chebyshev), or -1
+ * when there is none. Ties go to the lowest tile index.
+ */
+function nearestRoadTile(state: SimState, index: number, radius: number): number {
+  const { tileType } = state.layers;
+  const size = state.size;
+  const cx = tileX(index, size);
+  const cy = tileY(index, size);
+  const x0 = Math.max(0, cx - radius);
+  const x1 = Math.min(size - 1, cx + radius);
+  const y0 = Math.max(0, cy - radius);
+  const y1 = Math.min(size - 1, cy + radius);
+  let best = -1;
+  let bestDistance = Infinity;
+  for (let y = y0; y <= y1; y++) {
+    for (let x = x0; x <= x1; x++) {
+      const candidate = tileIndex(x, y, size);
+      if (tileType[candidate] !== TileType.Road) continue;
+      const distance = chebyshevDistance(index, candidate, size);
+      if (distance < bestDistance) {
+        bestDistance = distance;
+        best = candidate;
+      }
+    }
+  }
+  return best;
+}
+
+/**
+ * One-time migration for saves from before power lines: hook every supply
+ * plant up to the nearest road within the old supply radius (an L-shaped
+ * connector, since plants never had to touch a street) and put a line on
+ * every road tile reachable over roads from there, so the loaded city
+ * stays supplied and shows a network along its streets.
  */
 export function grantLegacyNetwork(state: SimState): void {
   const { layers } = state;
   const size = state.size;
   const { tileType, plantType, powerLine } = layers;
+  const granted: number[] = [];
+  const grant = (index: number): void => {
+    if (powerLine[index] !== 0) return;
+    powerLine[index] = LINE_PRESENT;
+    granted.push(index);
+  };
+
   const seen = new Uint8Array(size * size);
-  const queue: number[] = [];
   for (let i = 0; i < tileType.length; i++) {
     if (tileType[i] !== TileType.Plant || !isSupplySource(plantType[i] as PlantType)) continue;
-    for (const n of neighbors4(i, size)) {
-      if (tileType[n] === TileType.Road && seen[n] === 0) {
-        seen[n] = 1;
-        queue.push(n);
+    const road = nearestRoadTile(state, i, BALANCE.energy.legacySupplyRadius);
+    if (road < 0) continue;
+    // Connector from the plant to that road. A building in the way breaks
+    // the connector — those plants simply stay unconnected.
+    const connector = lShapedPath(
+      tileX(i, size),
+      tileY(i, size),
+      tileX(road, size),
+      tileY(road, size),
+      size,
+    );
+    for (const index of connector) {
+      if (index === i || !canCarryLine(state, index)) continue;
+      grant(index);
+    }
+    if (seen[road] === 1) continue;
+    // Follow the streets from there and light up the whole road network.
+    seen[road] = 1;
+    const queue: number[] = [road];
+    while (queue.length > 0) {
+      const index = queue.pop()!;
+      grant(index);
+      for (const n of neighbors4(index, size)) {
+        if (tileType[n] === TileType.Road && seen[n] === 0) {
+          seen[n] = 1;
+          queue.push(n);
+        }
       }
     }
   }
-  while (queue.length > 0) {
-    const index = queue.pop()!;
-    for (const n of neighbors4(index, size)) {
-      if (tileType[n] === TileType.Road && seen[n] === 0) {
-        seen[n] = 1;
-        queue.push(n);
-      }
-    }
-  }
-  for (let i = 0; i < seen.length; i++) {
-    if (seen[i] === 1) powerLine[i] = LINE_PRESENT;
-  }
-  for (let i = 0; i < seen.length; i++) {
-    if (seen[i] === 1) recomputePowerLineMask(state, i);
-  }
+
+  for (const index of granted) recomputePowerLineMask(state, index);
   // Inline instead of bumpGridVersion(): keeps this module's import of
   // state.ts type-only (state.ts imports this module for the migration).
   state.gridVersion++;

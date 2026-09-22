@@ -95,6 +95,11 @@ export const BALANCE = {
      */
     lineSupplyRadius: 3,
     /**
+     * Supply radius before power lines existed; only used to migrate saves
+     * without a line layer.
+     */
+    legacySupplyRadius: 14,
+    /**
      * Rooftop PV grows automatically with density: peak output per
      * building by density level 1..3 (only connected buildings feed in).
      */

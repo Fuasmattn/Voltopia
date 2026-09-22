@@ -112,9 +112,16 @@ afterwards by the network, exactly as it was judged by the radius.
 ### Save migration
 
 `deserializeState`: when `save.layers.powerLine` is absent, after
-restoring the other layers, run `grantLegacyNetwork(state)`: flood-fill
-over road tiles starting from every road tile 4-adjacent to a supply
-plant, set a line on every reached road tile, recompute masks, bump
+restoring the other layers, run `grantLegacyNetwork(state)`. Plants never
+had to touch a street, so seeding only from roads 4-adjacent to a plant
+would leave such cities unconnected: for every supply plant, find the
+nearest road tile within `BALANCE.energy.legacySupplyRadius` (14 — the
+supply radius from before power lines; Chebyshev, ties to the lowest tile
+index), grant lines along an `lShapedPath` connector to it (skipping the
+plant tile and any tile that cannot carry a line — a building in the way
+breaks the connector), then flood-fill over road tiles from there and set
+a line on every reached road tile. Plants with no road in reach are
+skipped. Finally recompute the masks of all granted tiles and bump
 `gridVersion`. The player loads into a supplied city with a visible
 network along the streets. Saves that have the layer (even all-zero) are
 never migrated.
