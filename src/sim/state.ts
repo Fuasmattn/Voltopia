@@ -1,4 +1,5 @@
 import { BALANCE, ENERGY_HISTORY_SAMPLES, SAVE_VERSION } from '../shared/constants.ts';
+import { neighbors4 } from '../shared/grid.ts';
 import { Rng } from '../shared/rng.ts';
 import type {
   DemandStats,
@@ -9,7 +10,7 @@ import type {
   TileDiff,
   Weather,
 } from '../shared/types.ts';
-import { PlantType, SupplyStatus, TileType, Zone } from '../shared/types.ts';
+import { PlantType, SupplyStatus, Terrain, TileType, Zone } from '../shared/types.ts';
 
 /** Commute phases of a vehicle. */
 export const VehiclePhase = {
@@ -71,6 +72,8 @@ export interface TileLayers {
   variant: Uint8Array;
   supplied: Uint8Array;
   plantType: Uint8Array;
+  /** Immutable ground type (land / river / lake), generated per map. */
+  terrain: Uint8Array;
   /** Ticks since the building on this tile last changed (not persisted). */
   buildingAge: Uint32Array;
   /** Consecutive ticks without full supply (not persisted). */
@@ -88,6 +91,8 @@ export interface SimState {
   smartCharging: boolean;
   happiness: number;
   storedEnergy: number;
+  /** Energy stored in pumped storage plants (separate pool from batteries). */
+  pumpedStorageEnergy: number;
   weather: Weather;
   layers: TileLayers;
   vehicles: Vehicle[];
@@ -118,6 +123,7 @@ export interface SimState {
     solar: number;
     wind: number;
     biogas: number;
+    hydro: number;
     rooftop: number;
     buildingConsumption: number;
     chargingConsumption: number;
@@ -138,6 +144,7 @@ export function createTileLayers(size: number): TileLayers {
     variant: new Uint8Array(tiles),
     supplied: new Uint8Array(tiles),
     plantType: new Uint8Array(tiles),
+    terrain: new Uint8Array(tiles),
     buildingAge: new Uint32Array(tiles),
     troubledTicks: new Uint32Array(tiles),
   };
@@ -159,7 +166,8 @@ export function createSimState(
     smartCharging: false,
     happiness: BALANCE.happiness.base,
     storedEnergy: 0,
-    weather: { cloudCover: 0.3, windSpeed: 0.5 },
+    pumpedStorageEnergy: 0,
+    weather: { cloudCover: 0.3, windSpeed: 0.5, riverFlow: BALANCE.water.initialFlow },
     layers: createTileLayers(size),
     vehicles: [],
     undoStack: [],
@@ -175,6 +183,7 @@ export function createSimState(
       solar: 0,
       wind: 0,
       biogas: 0,
+      hydro: 0,
       rooftop: 0,
       buildingConsumption: 0,
       chargingConsumption: 0,
@@ -204,6 +213,7 @@ export function collectDiffs(state: SimState): TileDiff[] {
       variant: layers.variant[index],
       supplied: layers.supplied[index] as TileDiff['supplied'],
       plantType: layers.plantType[index] as TileDiff['plantType'],
+      terrain: layers.terrain[index] as TileDiff['terrain'],
     });
   }
   state.dirty.clear();
@@ -215,6 +225,59 @@ export function markAllDirty(state: SimState): void {
   for (let i = 0; i < state.size * state.size; i++) {
     state.dirty.add(i);
   }
+}
+
+/** What a placement is trying to do; decides which terrain accepts it. */
+export const BuildIntent = { Road: 0, Zone: 1, Plant: 2 } as const;
+export type BuildIntent = (typeof BuildIntent)[keyof typeof BuildIntent];
+
+/** True when any 4-neighbour is a lake tile. */
+export function isLakeShore(state: SimState, index: number): boolean {
+  const { terrain } = state.layers;
+  return neighbors4(index, state.size).some((n) => terrain[n] === Terrain.Lake);
+}
+
+/**
+ * Why a tile cannot be built on with the given intent, or null when it
+ * can. Land accepts everything (except run-of-river, which needs the
+ * river); river tiles accept bridges and run-of-river plants; lakes
+ * accept nothing. Pumped storage additionally needs a lake shore.
+ */
+export function buildRejection(
+  state: SimState,
+  index: number,
+  intent: BuildIntent,
+  plant: PlantType = PlantType.None,
+): string | null {
+  const { layers } = state;
+  if (layers.tileType[index] !== TileType.Empty || layers.density[index] !== 0) {
+    return 'tileOccupied';
+  }
+  const terrain = layers.terrain[index] as Terrain;
+  const wantsRiver = intent === BuildIntent.Plant && plant === PlantType.RunOfRiver;
+  if (terrain === Terrain.Lake) return 'cannotBuildOnWater';
+  if (terrain === Terrain.River) {
+    if (intent === BuildIntent.Road || wantsRiver) return null;
+    return 'cannotBuildOnWater';
+  }
+  if (wantsRiver) return 'needsRiverTile';
+  if (
+    intent === BuildIntent.Plant &&
+    plant === PlantType.PumpedStorage &&
+    !isLakeShore(state, index)
+  ) {
+    return 'needsLakeShore';
+  }
+  return null;
+}
+
+export function isBuildable(
+  state: SimState,
+  index: number,
+  intent: BuildIntent,
+  plant: PlantType = PlantType.None,
+): boolean {
+  return buildRejection(state, index, intent, plant) === null;
 }
 
 function copyBuffer(view: Uint8Array | Uint32Array): ArrayBuffer {
@@ -305,6 +368,10 @@ export function totalStorageCapacity(state: SimState): number {
   return countPlants(state, PlantType.Battery) * BALANCE.energy.batteryCapacity;
 }
 
+export function totalPumpedStorageCapacity(state: SimState): number {
+  return countPlants(state, PlantType.PumpedStorage) * BALANCE.energy.pumpedStorageCapacity;
+}
+
 /** Append an energy history sample, keeping one in-game day of samples. */
 export function pushEnergyHistory(state: SimState, point: EnergyHistoryPoint): void {
   state.energyHistory.push(point);
@@ -313,4 +380,4 @@ export function pushEnergyHistory(state: SimState, point: EnergyHistoryPoint): v
   }
 }
 
-export { SupplyStatus, TileType, Zone, PlantType };
+export { SupplyStatus, TileType, Zone, PlantType, Terrain };

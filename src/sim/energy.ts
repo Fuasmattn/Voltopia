@@ -241,6 +241,7 @@ export function energyStep(state: SimState, input: EnergyTickInput): void {
     solar,
     wind,
     biogas,
+    hydro: 0,
     rooftop,
     buildingConsumption: buildingDemand,
     chargingConsumption: chargingDemand,

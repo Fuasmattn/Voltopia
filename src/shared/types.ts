@@ -7,6 +7,14 @@ export const TileType = {
 } as const;
 export type TileType = (typeof TileType)[keyof typeof TileType];
 
+/** Immutable ground type per tile, generated once per map. */
+export const Terrain = {
+  Land: 0,
+  River: 1,
+  Lake: 2,
+} as const;
+export type Terrain = (typeof Terrain)[keyof typeof Terrain];
+
 export const Zone = {
   None: 0,
   Residential: 1,
@@ -23,6 +31,8 @@ export const PlantType = {
   BiogasPlant: 4,
   ChargingHub: 5,
   Park: 6,
+  RunOfRiver: 7,
+  PumpedStorage: 8,
 } as const;
 export type PlantType = (typeof PlantType)[keyof typeof PlantType];
 
@@ -47,6 +57,8 @@ export interface Weather {
   cloudCover: number;
   /** 0 = calm, 1 = strongest wind. Drives wind turbine generation. */
   windSpeed: number;
+  /** 0 = dry riverbed, 1 = river in full flow. Drives run-of-river output. */
+  riverFlow: number;
 }
 
 export interface EnergyHistoryPoint {
@@ -149,6 +161,7 @@ export interface TileDiff {
   variant: number;
   supplied: SupplyStatus;
   plantType: PlantType;
+  terrain: Terrain;
 }
 
 /** Position and heading of one vehicle, interpolated by the renderer. */
