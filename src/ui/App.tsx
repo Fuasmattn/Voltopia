@@ -239,7 +239,7 @@ function Game({ save, options }: { save: SaveGame | null; options: NewGameOption
       />
       {stats && (
         <div className="right-panel">
-          <EnergyPanel energy={stats.energy} />
+          <EnergyPanel energy={stats.energy} riverFlow={stats.weather.riverFlow} />
           <TaxSlider
             rate={stats.taxRate}
             onChange={(rate) => bridge.send({ type: 'setTaxRate', rate })}

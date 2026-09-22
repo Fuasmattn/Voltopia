@@ -18,6 +18,8 @@ export type ToolId =
   | 'plant-biogas'
   | 'plant-hub'
   | 'plant-park'
+  | 'plant-hydro'
+  | 'plant-pumped'
   | 'bulldoze';
 
 const ZONE_BY_TOOL: Partial<Record<ToolId, Zone>> = {
@@ -40,6 +42,8 @@ export const TOOL_HOTKEYS: Record<string, ToolId> = {
   '0': 'plant-hub',
   b: 'bulldoze',
   p: 'plant-park',
+  h: 'plant-hydro',
+  u: 'plant-pumped',
 };
 
 export interface DragCostPreview {
@@ -54,6 +58,8 @@ export const PLANT_BY_TOOL: Partial<Record<ToolId, PlantType>> = {
   'plant-biogas': PlantType.BiogasPlant,
   'plant-hub': PlantType.ChargingHub,
   'plant-park': PlantType.Park,
+  'plant-hydro': PlantType.RunOfRiver,
+  'plant-pumped': PlantType.PumpedStorage,
 };
 
 /**

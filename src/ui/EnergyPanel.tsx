@@ -24,13 +24,14 @@ function formatEnergy(value: number): string {
  * Energy panel: per-source generation, consumption, storage state of
  * charge, curtailment/deficit, and a mini graph of the last in-game day.
  */
-export function EnergyPanel({ energy }: { energy: EnergyStats }) {
+export function EnergyPanel({ energy, riverFlow }: { energy: EnergyStats; riverFlow: number }) {
   const { t } = useI18n();
   const totalGeneration =
     energy.generation.solar +
     energy.generation.wind +
     energy.generation.biogas +
-    energy.generation.rooftop;
+    energy.generation.rooftop +
+    energy.generation.hydro;
   const totalConsumption = energy.consumption.buildings + energy.consumption.charging;
   const balance = totalGeneration - totalConsumption;
   const stateOfCharge =
@@ -51,6 +52,10 @@ export function EnergyPanel({ energy }: { energy: EnergyStats }) {
         <div className="energy-row" data-testid="energy-wind">
           <span>{t('energy.wind')}</span>
           <span>{formatEnergy(energy.generation.wind)}</span>
+        </div>
+        <div className="energy-row" data-testid="energy-hydro">
+          <span>{t('energy.hydro', { flow: Math.round(riverFlow * 100) })}</span>
+          <span>{formatEnergy(energy.generation.hydro)}</span>
         </div>
         <div className="energy-row" data-testid="energy-biogas">
           <span>{t('energy.biogas')}</span>
@@ -106,6 +111,21 @@ export function EnergyPanel({ energy }: { energy: EnergyStats }) {
           <div className="soc-fill" style={{ width: `${stateOfCharge * 100}%` }} />
         </div>
       </div>
+
+      {energy.pumpedCapacity > 0 && (
+        <div className="soc-block" data-testid="energy-pumped-soc">
+          <div className="soc-label">
+            <span>{t('energy.pumpedStorage')}</span>
+            <span>{`${Math.round((energy.pumpedStoredEnergy / energy.pumpedCapacity) * 100)}%`}</span>
+          </div>
+          <div className="soc-track">
+            <div
+              className="soc-fill"
+              style={{ width: `${(energy.pumpedStoredEnergy / energy.pumpedCapacity) * 100}%` }}
+            />
+          </div>
+        </div>
+      )}
 
       <svg
         className="energy-graph"

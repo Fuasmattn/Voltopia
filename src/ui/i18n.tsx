@@ -29,6 +29,8 @@ const en = {
   'tool.plant-biogas': 'Biogas plant',
   'tool.plant-hub': 'Charging hub',
   'tool.plant-park': 'Park',
+  'tool.plant-hydro': 'Run-of-river plant',
+  'tool.plant-pumped': 'Pumped storage',
   'tool.bulldoze': 'Bulldozer',
   'tool.undo': 'Undo',
   'tool.undo.title': 'Undo last build action',
@@ -37,6 +39,7 @@ const en = {
   'energy.title': 'Energy',
   'energy.solar': '☀️ Solar',
   'energy.wind': '🌀 Wind',
+  'energy.hydro': '💧 Hydro (flow {flow}%)',
   'energy.biogas': '♻️ Biogas',
   'energy.rooftop': '🏠 Rooftop PV',
   'energy.consumption': '🏙 Consumption',
@@ -47,6 +50,7 @@ const en = {
   'energy.import': '⤵️ Grid import',
   'energy.export': '⤴️ Grid export',
   'energy.storage': 'Storage (SoC)',
+  'energy.pumpedStorage': 'Pumped storage (SoC)',
   'energy.graph.label': 'Generation and consumption over the last day',
   'energy.legend.generation': 'generation',
   'energy.legend.consumption': 'consumption',
@@ -81,6 +85,9 @@ const en = {
   'rejection.tileOccupied': 'This tile is already occupied',
   'rejection.nothingToUndo': 'Nothing to undo',
   'rejection.noPlantSelected': 'No plant selected',
+  'rejection.needsRiverTile': 'Run-of-river plants must stand on a river tile',
+  'rejection.needsLakeShore': 'Pumped storage must stand on the lake shore',
+  'rejection.cannotBuildOnWater': 'Cannot build on water',
 
   'footer.hint': 'right mouse/WASD: pan · wheel: zoom · Q/E: rotate',
   'footer.help': 'Help',
@@ -96,6 +103,9 @@ const en = {
   'help.energy.title': 'Energy',
   'help.energy.body':
     'Every plant supplies a radius around it. Solar peaks at noon and suffers under clouds; wind follows the weather day and night. Batteries store the midday surplus for the evening; the biogas plant is dispatchable backup — reliable but expensive to run. Dense buildings add rooftop PV automatically.',
+  'help.water.title': 'Water and hydro',
+  'help.water.body':
+    'Every map has a river and a lake. Roads cross the river as bridges (pricier per tile). A run-of-river plant on the river generates day and night — more after rainy spells, less in a drought. Pumped storage on the lake shore is a large but slower store that fills after your batteries.',
   'help.ev.title': 'E-mobility',
   'help.ev.body':
     'Your citizens drive EVs. Home charging peaks in the evening — right when solar is gone. Charging hubs shift the load into the sunny midday, and the smart-charging upgrade follows the surplus automatically.',
@@ -214,6 +224,8 @@ const de: Record<TranslationKey, string> = {
   'tool.plant-biogas': 'Biogasanlage',
   'tool.plant-hub': 'Ladepark',
   'tool.plant-park': 'Park',
+  'tool.plant-hydro': 'Laufwasserkraftwerk',
+  'tool.plant-pumped': 'Pumpspeicher',
   'tool.bulldoze': 'Abriss',
   'tool.undo': 'Rückgängig',
   'tool.undo.title': 'Letzte Bauaktion rückgängig machen',
@@ -222,6 +234,7 @@ const de: Record<TranslationKey, string> = {
   'energy.title': 'Energie',
   'energy.solar': '☀️ Solar',
   'energy.wind': '🌀 Wind',
+  'energy.hydro': '💧 Wasserkraft (Abfluss {flow}%)',
   'energy.biogas': '♻️ Biogas',
   'energy.rooftop': '🏠 Dach-PV',
   'energy.consumption': '🏙 Verbrauch',
@@ -232,6 +245,7 @@ const de: Record<TranslationKey, string> = {
   'energy.import': '⤵️ Netzbezug',
   'energy.export': '⤴️ Einspeisung',
   'energy.storage': 'Speicher (Ladestand)',
+  'energy.pumpedStorage': 'Pumpspeicher (Ladestand)',
   'energy.graph.label': 'Erzeugung und Verbrauch des letzten Tages',
   'energy.legend.generation': 'Erzeugung',
   'energy.legend.consumption': 'Verbrauch',
@@ -266,6 +280,9 @@ const de: Record<TranslationKey, string> = {
   'rejection.tileOccupied': 'Dieses Feld ist bereits belegt',
   'rejection.nothingToUndo': 'Nichts rückgängig zu machen',
   'rejection.noPlantSelected': 'Keine Anlage ausgewählt',
+  'rejection.needsRiverTile': 'Laufwasserkraftwerke müssen auf einem Flussfeld stehen',
+  'rejection.needsLakeShore': 'Pumpspeicher müssen am Seeufer stehen',
+  'rejection.cannotBuildOnWater': 'Auf Wasser kann nicht gebaut werden',
 
   'footer.hint': 'rechte Maustaste/WASD: bewegen · Mausrad: zoomen · Q/E: drehen',
   'footer.help': 'Hilfe',
@@ -281,6 +298,9 @@ const de: Record<TranslationKey, string> = {
   'help.energy.title': 'Energie',
   'help.energy.body':
     'Jede Anlage versorgt einen Radius um sich herum. Solar liefert mittags am meisten und leidet unter Wolken; Wind folgt dem Wetter, Tag und Nacht. Batterien speichern den Mittagsüberschuss für den Abend; die Biogasanlage ist regelbare Reserve — zuverlässig, aber teuer im Betrieb. Dichte Gebäude bekommen automatisch Dach-PV.',
+  'help.water.title': 'Wasser und Wasserkraft',
+  'help.water.body':
+    'Jede Karte hat einen Fluss und einen See. Straßen überqueren den Fluss als Brücken (teurer pro Feld). Ein Laufwasserkraftwerk auf dem Fluss erzeugt Tag und Nacht Strom — mehr nach Regenphasen, weniger in Trockenzeiten. Ein Pumpspeicher am Seeufer ist ein großer, aber trägerer Speicher, der sich nach den Batterien füllt.',
   'help.ev.title': 'E-Mobilität',
   'help.ev.body':
     'Deine Bürger fahren E-Autos. Das Laden zu Hause hat abends seinen Höhepunkt — genau dann, wenn die Sonne weg ist. Ladeparks verschieben die Last in den sonnigen Mittag, und das Smart-Charging-Upgrade folgt dem Überschuss automatisch.',

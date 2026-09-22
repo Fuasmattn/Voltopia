@@ -5,6 +5,7 @@ const SECTIONS: Array<{ title: TranslationKey; body: TranslationKey }> = [
   { title: 'help.goal.title', body: 'help.goal.body' },
   { title: 'help.build.title', body: 'help.build.body' },
   { title: 'help.energy.title', body: 'help.energy.body' },
+  { title: 'help.water.title', body: 'help.water.body' },
   { title: 'help.ev.title', body: 'help.ev.body' },
   { title: 'help.icons.title', body: 'help.icons.body' },
   { title: 'help.controls.title', body: 'help.controls.body' },
