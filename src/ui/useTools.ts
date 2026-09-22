@@ -9,6 +9,7 @@ import type { SimBridge } from './useSimBridge.ts';
 export type ToolId =
   | 'select'
   | 'road'
+  | 'power-line'
   | 'zone-residential'
   | 'zone-commercial'
   | 'zone-retail'
@@ -44,6 +45,7 @@ export const TOOL_HOTKEYS: Record<string, ToolId> = {
   p: 'plant-park',
   h: 'plant-hydro',
   u: 'plant-pumped',
+  l: 'power-line',
 };
 
 export interface DragCostPreview {
@@ -63,9 +65,9 @@ export const PLANT_BY_TOOL: Partial<Record<ToolId, PlantType>> = {
 };
 
 /**
- * Wires the active tool to renderer pointer callbacks: road drags preview
- * an L-shaped path and commit on release, the bulldozer clears while
- * dragging.
+ * Wires the active tool to renderer pointer callbacks: road and power line
+ * drags preview an L-shaped path and commit on release, the bulldozer
+ * clears while dragging.
  */
 export function useTools(
   bridge: SimBridge,
@@ -106,41 +108,48 @@ export function useTools(
       setCostPreview({ tiles: tileCount, cost: tileCount * perTile });
     };
 
-    // Mirrors the sim's per-tile road pricing (src/sim/roads.ts): river
-    // tiles are bridges and cost more. Falls back to flat road pricing
-    // when the renderer isn't mounted yet.
-    const showRoadCost = (tiles: number[]): void => {
+    // Mirrors the sim's per-tile pricing (src/sim/roads.ts, powerLines.ts):
+    // river tiles are bridges; lines over river or lake are crossings.
+    // Falls back to the land price when the renderer isn't mounted yet.
+    const showPathCost = (tiles: number[], line: boolean): void => {
       const renderer = rendererRef.current;
       const cost = tiles.reduce((sum, index) => {
-        const perTile =
-          renderer?.terrainAt(index) === Terrain.River
-            ? BALANCE.costs.bridgePerTile
-            : BALANCE.costs.roadPerTile;
-        return sum + perTile;
+        const terrain = renderer?.terrainAt(index);
+        if (line) {
+          const water = terrain !== undefined && terrain !== Terrain.Land;
+          return (
+            sum + (water ? BALANCE.costs.powerLineWaterPerTile : BALANCE.costs.powerLinePerTile)
+          );
+        }
+        return (
+          sum +
+          (terrain === Terrain.River ? BALANCE.costs.bridgePerTile : BALANCE.costs.roadPerTile)
+        );
       }, 0);
       setCostPreview({ tiles: tiles.length, cost });
     };
 
     const callbacks: RendererCallbacks = {};
-    if (tool === 'road') {
+    if (tool === 'road' || tool === 'power-line') {
+      const line = tool === 'power-line';
       callbacks.onBuildStart = (tile) => {
         anchor = tile;
         path = [tile.index];
         rendererRef.current?.setPreviewTiles(path);
-        showRoadCost(path);
+        showPathCost(path, line);
       };
       callbacks.onBuildDrag = (tile) => {
         if (!anchor) return;
         path = lShapedPath(anchor.x, anchor.y, tile.x, tile.y, gridSize);
         rendererRef.current?.setPreviewTiles(path);
-        showRoadCost(path);
+        showPathCost(path, line);
       };
       callbacks.onBuildEnd = (tile) => {
         if (anchor && tile) {
           path = lShapedPath(anchor.x, anchor.y, tile.x, tile.y, gridSize);
         }
         if (path.length > 0) {
-          send({ type: 'buildRoad', tiles: path });
+          send({ type: line ? 'buildPowerLine' : 'buildRoad', tiles: path });
           sound.play('build');
         }
         clearPreview();

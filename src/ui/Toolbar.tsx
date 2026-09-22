@@ -18,6 +18,7 @@ interface ToolButton {
 const TOOLS: ToolButton[] = [
   { id: 'select', icon: '🖐' },
   { id: 'road', icon: '🛣', cost: BALANCE.costs.roadPerTile, perTile: true },
+  { id: 'power-line', icon: '⚡', cost: BALANCE.costs.powerLinePerTile, perTile: true },
   {
     id: 'zone-residential',
     icon: '🏠',

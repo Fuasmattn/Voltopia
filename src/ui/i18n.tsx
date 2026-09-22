@@ -20,6 +20,7 @@ const en = {
 
   'tool.select': 'Select / pan',
   'tool.road': 'Road',
+  'tool.power-line': 'Power line',
   'tool.zone-residential': 'Residential',
   'tool.zone-commercial': 'Commercial',
   'tool.zone-retail': 'Retail',
@@ -89,6 +90,7 @@ const en = {
   'rejection.needsRiverTile': 'Run-of-river plants must stand on a river tile',
   'rejection.needsLakeShore': 'Pumped storage must stand on the lake shore',
   'rejection.cannotBuildOnWater': 'Cannot build on water',
+  'rejection.needsLineSite': 'Power lines need free land, a road or water',
 
   'footer.hint': 'right mouse/WASD: pan · wheel: zoom · Q/E: rotate',
   'footer.help': 'Help',
@@ -103,7 +105,10 @@ const en = {
     'Drag roads, then paint residential, commercial and retail zones next to them. Buildings appear on their own when there is demand (see the R/C/S bars) and densify over time — but only while they are fully supplied with energy.',
   'help.energy.title': 'Energy',
   'help.energy.body':
-    'Every plant supplies a radius around it. Solar peaks at noon and suffers under clouds; wind follows the weather day and night. Batteries store the midday surplus for the evening; the biogas plant is dispatchable backup — reliable but expensive to run, and it only fires when sun, wind, water and storage cannot cover the load, so it usually sits on standby. Dense buildings add rooftop PV automatically.',
+    'Plants supply only what power lines connect to them (see Grid and power lines). Solar peaks at noon and suffers under clouds; wind follows the weather day and night. Batteries store the midday surplus for the evening; the biogas plant is dispatchable backup — reliable but expensive to run, and it only fires when sun, wind, water and storage cannot cover the load, so it usually sits on standby. Dense buildings add rooftop PV automatically.',
+  'help.grid.title': 'Grid and power lines',
+  'help.grid.body':
+    'Plants only supply buildings connected to them. Draw power lines (⚡, key L) from a plant along your streets — they run over roads and across water. Every energised line tile and every plant connects buildings within three tiles. A line that does not touch a plant carries nothing; the supply overlay shows what is connected. Cities from before power lines got lines along their roads for free.',
   'help.water.title': 'Water and hydro',
   'help.water.body':
     'Every map has a river and a lake. Roads cross the river as bridges (pricier per tile). A run-of-river plant on the river generates day and night — more after rainy spells, less in a drought. Pumped storage on the lake shore is a large but slower store that fills after your batteries.',
@@ -138,7 +143,10 @@ const en = {
     'Pick the residential tool (🏠 or key 3) and drag a small rectangle next to your road.',
   'tutorial.power.title': 'Provide power',
   'tutorial.power.body':
-    'Place a wind turbine (🌀, key 7) or a solar farm (☀️, key 6) nearby. The ring shows its supply radius — keep your zones inside it.',
+    'Place a wind turbine (🌀, key 7) or a solar farm (☀️, key 6) next to your road. The ring shows how far it reaches on its own — just a few tiles.',
+  'tutorial.grid.title': 'Connect the grid',
+  'tutorial.grid.body':
+    'Draw a power line (⚡, key L) from the plant along your road. Buildings within three tiles of a connected line get power.',
   'tutorial.growth.title': 'Watch it grow',
   'tutorial.growth.body':
     'With demand, roads and power in place, the first houses will appear on their own. Give it a moment (▶▶▶ speeds things up).',
@@ -218,6 +226,7 @@ const de: Record<TranslationKey, string> = {
 
   'tool.select': 'Auswählen / bewegen',
   'tool.road': 'Straße',
+  'tool.power-line': 'Stromleitung',
   'tool.zone-residential': 'Wohngebiet',
   'tool.zone-commercial': 'Gewerbe',
   'tool.zone-retail': 'Einzelhandel',
@@ -287,6 +296,7 @@ const de: Record<TranslationKey, string> = {
   'rejection.needsRiverTile': 'Laufwasserkraftwerke müssen auf einem Flussfeld stehen',
   'rejection.needsLakeShore': 'Pumpspeicher müssen am Seeufer stehen',
   'rejection.cannotBuildOnWater': 'Auf Wasser kann nicht gebaut werden',
+  'rejection.needsLineSite': 'Leitungen brauchen freies Land, eine Straße oder Wasser',
 
   'footer.hint': 'rechte Maustaste/WASD: bewegen · Mausrad: zoomen · Q/E: drehen',
   'footer.help': 'Hilfe',
@@ -301,7 +311,10 @@ const de: Record<TranslationKey, string> = {
     'Ziehe Straßen und male daneben Wohn-, Gewerbe- und Einzelhandelszonen. Gebäude entstehen von selbst, wenn Nachfrage besteht (siehe die R/C/S-Balken), und verdichten sich mit der Zeit — aber nur, solange sie vollständig mit Energie versorgt sind.',
   'help.energy.title': 'Energie',
   'help.energy.body':
-    'Jede Anlage versorgt einen Radius um sich herum. Solar liefert mittags am meisten und leidet unter Wolken; Wind folgt dem Wetter, Tag und Nacht. Batterien speichern den Mittagsüberschuss für den Abend; die Biogasanlage ist regelbare Reserve — zuverlässig, aber teuer im Betrieb, und sie springt nur an, wenn Sonne, Wind, Wasser und Speicher die Last nicht decken; meist steht sie in Bereitschaft. Dichte Gebäude bekommen automatisch Dach-PV.',
+    'Anlagen versorgen nur, was Stromleitungen mit ihnen verbinden (siehe Netz und Leitungen). Solar liefert mittags am meisten und leidet unter Wolken; Wind folgt dem Wetter, Tag und Nacht. Batterien speichern den Mittagsüberschuss für den Abend; die Biogasanlage ist regelbare Reserve — zuverlässig, aber teuer im Betrieb, und sie springt nur an, wenn Sonne, Wind, Wasser und Speicher die Last nicht decken; meist steht sie in Bereitschaft. Dichte Gebäude bekommen automatisch Dach-PV.',
+  'help.grid.title': 'Netz und Leitungen',
+  'help.grid.body':
+    'Anlagen versorgen nur Gebäude, die mit ihnen verbunden sind. Ziehe Stromleitungen (⚡, Taste L) von einer Anlage entlang deiner Straßen — sie laufen über Straßen und über Wasser. Jedes angeschlossene Leitungsfeld und jede Anlage versorgt Gebäude im Umkreis von drei Feldern. Eine Leitung ohne Anlage führt keinen Strom; das Versorgungs-Overlay zeigt, was angeschlossen ist. Städte aus der Zeit vor den Leitungen haben ihre Leitungen entlang der Straßen geschenkt bekommen.',
   'help.water.title': 'Wasser und Wasserkraft',
   'help.water.body':
     'Jede Karte hat einen Fluss und einen See. Straßen überqueren den Fluss als Brücken (teurer pro Feld). Ein Laufwasserkraftwerk auf dem Fluss erzeugt Tag und Nacht Strom — mehr nach Regenphasen, weniger in Trockenzeiten. Ein Pumpspeicher am Seeufer ist ein großer, aber trägerer Speicher, der sich nach den Batterien füllt.',
@@ -336,7 +349,10 @@ const de: Record<TranslationKey, string> = {
     'Nimm das Wohngebiets-Werkzeug (🏠 oder Taste 3) und ziehe ein kleines Rechteck neben deine Straße.',
   'tutorial.power.title': 'Sorge für Strom',
   'tutorial.power.body':
-    'Platziere ein Windrad (🌀, Taste 7) oder einen Solarpark (☀️, Taste 6) in der Nähe. Der Ring zeigt den Versorgungsradius — halte deine Zonen darin.',
+    'Platziere ein Windrad (🌀, Taste 7) oder einen Solarpark (☀️, Taste 6) neben deiner Straße. Der Ring zeigt, wie weit die Anlage allein reicht — nur ein paar Felder.',
+  'tutorial.grid.title': 'Schließe das Netz an',
+  'tutorial.grid.body':
+    'Ziehe eine Stromleitung (⚡, Taste L) von der Anlage entlang deiner Straße. Gebäude im Umkreis von drei Feldern einer angeschlossenen Leitung bekommen Strom.',
   'tutorial.growth.title': 'Sieh zu, wie es wächst',
   'tutorial.growth.body':
     'Mit Nachfrage, Straßen und Strom entstehen die ersten Häuser von selbst. Gib ihnen einen Moment (▶▶▶ beschleunigt).',

@@ -49,6 +49,12 @@ const STEPS: TutorialStep[] = [
     isComplete: (stats) => stats.counts.plantTiles > 0,
   },
   {
+    id: 'grid',
+    title: 'tutorial.grid.title',
+    body: 'tutorial.grid.body',
+    isComplete: (stats) => stats.counts.powerLineTiles > 0,
+  },
+  {
     id: 'growth',
     title: 'tutorial.growth.title',
     body: 'tutorial.growth.body',
