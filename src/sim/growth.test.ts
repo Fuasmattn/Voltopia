@@ -61,6 +61,34 @@ describe('computeDemand', () => {
     expect(demand.residential).toBeGreaterThan(0);
   });
 
+  it('a balanced large city never deadlocks: some zone still meets the growth threshold', () => {
+    // 20 residential blocks at density 3 = 520 residents; 15 commercial
+    // blocks at density 3 = 330 jobs. Jobs sit just under the sustainable
+    // ratio, so a fixed pioneer bonus alone leaves BOTH demands under the
+    // threshold and the city freezes.
+    const state = createSimState(1, SIZE);
+    const { zone, density } = state.layers;
+    for (let i = 0; i < 20; i++) {
+      const tile = at(i % SIZE, 1 + Math.floor(i / SIZE));
+      zone[tile] = Zone.Residential;
+      density[tile] = 3;
+    }
+    for (let i = 0; i < 15; i++) {
+      zone[at(i, 3)] = Zone.Commercial;
+      density[at(i, 3)] = 3;
+    }
+    const demand = computeDemand(state);
+    const threshold = BALANCE.growth.growthDemandThreshold;
+    expect(Math.max(demand.residential, demand.commercial)).toBeGreaterThanOrEqual(threshold);
+  });
+
+  it('demand headroom is large enough to rule out a two-sided deadlock', () => {
+    // Both demands can only fall under the threshold together when
+    // ((1 - threshold) * headroom) ^ 2 < 1; keep the config on the safe side.
+    const { demandHeadroom, growthDemandThreshold } = BALANCE.growth;
+    expect(demandHeadroom * (1 - growthDemandThreshold)).toBeGreaterThan(1);
+  });
+
   it('demand values stay within -1..1', () => {
     const state = createSimState(1, SIZE);
     for (let i = 0; i < 20; i++) {

@@ -175,6 +175,18 @@ export const BALANCE = {
     } as Record<Zone, number[]>,
     /** Jobs the city can sustain per resident (service jobs etc. abstracted). */
     jobsPerResident: 0.65,
+    /**
+     * Residents a brand-new city attracts before any jobs exist, so growth
+     * can bootstrap.
+     */
+    pioneerPopulation: 30,
+    /**
+     * Growth targets are scaled up by this factor so residential and
+     * commercial demand can never BOTH fall under growthDemandThreshold at
+     * the same time (which froze cities at ~300 residents). Must exceed
+     * 1 / (1 - growthDemandThreshold).
+     */
+    demandHeadroom: 1.08,
     /** Retail floor space supported per resident + per job. */
     retailPerResident: 0.1,
     retailPerJob: 0.08,

@@ -15,12 +15,6 @@ import {
 /** Number of visual variants per zone the renderer provides. */
 export const BUILDING_VARIANTS = 8;
 
-/**
- * A small settlement is always attracted to a brand-new city, so growth
- * can bootstrap before any jobs exist.
- */
-const PIONEER_POPULATION = 30;
-
 /** Jobs provided by retail buildings only (used for retail demand). */
 function countRetailJobs(state: SimState): number {
   const { zone, density, tileType } = state.layers;
@@ -40,16 +34,19 @@ function countRetailJobs(state: SimState): number {
  */
 export function computeDemand(state: SimState): DemandStats {
   const { population, jobs } = countPopulationAndJobs(state);
-  const { jobsPerResident, retailPerResident, retailPerJob } = BALANCE.growth;
+  const { jobsPerResident, retailPerResident, retailPerJob, pioneerPopulation, demandHeadroom } =
+    BALANCE.growth;
 
-  const targetPopulation = PIONEER_POPULATION + jobs / jobsPerResident;
+  // Each target is scaled by the headroom factor so the two mutually
+  // dependent zones always leave at least one demand above the threshold.
+  const targetPopulation = (pioneerPopulation + jobs / jobsPerResident) * demandHeadroom;
   const residential = normalize(targetPopulation - population, targetPopulation);
 
-  const targetJobs = population * jobsPerResident;
+  const targetJobs = population * jobsPerResident * demandHeadroom;
   const commercial = normalize(targetJobs - jobs, Math.max(targetJobs, jobs));
 
   const retailJobs = countRetailJobs(state);
-  const targetRetail = population * retailPerResident + jobs * retailPerJob;
+  const targetRetail = (population * retailPerResident + jobs * retailPerJob) * demandHeadroom;
   const retail = normalize(targetRetail - retailJobs, Math.max(targetRetail, retailJobs));
 
   return { residential, commercial, retail };
