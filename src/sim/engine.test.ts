@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { BALANCE, TICKS_PER_DAY } from '../shared/constants.ts';
+import { Terrain } from '../shared/types.ts';
 import { SimEngine } from './engine.ts';
 import { timeOfDay, dayNumber } from './tick.ts';
 
@@ -96,6 +97,21 @@ describe('SimEngine basics', () => {
     const first = engine.tick();
     if (first.type !== 'tick') throw new Error('expected tick');
     expect(first.diffs.some((d) => d.terrain !== 0)).toBe(true);
+
+    // Loading a save restores its terrain exactly instead of regenerating
+    // it. SimEngine's constructor never calls generateWater, so a fresh
+    // engine's terrain is all-land: deterministic, non-generated ground
+    // truth to hand-set a single river tile on.
+    const source = makeEngine(1, 48);
+    source.state.layers.terrain[0] = Terrain.River;
+    const events = source.applyCommand({ type: 'requestSave' });
+    const saveEvent = events[0]!;
+    if (saveEvent.type !== 'saveData') throw new Error('expected saveData');
+
+    engine.applyCommand({ type: 'init', seed: 1, size: 48, save: saveEvent.save });
+    const loadedWater = engine.state.layers.terrain.filter((t) => t !== Terrain.Land).length;
+    expect(loadedWater).toBe(1);
+    expect(engine.state.layers.terrain[0]).toBe(Terrain.River);
   });
 });
 

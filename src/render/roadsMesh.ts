@@ -92,10 +92,13 @@ export class RoadsMesh implements DiffLayer {
     this.decks.count = 0;
     scene.add(this.decks);
 
+    // Bridges are bounded by the river, not the grid: the river is one
+    // tile wide and crosses the map once (roughly gridSize tiles, with
+    // margin for width/meanders), at most 2 rails per tile.
     this.rails = new THREE.InstancedMesh(
       deckGeometry,
       new THREE.MeshLambertMaterial({ color: RAIL_COLOR }),
-      gridSize * gridSize * 2,
+      gridSize * 4,
     );
     // Instance transforms live across the whole grid; the base geometry's
     // bounds would wrongly cull the mesh, so culling is disabled.
@@ -178,8 +181,10 @@ export class RoadsMesh implements DiffLayer {
 
   /**
    * Roads on river tiles are bridges: a deck slab under the road pad and
-   * a railing on each side of the carriageway. Crossings and isolated
-   * tiles get the deck only.
+   * a railing on each side of the carriageway. Rails only make sense
+   * along a single straight axis, so only straight segments and dead
+   * ends get them; tiles with connections on both axes (turns,
+   * T-junctions, crossings) as well as isolated tiles get the deck only.
    */
   private rebuildBridges(): void {
     let deckCount = 0;

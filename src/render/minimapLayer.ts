@@ -24,6 +24,8 @@ const COLORS = {
     [PlantType.BiogasPlant]: '#93ab6d',
     [PlantType.ChargingHub]: '#58b7a4',
     [PlantType.Park]: '#3f7d46',
+    [PlantType.RunOfRiver]: '#9aa3ad',
+    [PlantType.PumpedStorage]: '#5d6b7a',
   } as Record<number, string>,
 } as const;
 

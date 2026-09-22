@@ -53,6 +53,8 @@ export function EnergyPanel({ energy, riverFlow }: { energy: EnergyStats; riverF
           <span>{t('energy.wind')}</span>
           <span>{formatEnergy(energy.generation.wind)}</span>
         </div>
+        {/* Unconditional on purpose (unlike the rooftop row below): the
+            e2e suite asserts energy-hydro is visible on a fresh city. */}
         <div className="energy-row" data-testid="energy-hydro">
           <span>{t('energy.hydro', { flow: Math.round(riverFlow * 100) })}</span>
           <span>{formatEnergy(energy.generation.hydro)}</span>
