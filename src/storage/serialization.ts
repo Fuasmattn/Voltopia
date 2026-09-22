@@ -13,6 +13,8 @@ interface SaveGameJson {
   storedEnergy: number;
   goals?: string[];
   lifetime?: LifetimeSample[];
+  riverFlow?: number;
+  pumpedStorageEnergy?: number;
   layers: Record<string, string>;
 }
 
@@ -52,6 +54,10 @@ export function saveToJson(save: SaveGame): string {
     storedEnergy: save.storedEnergy,
     ...(save.goals ? { goals: save.goals } : {}),
     ...(save.lifetime ? { lifetime: save.lifetime } : {}),
+    ...(save.riverFlow !== undefined ? { riverFlow: save.riverFlow } : {}),
+    ...(save.pumpedStorageEnergy !== undefined
+      ? { pumpedStorageEnergy: save.pumpedStorageEnergy }
+      : {}),
     layers,
   };
   return JSON.stringify(json, null, 2);
@@ -96,6 +102,14 @@ export function saveFromJson(text: string): SaveGame {
     }
     layers[name] = buffer;
   }
+  const terrainEncoded = parsed.layers.terrain;
+  if (typeof terrainEncoded === 'string') {
+    const buffer = base64ToBuffer(terrainEncoded);
+    if (buffer.byteLength !== expectedBytes) {
+      throw new Error('Layer "terrain" has the wrong size');
+    }
+    layers.terrain = buffer;
+  }
   return {
     version: parsed.version,
     seed: parsed.seed,
@@ -115,6 +129,10 @@ export function saveFromJson(text: string): SaveGame {
               typeof sample === 'object' && sample !== null && typeof sample.day === 'number',
           ),
         }
+      : {}),
+    ...(typeof parsed.riverFlow === 'number' ? { riverFlow: parsed.riverFlow } : {}),
+    ...(typeof parsed.pumpedStorageEnergy === 'number'
+      ? { pumpedStorageEnergy: parsed.pumpedStorageEnergy }
       : {}),
     layers,
   };

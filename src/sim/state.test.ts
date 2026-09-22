@@ -1,13 +1,16 @@
 import { describe, expect, it } from 'vitest';
+import { BALANCE } from '../shared/constants.ts';
 import { tileIndex } from '../shared/grid.ts';
 import { Terrain } from '../shared/types.ts';
 import {
   BuildIntent,
   buildRejection,
   createSimState,
+  deserializeState,
   isBuildable,
   isLakeShore,
   PlantType,
+  serializeState,
   TileType,
   type SimState,
 } from './state.ts';
@@ -69,5 +72,30 @@ describe('buildRejection', () => {
       'needsLakeShore',
     );
     expect(isBuildable(state, at(8, 7), BuildIntent.Plant, PlantType.PumpedStorage)).toBe(true);
+  });
+});
+
+describe('save round trip', () => {
+  it('persists terrain, river flow and pumped storage', () => {
+    const state = makeState();
+    state.weather.riverFlow = 0.8;
+    state.pumpedStorageEnergy = 1234;
+    const save = serializeState(state);
+    const restored = deserializeState(save);
+    expect(restored.layers.terrain).toEqual(state.layers.terrain);
+    expect(restored.weather.riverFlow).toBe(0.8);
+    expect(restored.pumpedStorageEnergy).toBe(1234);
+  });
+
+  it('loads older saves without the new fields as dry land', () => {
+    const state = makeState();
+    const save = serializeState(state);
+    delete save.layers.terrain;
+    delete save.riverFlow;
+    delete save.pumpedStorageEnergy;
+    const restored = deserializeState(save);
+    expect(restored.layers.terrain.every((t) => t === Terrain.Land)).toBe(true);
+    expect(restored.weather.riverFlow).toBe(BALANCE.water.dryBaselineFlow);
+    expect(restored.pumpedStorageEnergy).toBe(0);
   });
 });

@@ -1,7 +1,34 @@
 import { describe, expect, it } from 'vitest';
 import { buildRoads } from '../sim/roads.ts';
 import { createSimState, serializeState } from '../sim/state.ts';
+import { SAVE_VERSION } from '../shared/constants.ts';
+import type { SaveGame } from '../shared/types.ts';
 import { saveFromJson, saveToJson } from './serialization.ts';
+
+/** Build a minimal, valid save game for size 4 to use as a test fixture. */
+function makeSave(): SaveGame {
+  const size = 4;
+  const bytes = size * size;
+  return {
+    version: SAVE_VERSION,
+    seed: 1,
+    size,
+    tick: 0,
+    money: 0,
+    taxRate: 0.1,
+    smartCharging: false,
+    storedEnergy: 0,
+    layers: {
+      tileType: new Uint8Array(bytes).buffer as ArrayBuffer,
+      roadMask: new Uint8Array(bytes).buffer as ArrayBuffer,
+      zone: new Uint8Array(bytes).buffer as ArrayBuffer,
+      density: new Uint8Array(bytes).buffer as ArrayBuffer,
+      variant: new Uint8Array(bytes).buffer as ArrayBuffer,
+      supplied: new Uint8Array(bytes).buffer as ArrayBuffer,
+      plantType: new Uint8Array(bytes).buffer as ArrayBuffer,
+    },
+  };
+}
 
 describe('save game JSON export/import', () => {
   it('round-trips a save game', () => {
@@ -28,5 +55,22 @@ describe('save game JSON export/import', () => {
     const json = JSON.parse(saveToJson(serializeState(state)));
     json.layers.zone = 'AAAA';
     expect(() => saveFromJson(JSON.stringify(json))).toThrow(/wrong size/);
+  });
+
+  it('round-trips the optional terrain layer, river flow and pumped storage', () => {
+    const save = makeSave();
+    save.layers.terrain = new Uint8Array(save.size * save.size).fill(1).buffer as ArrayBuffer;
+    save.riverFlow = 0.6;
+    save.pumpedStorageEnergy = 42;
+    const restored = saveFromJson(saveToJson(save));
+    expect(new Uint8Array(restored.layers.terrain!)).toEqual(new Uint8Array(save.layers.terrain));
+    expect(restored.riverFlow).toBe(0.6);
+    expect(restored.pumpedStorageEnergy).toBe(42);
+  });
+
+  it('accepts exports without the terrain layer', () => {
+    const save = makeSave();
+    const restored = saveFromJson(saveToJson(save));
+    expect(restored.layers.terrain).toBeUndefined();
   });
 });

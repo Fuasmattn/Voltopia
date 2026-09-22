@@ -192,6 +192,10 @@ export interface SaveGame {
   goals?: string[];
   /** Daily lifetime statistics (absent in older saves). */
   lifetime?: LifetimeSample[];
+  /** River flow 0..1 (absent in older saves → dry baseline). */
+  riverFlow?: number;
+  /** Energy stored in pumped storage plants (absent in older saves). */
+  pumpedStorageEnergy?: number;
   /** Raw copies of the tile layers. */
   layers: {
     tileType: ArrayBuffer;
@@ -201,5 +205,7 @@ export interface SaveGame {
     variant: ArrayBuffer;
     supplied: ArrayBuffer;
     plantType: ArrayBuffer;
+    /** Terrain layer; absent in older saves (all land). */
+    terrain?: ArrayBuffer;
   };
 }

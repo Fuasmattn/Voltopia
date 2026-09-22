@@ -297,6 +297,8 @@ export function serializeState(state: SimState): SaveGame {
     storedEnergy: state.storedEnergy,
     goals: [...state.goalsAchieved],
     lifetime: state.lifetime.samples.map((sample) => ({ ...sample })),
+    riverFlow: state.weather.riverFlow,
+    pumpedStorageEnergy: state.pumpedStorageEnergy,
     layers: {
       tileType: copyBuffer(layers.tileType),
       roadMask: copyBuffer(layers.roadMask),
@@ -305,6 +307,7 @@ export function serializeState(state: SimState): SaveGame {
       variant: copyBuffer(layers.variant),
       supplied: copyBuffer(layers.supplied),
       plantType: copyBuffer(layers.plantType),
+      terrain: copyBuffer(layers.terrain),
     },
   };
 }
@@ -325,6 +328,9 @@ export function deserializeState(save: SaveGame): SimState {
   state.layers.variant.set(new Uint8Array(save.layers.variant));
   state.layers.supplied.set(new Uint8Array(save.layers.supplied));
   state.layers.plantType.set(new Uint8Array(save.layers.plantType));
+  state.pumpedStorageEnergy = save.pumpedStorageEnergy ?? 0;
+  state.weather.riverFlow = save.riverFlow ?? BALANCE.water.dryBaselineFlow;
+  if (save.layers.terrain) state.layers.terrain.set(new Uint8Array(save.layers.terrain));
   // Advance the RNG deterministically past the founding state so a loaded
   // game does not replay the exact random sequence from tick zero.
   state.rng.setState(save.seed ^ save.tick);
