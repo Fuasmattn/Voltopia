@@ -70,6 +70,7 @@ test('boots with a running simulation', async ({ page }) => {
   await expect.poll(async () => readTick(page), { timeout: 5_000 }).toBeGreaterThan(before);
   await expect(page.getByTestId('money')).toBeVisible();
   await expect(page.getByTestId('energy-panel')).toBeVisible();
+  await expect(page.getByTestId('energy-hydro')).toBeVisible();
 });
 
 test('pause stops the simulation, play resumes it', async ({ page }) => {

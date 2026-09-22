@@ -34,6 +34,10 @@ _Screenshots coming soon — run `pnpm dev`, build a city, and snap away._
 - **Power the city** with solar farms, wind turbines, battery storage and a
   dispatchable (but expensive) biogas plant. Every plant supplies a radius
   around it.
+- **Water**: every map has a seeded river and lake. Bridge the river with
+  the road tool, build run-of-river plants on it (output follows rain
+  and drought) and pumped storage on the lake shore — a big, slow store
+  that fills after your batteries.
 - **Watch the balance**: surplus charges batteries, then is curtailed.
   Deficits discharge storage, dispatch biogas — and beyond that, buildings
   flicker and go dark, happiness drops, growth stops.
