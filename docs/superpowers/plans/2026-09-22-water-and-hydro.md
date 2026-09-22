@@ -23,35 +23,37 @@
 
 ## File Map
 
-| File | Change |
-| --- | --- |
-| `src/shared/types.ts` | `Terrain` enum, `PlantType.RunOfRiver/PumpedStorage`, `Weather.riverFlow`, `EnergyStats` hydro + pumped fields, `TileDiff.terrain`, `SaveGame` optional fields |
-| `src/shared/constants.ts` | `BALANCE.water`, bridge cost, hydro plant costs/upkeep, hydro + pumped energy numbers |
-| `src/sim/state.ts` | `terrain` layer, `pumpedStorageEnergy`, `lastEnergy.hydro`, `buildRejection`/`isBuildable`/`isLakeShore`, `totalPumpedStorageCapacity`, save (de)serialization |
-| `src/sim/state.test.ts` (new) | buildability matrix, save round trip |
-| `src/sim/water.ts` (new) + test | river + lake generation |
-| `src/sim/roads.ts`, `zones.ts`, `growth.ts` | use the buildability helper; bridge pricing |
-| `src/sim/energy.ts` + test | hydro placement rules, hydro generation, pumped storage pool |
-| `src/sim/weather.ts` + test | river flow |
-| `src/sim/tick.ts` | stats, lifetime sums |
-| `src/sim/engine.ts` | generate water on new-game init |
-| `src/sim/goals.ts` | `hydroPower` goal |
-| `src/storage/serialization.ts` + test | JSON export/import of new fields |
-| `src/render/waterMesh.ts` (new), `renderer.ts`, `scene.ts`, `roadsMesh.ts`, `plantsMesh.ts`, `minimapLayer.ts`, `weatherFx.ts` | water, bridges, hydro plant meshes, minimap, rain threshold |
-| `src/ui/useTools.ts`, `Toolbar.tsx`, `EnergyPanel.tsx`, `App.tsx`, `HelpPage.tsx`, `i18n.tsx` | tools, panel rows, help, strings |
-| `e2e/game.spec.ts`, `README.md` | hydro row assertion, gameplay bullet |
+| File                                                                                                                           | Change                                                                                                                                                         |
+| ------------------------------------------------------------------------------------------------------------------------------ | -------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `src/shared/types.ts`                                                                                                          | `Terrain` enum, `PlantType.RunOfRiver/PumpedStorage`, `Weather.riverFlow`, `EnergyStats` hydro + pumped fields, `TileDiff.terrain`, `SaveGame` optional fields |
+| `src/shared/constants.ts`                                                                                                      | `BALANCE.water`, bridge cost, hydro plant costs/upkeep, hydro + pumped energy numbers                                                                          |
+| `src/sim/state.ts`                                                                                                             | `terrain` layer, `pumpedStorageEnergy`, `lastEnergy.hydro`, `buildRejection`/`isBuildable`/`isLakeShore`, `totalPumpedStorageCapacity`, save (de)serialization |
+| `src/sim/state.test.ts` (new)                                                                                                  | buildability matrix, save round trip                                                                                                                           |
+| `src/sim/water.ts` (new) + test                                                                                                | river + lake generation                                                                                                                                        |
+| `src/sim/roads.ts`, `zones.ts`, `growth.ts`                                                                                    | use the buildability helper; bridge pricing                                                                                                                    |
+| `src/sim/energy.ts` + test                                                                                                     | hydro placement rules, hydro generation, pumped storage pool                                                                                                   |
+| `src/sim/weather.ts` + test                                                                                                    | river flow                                                                                                                                                     |
+| `src/sim/tick.ts`                                                                                                              | stats, lifetime sums                                                                                                                                           |
+| `src/sim/engine.ts`                                                                                                            | generate water on new-game init                                                                                                                                |
+| `src/sim/goals.ts`                                                                                                             | `hydroPower` goal                                                                                                                                              |
+| `src/storage/serialization.ts` + test                                                                                          | JSON export/import of new fields                                                                                                                               |
+| `src/render/waterMesh.ts` (new), `renderer.ts`, `scene.ts`, `roadsMesh.ts`, `plantsMesh.ts`, `minimapLayer.ts`, `weatherFx.ts` | water, bridges, hydro plant meshes, minimap, rain threshold                                                                                                    |
+| `src/ui/useTools.ts`, `Toolbar.tsx`, `EnergyPanel.tsx`, `App.tsx`, `HelpPage.tsx`, `i18n.tsx`                                  | tools, panel rows, help, strings                                                                                                                               |
+| `e2e/game.spec.ts`, `README.md`                                                                                                | hydro row assertion, gameplay bullet                                                                                                                           |
 
 ---
 
 ### Task 1: Terrain layer, buildability helper, shared types
 
 **Files:**
+
 - Modify: `src/shared/types.ts`
 - Modify: `src/shared/constants.ts`
 - Modify: `src/sim/state.ts`
 - Create: `src/sim/state.test.ts`
 
 **Interfaces:**
+
 - Produces: `Terrain` enum (`Land=0, River=1, Lake=2`); `PlantType.RunOfRiver=7`, `PlantType.PumpedStorage=8`; `TileLayers.terrain: Uint8Array`; `BuildIntent` enum; `buildRejection(state, index, intent, plant?) => string | null`; `isBuildable(...) => boolean`; `isLakeShore(state, index) => boolean`; `BALANCE.water`, `BALANCE.costs.bridgePerTile`.
 
 - [ ] **Step 1: Add the shared types**
@@ -83,16 +85,21 @@ Add `terrain: Terrain;` to `TileDiff` (after `plantType`).
 In `src/shared/constants.ts`:
 
 `costs`: add `bridgePerTile: 40,` after `roadPerTile`; add to `costs.plant`:
+
 ```ts
       [PlantType.RunOfRiver]: 2_200,
       [PlantType.PumpedStorage]: 4_000,
 ```
+
 `upkeepPerTick.plant`: add
+
 ```ts
       [PlantType.RunOfRiver]: 0.06,
       [PlantType.PumpedStorage]: 0.08,
 ```
+
 After the `market` block add:
+
 ```ts
   water: {
     /** River entry/exit stay this many tiles away from map corners. */
@@ -124,7 +131,9 @@ After the `market` block add:
     minFlowFactor: 0.4,
   },
 ```
+
 In `energy` add after `biogasMaxOutput`:
+
 ```ts
     /** Run-of-river output per plant per tick at full river flow. */
     hydroPeakOutput: 70,
@@ -268,7 +277,11 @@ export function buildRejection(
     return 'cannotBuildOnWater';
   }
   if (wantsRiver) return 'needsRiverTile';
-  if (intent === BuildIntent.Plant && plant === PlantType.PumpedStorage && !isLakeShore(state, index)) {
+  if (
+    intent === BuildIntent.Plant &&
+    plant === PlantType.PumpedStorage &&
+    !isLakeShore(state, index)
+  ) {
     return 'needsLakeShore';
   }
   return null;
@@ -322,10 +335,12 @@ Co-Authored-By: Claude Fable 5.1 <noreply@anthropic.com>"
 ### Task 2: Placement goes through the helper; bridges; hydro plant placement
 
 **Files:**
+
 - Modify: `src/sim/roads.ts`, `src/sim/zones.ts`, `src/sim/growth.ts`, `src/sim/energy.ts`
 - Test: `src/sim/roads.test.ts`, `src/sim/zones.test.ts`, `src/sim/energy.test.ts`
 
 **Interfaces:**
+
 - Consumes: `buildRejection`, `isBuildable`, `BuildIntent`, `Terrain`, `BALANCE.costs.bridgePerTile`.
 - Produces: `placePlant` rejections `needsRiverTile`, `needsLakeShore`, `cannotBuildOnWater`; `PlantCensus.runOfRiverPlants`, `PlantCensus.pumpedStoragePlants`; both hydro plants in `SUPPLY_SOURCES`.
 
@@ -343,9 +358,7 @@ describe('bridges', () => {
     const before = state.money;
     buildRoads(state, [at(4, 5), at(5, 5), at(6, 5)]);
     expect(state.layers.tileType[at(5, 5)]).toBe(TileType.Road);
-    expect(state.money).toBe(
-      before - 2 * BALANCE.costs.roadPerTile - BALANCE.costs.bridgePerTile,
-    );
+    expect(state.money).toBe(before - 2 * BALANCE.costs.roadPerTile - BALANCE.costs.bridgePerTile);
     expect(state.layers.terrain[at(5, 5)]).toBe(Terrain.River);
   });
 
@@ -374,17 +387,17 @@ describe('bridges', () => {
 Append to `src/sim/zones.test.ts`:
 
 ```ts
-  it('skips water tiles', () => {
-    const state = makeState();
-    state.layers.terrain[at(3, 3)] = Terrain.River;
-    state.layers.terrain[at(4, 4)] = Terrain.Lake;
-    const before = state.money;
-    paintZones(state, [at(3, 3), at(4, 4), at(5, 5)], Zone.Residential);
-    expect(state.layers.zone[at(3, 3)]).toBe(Zone.None);
-    expect(state.layers.zone[at(4, 4)]).toBe(Zone.None);
-    expect(state.layers.zone[at(5, 5)]).toBe(Zone.Residential);
-    expect(state.money).toBe(before - BALANCE.costs.zonePerTile);
-  });
+it('skips water tiles', () => {
+  const state = makeState();
+  state.layers.terrain[at(3, 3)] = Terrain.River;
+  state.layers.terrain[at(4, 4)] = Terrain.Lake;
+  const before = state.money;
+  paintZones(state, [at(3, 3), at(4, 4), at(5, 5)], Zone.Residential);
+  expect(state.layers.zone[at(3, 3)]).toBe(Zone.None);
+  expect(state.layers.zone[at(4, 4)]).toBe(Zone.None);
+  expect(state.layers.zone[at(5, 5)]).toBe(Zone.Residential);
+  expect(state.money).toBe(before - BALANCE.costs.zonePerTile);
+});
 ```
 
 Check the file's existing helpers (`makeState`, `at`) and imports; add `Terrain` and `BALANCE` imports if missing.
@@ -394,36 +407,34 @@ Check the file's existing helpers (`makeState`, `at`) and imports; add `Terrain`
 Append to `src/sim/energy.test.ts` inside `describe('placePlant')`:
 
 ```ts
-  it('places run-of-river only on river tiles', () => {
-    const state = makeState();
-    expect(placePlant(state, at(5, 5), PlantType.RunOfRiver).rejected).toBe('needsRiverTile');
-    state.layers.terrain[at(5, 5)] = Terrain.River;
-    expect(placePlant(state, at(5, 5), PlantType.RunOfRiver).rejected).toBeUndefined();
-    expect(state.layers.plantType[at(5, 5)]).toBe(PlantType.RunOfRiver);
-  });
+it('places run-of-river only on river tiles', () => {
+  const state = makeState();
+  expect(placePlant(state, at(5, 5), PlantType.RunOfRiver).rejected).toBe('needsRiverTile');
+  state.layers.terrain[at(5, 5)] = Terrain.River;
+  expect(placePlant(state, at(5, 5), PlantType.RunOfRiver).rejected).toBeUndefined();
+  expect(state.layers.plantType[at(5, 5)]).toBe(PlantType.RunOfRiver);
+});
 
-  it('places pumped storage only on the lake shore and never on water', () => {
-    const state = makeState();
-    state.layers.terrain[at(8, 8)] = Terrain.Lake;
-    expect(placePlant(state, at(2, 2), PlantType.PumpedStorage).rejected).toBe('needsLakeShore');
-    expect(placePlant(state, at(8, 8), PlantType.PumpedStorage).rejected).toBe(
-      'cannotBuildOnWater',
-    );
-    expect(placePlant(state, at(8, 7), PlantType.PumpedStorage).rejected).toBeUndefined();
-    expect(placePlant(state, at(8, 8), PlantType.SolarFarm).rejected).toBe('cannotBuildOnWater');
-  });
+it('places pumped storage only on the lake shore and never on water', () => {
+  const state = makeState();
+  state.layers.terrain[at(8, 8)] = Terrain.Lake;
+  expect(placePlant(state, at(2, 2), PlantType.PumpedStorage).rejected).toBe('needsLakeShore');
+  expect(placePlant(state, at(8, 8), PlantType.PumpedStorage).rejected).toBe('cannotBuildOnWater');
+  expect(placePlant(state, at(8, 7), PlantType.PumpedStorage).rejected).toBeUndefined();
+  expect(placePlant(state, at(8, 8), PlantType.SolarFarm).rejected).toBe('cannotBuildOnWater');
+});
 
-  it('census counts hydro plants as supply sources', () => {
-    const state = makeState();
-    state.layers.terrain[at(5, 5)] = Terrain.River;
-    state.layers.terrain[at(8, 8)] = Terrain.Lake;
-    placePlant(state, at(5, 5), PlantType.RunOfRiver);
-    placePlant(state, at(8, 7), PlantType.PumpedStorage);
-    const census = censusPlants(state);
-    expect(census.runOfRiverPlants).toBe(1);
-    expect(census.pumpedStoragePlants).toBe(1);
-    expect(census.supplySources).toEqual([at(5, 5), at(8, 7)]);
-  });
+it('census counts hydro plants as supply sources', () => {
+  const state = makeState();
+  state.layers.terrain[at(5, 5)] = Terrain.River;
+  state.layers.terrain[at(8, 8)] = Terrain.Lake;
+  placePlant(state, at(5, 5), PlantType.RunOfRiver);
+  placePlant(state, at(8, 7), PlantType.PumpedStorage);
+  const census = censusPlants(state);
+  expect(census.runOfRiverPlants).toBe(1);
+  expect(census.pumpedStoragePlants).toBe(1);
+  expect(census.supplySources).toEqual([at(5, 5), at(8, 7)]);
+});
 ```
 
 Add `Terrain` to the `./state.ts` import in that file.
@@ -438,14 +449,14 @@ Expected: the new tests FAIL (bridge price not charged; water tiles paved/zoned;
 In `src/sim/roads.ts` import `BuildIntent`, `isBuildable`, `Terrain` from `./state.ts` (add to the existing import). Replace in `buildRoads`:
 
 ```ts
-  const buildable = tiles.filter((index) => isBuildable(state, index, BuildIntent.Road));
-  if (buildable.length === 0) return {};
+const buildable = tiles.filter((index) => isBuildable(state, index, BuildIntent.Road));
+if (buildable.length === 0) return {};
 
-  const { roadPerTile, bridgePerTile } = BALANCE.costs;
-  const cost = buildable.reduce(
-    (sum, index) => sum + (layers.terrain[index] === Terrain.River ? bridgePerTile : roadPerTile),
-    0,
-  );
+const { roadPerTile, bridgePerTile } = BALANCE.costs;
+const cost = buildable.reduce(
+  (sum, index) => sum + (layers.terrain[index] === Terrain.River ? bridgePerTile : roadPerTile),
+  0,
+);
 ```
 
 `bulldozeTiles` needs no change (it only resets tileType/zone/density/variant/plantType).
@@ -455,9 +466,9 @@ In `src/sim/roads.ts` import `BuildIntent`, `isBuildable`, `Terrain` from `./sta
 In `src/sim/zones.ts` import `BuildIntent`, `isBuildable` and replace the filter:
 
 ```ts
-  const paintable = tiles.filter(
-    (index) => isBuildable(state, index, BuildIntent.Zone) && layers.zone[index] !== zone,
-  );
+const paintable = tiles.filter(
+  (index) => isBuildable(state, index, BuildIntent.Zone) && layers.zone[index] !== zone,
+);
 ```
 
 - [ ] **Step 7: Growth guard**
@@ -465,7 +476,7 @@ In `src/sim/zones.ts` import `BuildIntent`, `isBuildable` and replace the filter
 In `src/sim/growth.ts` `growthStep`, after `if (layers.tileType[index] !== TileType.Empty) continue;` add:
 
 ```ts
-    if (layers.terrain[index] !== Terrain.Land) continue;
+if (layers.terrain[index] !== Terrain.Land) continue;
 ```
 
 and add `Terrain` to the `./state.ts` import.
@@ -479,8 +490,8 @@ In `src/sim/energy.ts`:
 - In `placePlant` replace the occupied check with:
 
 ```ts
-  const rejection = buildRejection(state, tile, BuildIntent.Plant, plant);
-  if (rejection) return { rejected: rejection };
+const rejection = buildRejection(state, tile, BuildIntent.Plant, plant);
+if (rejection) return { rejected: rejection };
 ```
 
 - `PlantCensus`: add `runOfRiverPlants: number; pumpedStoragePlants: number;`, initialise both to 0, and add switch cases:
@@ -518,10 +529,12 @@ Co-Authored-By: Claude Fable 5.1 <noreply@anthropic.com>"
 ### Task 3: River and lake generation
 
 **Files:**
+
 - Create: `src/sim/water.ts`, `src/sim/water.test.ts`
 - Modify: `src/sim/engine.ts`
 
 **Interfaces:**
+
 - Consumes: `Terrain`, `Rng`, `BALANCE.water`, `markDirty`.
 - Produces: `generateWater(state: SimState): void` — fills `state.layers.terrain`, marks water tiles dirty, uses its own `Rng` seeded from `state.seed` (does not touch `state.rng`).
 
@@ -585,7 +598,10 @@ describe('generateWater', () => {
           expect(a.length, `seed ${seed} entry`).toBeGreaterThan(0);
           expect(b.length, `seed ${seed} exit`).toBeGreaterThan(0);
           const reachable = floodWater(state, a[0]);
-          expect(b.some((tile) => reachable.has(tile)), `seed ${seed} connected`).toBe(true);
+          expect(
+            b.some((tile) => reachable.has(tile)),
+            `seed ${seed} connected`,
+          ).toBe(true);
         }
       });
 
@@ -749,7 +765,8 @@ export function generateWater(state: SimState): void {
   const reach = Math.ceil(Math.max(radiusAlong, radiusLateral)) + 1;
   for (let da = -reach; da <= reach; da++) {
     for (let dl = -reach; dl <= reach; dl++) {
-      const ellipse = (da * da) / (radiusAlong * radiusAlong) + (dl * dl) / (radiusLateral * radiusLateral);
+      const ellipse =
+        (da * da) / (radiusAlong * radiusAlong) + (dl * dl) / (radiusLateral * radiusLateral);
       const noise = (rng.next() - 0.5) * cfg.lakeEdgeNoise;
       if (ellipse <= 1 + noise) setTerrain(lakeAlong + da, lakeLateral + dl, Terrain.Lake);
     }
@@ -784,15 +801,15 @@ In `src/sim/engine.ts` import `generateWater` from `./water.ts` and change the `
 Add to `src/sim/engine.test.ts`:
 
 ```ts
-  it('generates water on a fresh init but not when loading a save', () => {
-    const engine = makeEngine(1, 48);
-    engine.applyCommand({ type: 'init', seed: 2, size: 48 });
-    const water = engine.state.layers.terrain.filter((t) => t !== 0).length;
-    expect(water).toBeGreaterThan(40);
-    const first = engine.tick();
-    if (first.type !== 'tick') throw new Error('expected tick');
-    expect(first.diffs.some((d) => d.terrain !== 0)).toBe(true);
-  });
+it('generates water on a fresh init but not when loading a save', () => {
+  const engine = makeEngine(1, 48);
+  engine.applyCommand({ type: 'init', seed: 2, size: 48 });
+  const water = engine.state.layers.terrain.filter((t) => t !== 0).length;
+  expect(water).toBeGreaterThan(40);
+  const first = engine.tick();
+  if (first.type !== 'tick') throw new Error('expected tick');
+  expect(first.diffs.some((d) => d.terrain !== 0)).toBe(true);
+});
 ```
 
 Run: `pnpm vitest run src/sim/engine.test.ts` → PASS.
@@ -816,9 +833,11 @@ Co-Authored-By: Claude Fable 5.1 <noreply@anthropic.com>"
 ### Task 4: River flow in the weather model
 
 **Files:**
+
 - Modify: `src/sim/weather.ts`, `src/sim/weather.test.ts`
 
 **Interfaces:**
+
 - Produces: `riverFlowFactor(state: SimState): number` (0..1 multiplier for run-of-river output); `updateWeather` advances `state.weather.riverFlow`.
 
 - [ ] **Step 1: Write failing tests**
@@ -951,10 +970,12 @@ Co-Authored-By: Claude Fable 5.1 <noreply@anthropic.com>"
 ### Task 5: Hydro generation and pumped storage in the energy balance
 
 **Files:**
+
 - Modify: `src/sim/energy.ts`, `src/sim/tick.ts`, `src/shared/types.ts`
 - Test: `src/sim/energy.test.ts`
 
 **Interfaces:**
+
 - Consumes: `riverFlowFactor`, census fields from Task 2, `state.pumpedStorageEnergy`, `totalPumpedStorageCapacity`.
 - Produces: `EnergyStats.generation.hydro`, `EnergyStats.pumpedStoredEnergy`, `EnergyStats.pumpedCapacity`; `state.lastEnergy.hydro`; history `stateOfCharge` = combined pools.
 
@@ -1055,8 +1076,7 @@ describe('hydro and pumped storage', () => {
     energyStep(state, { chargingDemand: 0 });
     const last = state.energyHistory[state.energyHistory.length - 1];
     const combined =
-      state.storedEnergy /
-      (BALANCE.energy.batteryCapacity + BALANCE.energy.pumpedStorageCapacity);
+      state.storedEnergy / (BALANCE.energy.batteryCapacity + BALANCE.energy.pumpedStorageCapacity);
     expect(last.stateOfCharge).toBeCloseTo(combined, 6);
   });
 });
@@ -1129,57 +1149,57 @@ Then in `energyStep`:
 Replace the surplus/deficit branches:
 
 ```ts
-  const net = generation - totalDemand;
-  if (net >= 0) {
-    const battery = chargePool(
-      state.storedEnergy,
-      storageCapacity,
-      powerLimit,
-      BALANCE.energy.batteryChargeEfficiency,
-      net,
-    );
-    state.storedEnergy = battery.stored;
-    const pumped = chargePool(
-      state.pumpedStorageEnergy,
-      pumpedCapacity,
-      pumpedPowerLimit,
-      BALANCE.energy.pumpedStorageChargeEfficiency,
-      net - battery.absorbed,
-    );
-    state.pumpedStorageEnergy = pumped.stored;
-    const remaining = net - battery.absorbed - pumped.absorbed;
-    // Sell what storage cannot absorb; curtail beyond the link.
-    gridExport = Math.min(remaining, BALANCE.market.exportCapacity);
-    curtailment = remaining - gridExport;
-  } else {
-    let shortfall = -net;
-    const battery = dischargePool(state.storedEnergy, powerLimit, shortfall);
-    state.storedEnergy = battery.stored;
-    shortfall -= battery.released;
-    const pumped = dischargePool(state.pumpedStorageEnergy, pumpedPowerLimit, shortfall);
-    state.pumpedStorageEnergy = pumped.stored;
-    shortfall -= pumped.released;
-    biogas = Math.min(shortfall, census.biogasPlants * BALANCE.energy.biogasMaxOutput);
-    shortfall -= biogas;
-    // Expensive imports over the limited transmission link come last.
-    gridImport = Math.min(shortfall, BALANCE.market.importCapacity);
-    shortfall -= gridImport;
-    deficit = shortfall;
-  }
+const net = generation - totalDemand;
+if (net >= 0) {
+  const battery = chargePool(
+    state.storedEnergy,
+    storageCapacity,
+    powerLimit,
+    BALANCE.energy.batteryChargeEfficiency,
+    net,
+  );
+  state.storedEnergy = battery.stored;
+  const pumped = chargePool(
+    state.pumpedStorageEnergy,
+    pumpedCapacity,
+    pumpedPowerLimit,
+    BALANCE.energy.pumpedStorageChargeEfficiency,
+    net - battery.absorbed,
+  );
+  state.pumpedStorageEnergy = pumped.stored;
+  const remaining = net - battery.absorbed - pumped.absorbed;
+  // Sell what storage cannot absorb; curtail beyond the link.
+  gridExport = Math.min(remaining, BALANCE.market.exportCapacity);
+  curtailment = remaining - gridExport;
+} else {
+  let shortfall = -net;
+  const battery = dischargePool(state.storedEnergy, powerLimit, shortfall);
+  state.storedEnergy = battery.stored;
+  shortfall -= battery.released;
+  const pumped = dischargePool(state.pumpedStorageEnergy, pumpedPowerLimit, shortfall);
+  state.pumpedStorageEnergy = pumped.stored;
+  shortfall -= pumped.released;
+  biogas = Math.min(shortfall, census.biogasPlants * BALANCE.energy.biogasMaxOutput);
+  shortfall -= biogas;
+  // Expensive imports over the limited transmission link come last.
+  gridImport = Math.min(shortfall, BALANCE.market.importCapacity);
+  shortfall -= gridImport;
+  deficit = shortfall;
+}
 ```
 
 Add `hydro,` to the `state.lastEnergy = {...}` literal. History sample:
 
 ```ts
-  if (state.tick % TICKS_PER_HISTORY_SAMPLE === 0) {
-    const totalCapacity = storageCapacity + pumpedCapacity;
-    pushEnergyHistory(state, {
-      generation: generation + biogas,
-      consumption: totalDemand,
-      stateOfCharge:
-        totalCapacity > 0 ? (state.storedEnergy + state.pumpedStorageEnergy) / totalCapacity : 0,
-    });
-  }
+if (state.tick % TICKS_PER_HISTORY_SAMPLE === 0) {
+  const totalCapacity = storageCapacity + pumpedCapacity;
+  pushEnergyHistory(state, {
+    generation: generation + biogas,
+    consumption: totalDemand,
+    stateOfCharge:
+      totalCapacity > 0 ? (state.storedEnergy + state.pumpedStorageEnergy) / totalCapacity : 0,
+  });
+}
 ```
 
 Update the docblock above `energyStep` to list the order: renewables (solar, wind, rooftop, hydro) → batteries → pumped storage → export → curtail; deficit → batteries → pumped storage → biogas → import → undersupply.
@@ -1187,12 +1207,15 @@ Update the docblock above `energyStep` to list the order: renewables (solar, win
 - [ ] **Step 5: Stats and lifetime**
 
 In `src/sim/tick.ts`:
+
 - `recordLifetime`: `sums.generation += e.solar + e.wind + e.rooftop + e.hydro + e.biogas;`
 - `buildStats`: add `hydro: e.hydro,` to `generation`, and after `storageCapacity`:
+
 ```ts
       pumpedStoredEnergy: state.pumpedStorageEnergy,
       pumpedCapacity: totalPumpedStorageCapacity(state),
 ```
+
 (import `totalPumpedStorageCapacity` from `./state.ts`).
 
 Run `pnpm typecheck`; fix any other `EnergyStats` literal (search `gridExport:` in `src/ui` and tests).
@@ -1221,10 +1244,12 @@ Co-Authored-By: Claude Fable 5.1 <noreply@anthropic.com>"
 ### Task 6: Save games carry terrain, river flow and pumped storage
 
 **Files:**
+
 - Modify: `src/shared/types.ts`, `src/sim/state.ts`, `src/storage/serialization.ts`
 - Test: `src/sim/state.test.ts`, `src/storage/serialization.test.ts`
 
 **Interfaces:**
+
 - Produces: `SaveGame.layers.terrain?: ArrayBuffer`, `SaveGame.riverFlow?: number`, `SaveGame.pumpedStorageEnergy?: number`.
 
 - [ ] **Step 1: Write failing tests**
@@ -1264,22 +1289,22 @@ describe('save round trip', () => {
 Append to `src/storage/serialization.test.ts` (look at its existing `makeSave`/fixture helper and reuse it):
 
 ```ts
-  it('round-trips the optional terrain layer, river flow and pumped storage', () => {
-    const save = makeSave();
-    save.layers.terrain = new Uint8Array(save.size * save.size).fill(1).buffer as ArrayBuffer;
-    save.riverFlow = 0.6;
-    save.pumpedStorageEnergy = 42;
-    const restored = saveFromJson(saveToJson(save));
-    expect(new Uint8Array(restored.layers.terrain!)).toEqual(new Uint8Array(save.layers.terrain));
-    expect(restored.riverFlow).toBe(0.6);
-    expect(restored.pumpedStorageEnergy).toBe(42);
-  });
+it('round-trips the optional terrain layer, river flow and pumped storage', () => {
+  const save = makeSave();
+  save.layers.terrain = new Uint8Array(save.size * save.size).fill(1).buffer as ArrayBuffer;
+  save.riverFlow = 0.6;
+  save.pumpedStorageEnergy = 42;
+  const restored = saveFromJson(saveToJson(save));
+  expect(new Uint8Array(restored.layers.terrain!)).toEqual(new Uint8Array(save.layers.terrain));
+  expect(restored.riverFlow).toBe(0.6);
+  expect(restored.pumpedStorageEnergy).toBe(42);
+});
 
-  it('accepts exports without the terrain layer', () => {
-    const save = makeSave();
-    const restored = saveFromJson(saveToJson(save));
-    expect(restored.layers.terrain).toBeUndefined();
-  });
+it('accepts exports without the terrain layer', () => {
+  const save = makeSave();
+  const restored = saveFromJson(saveToJson(save));
+  expect(restored.layers.terrain).toBeUndefined();
+});
 ```
 
 If the test file has no `makeSave` helper, add one that builds a `SaveGame` for size 4 with all seven required layers as zero-filled buffers, `version: SAVE_VERSION`, and numeric fields.
@@ -1313,28 +1338,29 @@ In `src/shared/types.ts` `SaveGame`:
 `deserializeState`:
 
 ```ts
-  state.pumpedStorageEnergy = save.pumpedStorageEnergy ?? 0;
-  state.weather.riverFlow = save.riverFlow ?? BALANCE.water.dryBaselineFlow;
-  if (save.layers.terrain) state.layers.terrain.set(new Uint8Array(save.layers.terrain));
+state.pumpedStorageEnergy = save.pumpedStorageEnergy ?? 0;
+state.weather.riverFlow = save.riverFlow ?? BALANCE.water.dryBaselineFlow;
+if (save.layers.terrain) state.layers.terrain.set(new Uint8Array(save.layers.terrain));
 ```
 
 - [ ] **Step 5: JSON export/import**
 
 In `src/storage/serialization.ts`:
+
 - `SaveGameJson`: add `riverFlow?: number; pumpedStorageEnergy?: number;`.
 - `saveToJson`: the `Object.entries(save.layers)` loop already exports `terrain` when present; add
   `...(save.riverFlow !== undefined ? { riverFlow: save.riverFlow } : {}),` and the same for `pumpedStorageEnergy`.
 - `saveFromJson`: after the required-layer loop add
 
 ```ts
-  const terrainEncoded = parsed.layers.terrain;
-  if (typeof terrainEncoded === 'string') {
-    const buffer = base64ToBuffer(terrainEncoded);
-    if (buffer.byteLength !== expectedBytes) {
-      throw new Error('Layer "terrain" has the wrong size');
-    }
-    layers.terrain = buffer;
+const terrainEncoded = parsed.layers.terrain;
+if (typeof terrainEncoded === 'string') {
+  const buffer = base64ToBuffer(terrainEncoded);
+  if (buffer.byteLength !== expectedBytes) {
+    throw new Error('Layer "terrain" has the wrong size');
   }
+  layers.terrain = buffer;
+}
 ```
 
 and in the returned object
@@ -1369,6 +1395,7 @@ Co-Authored-By: Claude Fable 5.1 <noreply@anthropic.com>"
 ### Task 7: Hydro goal
 
 **Files:**
+
 - Modify: `src/sim/goals.ts`, `src/sim/goals.test.ts`, `src/ui/i18n.tsx`
 
 - [ ] **Step 1: Write failing test**
@@ -1376,15 +1403,15 @@ Co-Authored-By: Claude Fable 5.1 <noreply@anthropic.com>"
 Append to `src/sim/goals.test.ts` (reuse its helpers; it builds states via `createSimState` and calls `goalsStep`):
 
 ```ts
-  it('hydroPower is achieved by the first run-of-river plant', () => {
-    const state = createSimState(1, 16);
-    goalsStep(state);
-    expect(state.goalsAchieved.has('hydroPower')).toBe(false);
-    state.layers.terrain[tileIndex(3, 3, 16)] = Terrain.River;
-    placePlant(state, tileIndex(3, 3, 16), PlantType.RunOfRiver);
-    goalsStep(state);
-    expect(state.goalsAchieved.has('hydroPower')).toBe(true);
-  });
+it('hydroPower is achieved by the first run-of-river plant', () => {
+  const state = createSimState(1, 16);
+  goalsStep(state);
+  expect(state.goalsAchieved.has('hydroPower')).toBe(false);
+  state.layers.terrain[tileIndex(3, 3, 16)] = Terrain.River;
+  placePlant(state, tileIndex(3, 3, 16), PlantType.RunOfRiver);
+  goalsStep(state);
+  expect(state.goalsAchieved.has('hydroPower')).toBe(true);
+});
 ```
 
 Add the needed imports (`tileIndex`, `Terrain`, `placePlant`, `PlantType`).
@@ -1398,17 +1425,20 @@ Run: `pnpm vitest run src/sim/goals.test.ts` → FAIL.
 `src/sim/goals.ts`: add `'hydroPower',` to `GOAL_IDS`; import `countPlants, PlantType` from `./state.ts`; in `goalsStep`:
 
 ```ts
-  if (!achieved.has('hydroPower') && countPlants(state, PlantType.RunOfRiver) > 0) {
-    achieved.add('hydroPower');
-  }
+if (!achieved.has('hydroPower') && countPlants(state, PlantType.RunOfRiver) > 0) {
+  achieved.add('hydroPower');
+}
 ```
 
 `src/ui/i18n.tsx` — English (after `goal.exporter.body`):
+
 ```ts
   'goal.hydroPower.title': 'Blue power',
   'goal.hydroPower.body': 'Build a run-of-river plant on the river.',
 ```
+
 German:
+
 ```ts
   'goal.hydroPower.title': 'Wasserkraft',
   'goal.hydroPower.body': 'Baue ein Laufwasserkraftwerk am Fluss.',
@@ -1431,6 +1461,7 @@ Co-Authored-By: Claude Fable 5.1 <noreply@anthropic.com>"
 ### Task 8: Balance probe and tuning
 
 **Files:**
+
 - Create (temporary, deleted before commit): `src/sim/probe-hydro.test.ts`
 - Modify: `src/shared/constants.ts` (only if the probe says so)
 
@@ -1502,7 +1533,17 @@ function findShore(state: SimEngine['state']): number {
       [x, y + 1],
       [x, y - 1],
     ];
-    if (n.some(([nx, ny]) => nx >= 0 && ny >= 0 && nx < SIZE && ny < SIZE && state.layers.terrain[ny * SIZE + nx] === Terrain.Lake)) return i;
+    if (
+      n.some(
+        ([nx, ny]) =>
+          nx >= 0 &&
+          ny >= 0 &&
+          nx < SIZE &&
+          ny < SIZE &&
+          state.layers.terrain[ny * SIZE + nx] === Terrain.Lake,
+      )
+    )
+      return i;
   }
   throw new Error('no shore');
 }
@@ -1525,7 +1566,11 @@ it('probe', () => {
     e.applyCommand({ type: 'placePlant', tile: at(20, 24), plant: PlantType.SolarFarm });
     e.applyCommand({ type: 'placePlant', tile: at(22, 24), plant: PlantType.SolarFarm });
     e.applyCommand({ type: 'placePlant', tile: at(24, 24), plant: PlantType.WindTurbine });
-    e.applyCommand({ type: 'placePlant', tile: findShore(e.state), plant: PlantType.PumpedStorage });
+    e.applyCommand({
+      type: 'placePlant',
+      tile: findShore(e.state),
+      plant: PlantType.PumpedStorage,
+    });
   });
   run('2 run-of-river only', (e) => {
     const first = findRiver(e.state);
@@ -1542,6 +1587,7 @@ Note: the river/lake positions vary by seed; if a placed hydro plant is outside 
 Run: `pnpm vitest run src/sim/probe-hydro.test.ts --reporter=verbose 2>&1 | grep -E "deficit|Error"`
 
 Targets:
+
 - One run-of-river should cut the baseline's deficit share noticeably (roughly a third to a half) without erasing it.
 - Pumped storage should reach a peak well above one battery's capacity and improve deficits at least as much as a battery does, while the city stays solvent with its upkeep.
 - Two run-of-river plants alone must NOT power the city (deficit share stays high), otherwise hydro is a "solve everything" button.
@@ -1568,10 +1614,12 @@ Skip the commit if nothing changed, but still delete the probe.
 ### Task 9: Water rendering, minimap and shared rain threshold
 
 **Files:**
+
 - Create: `src/render/waterMesh.ts`
 - Modify: `src/render/scene.ts`, `src/render/renderer.ts`, `src/render/minimapLayer.ts`, `src/render/weatherFx.ts`
 
 **Interfaces:**
+
 - Consumes: `TileDiff.terrain`, `Terrain`, `RenderEnvironment.nightFactor`, `DiffLayer`.
 - Produces: `WaterMesh implements DiffLayer`.
 
@@ -1666,7 +1714,10 @@ export class WaterMesh implements DiffLayer {
       this.matrix.identity();
       this.matrix.setPosition(x, WATER_HEIGHT, z);
       this.mesh.setMatrixAt(count, this.matrix);
-      this.mesh.setColorAt(count, color.setHex(terrain === Terrain.River ? PALETTE.river : PALETTE.lake));
+      this.mesh.setColorAt(
+        count,
+        color.setHex(terrain === Terrain.River ? PALETTE.river : PALETTE.lake),
+      );
       count++;
     }
     this.mesh.count = count;
@@ -1685,9 +1736,9 @@ In `src/render/renderer.ts` import `WaterMesh` and add `this.addDiffLayer(new Wa
 In `src/render/minimapLayer.ts` import `Terrain` and add to `COLORS`: `river: '#4d8fc4', lake: '#3f7fb5',`. In `tileColor`, before the road check:
 
 ```ts
-    if (diff.tileType === TileType.Empty && diff.terrain !== Terrain.Land) {
-      return diff.terrain === Terrain.River ? COLORS.river : COLORS.lake;
-    }
+if (diff.tileType === TileType.Empty && diff.terrain !== Terrain.Land) {
+  return diff.terrain === Terrain.River ? COLORS.river : COLORS.lake;
+}
 ```
 
 - [ ] **Step 5: Shared rain threshold**
@@ -1714,6 +1765,7 @@ Co-Authored-By: Claude Fable 5.1 <noreply@anthropic.com>"
 ### Task 10: Bridge rendering
 
 **Files:**
+
 - Modify: `src/render/roadsMesh.ts`
 
 - [ ] **Step 1: Track terrain per tile**
@@ -1721,17 +1773,17 @@ Co-Authored-By: Claude Fable 5.1 <noreply@anthropic.com>"
 Add `private readonly terrain: Uint8Array;` (allocated `new Uint8Array(gridSize * gridSize)` in the constructor) and record it in `applyDiffs`:
 
 ```ts
-    for (const diff of diffs) {
-      const mask = diff.tileType === TileType.Road ? diff.roadMask : -1;
-      if (this.terrain[diff.index] !== diff.terrain) {
-        this.terrain[diff.index] = diff.terrain;
-        changed = true;
-      }
-      if (this.roadMasks[diff.index] !== mask) {
-        this.roadMasks[diff.index] = mask;
-        changed = true;
-      }
-    }
+for (const diff of diffs) {
+  const mask = diff.tileType === TileType.Road ? diff.roadMask : -1;
+  if (this.terrain[diff.index] !== diff.terrain) {
+    this.terrain[diff.index] = diff.terrain;
+    changed = true;
+  }
+  if (this.roadMasks[diff.index] !== mask) {
+    this.roadMasks[diff.index] = mask;
+    changed = true;
+  }
+}
 ```
 
 Import `Terrain` from `../shared/types.ts` and `DIR_E, DIR_N, DIR_S, DIR_W` from `../shared/grid.ts`.
@@ -1752,28 +1804,28 @@ const RAIL_HEIGHT = 0.14;
 In the constructor, after the lamp meshes:
 
 ```ts
-    const deckGeometry = new THREE.BoxGeometry(1, 1, 1);
-    this.decks = new THREE.InstancedMesh(
-      deckGeometry,
-      new THREE.MeshLambertMaterial({ color: DECK_COLOR }),
-      gridSize * gridSize,
-    );
-    // Instance transforms live across the whole grid; the base geometry's
-    // bounds would wrongly cull the mesh, so culling is disabled.
-    this.decks.frustumCulled = false;
-    this.decks.count = 0;
-    scene.add(this.decks);
+const deckGeometry = new THREE.BoxGeometry(1, 1, 1);
+this.decks = new THREE.InstancedMesh(
+  deckGeometry,
+  new THREE.MeshLambertMaterial({ color: DECK_COLOR }),
+  gridSize * gridSize,
+);
+// Instance transforms live across the whole grid; the base geometry's
+// bounds would wrongly cull the mesh, so culling is disabled.
+this.decks.frustumCulled = false;
+this.decks.count = 0;
+scene.add(this.decks);
 
-    this.rails = new THREE.InstancedMesh(
-      deckGeometry,
-      new THREE.MeshLambertMaterial({ color: RAIL_COLOR }),
-      gridSize * gridSize * 2,
-    );
-    // Instance transforms live across the whole grid; the base geometry's
-    // bounds would wrongly cull the mesh, so culling is disabled.
-    this.rails.frustumCulled = false;
-    this.rails.count = 0;
-    scene.add(this.rails);
+this.rails = new THREE.InstancedMesh(
+  deckGeometry,
+  new THREE.MeshLambertMaterial({ color: RAIL_COLOR }),
+  gridSize * gridSize * 2,
+);
+// Instance transforms live across the whole grid; the base geometry's
+// bounds would wrongly cull the mesh, so culling is disabled.
+this.rails.frustumCulled = false;
+this.rails.count = 0;
+scene.add(this.rails);
 ```
 
 with fields `private readonly decks: THREE.InstancedMesh; private readonly rails: THREE.InstancedMesh;`.
@@ -1839,6 +1891,7 @@ Co-Authored-By: Claude Fable 5.1 <noreply@anthropic.com>"
 ### Task 11: Hydro plant meshes
 
 **Files:**
+
 - Modify: `src/render/plantsMesh.ts`
 
 - [ ] **Step 1: Track terrain and give parts a placement context**
@@ -1979,11 +2032,13 @@ Co-Authored-By: Claude Fable 5.1 <noreply@anthropic.com>"
 ### Task 12: Tools, energy panel, help and strings
 
 **Files:**
+
 - Modify: `src/ui/useTools.ts`, `src/ui/Toolbar.tsx`, `src/ui/EnergyPanel.tsx`, `src/ui/App.tsx`, `src/ui/HelpPage.tsx`, `src/ui/i18n.tsx`
 
 - [ ] **Step 1: Tools**
 
 `src/ui/useTools.ts`:
+
 - `ToolId` union: add `| 'plant-hydro' | 'plant-pumped'` before `'bulldoze'`.
 - `TOOL_HOTKEYS`: add `h: 'plant-hydro', u: 'plant-pumped',`.
 - `PLANT_BY_TOOL`: add `'plant-hydro': PlantType.RunOfRiver, 'plant-pumped': PlantType.PumpedStorage,`.
@@ -2001,29 +2056,31 @@ Co-Authored-By: Claude Fable 5.1 <noreply@anthropic.com>"
 `src/ui/EnergyPanel.tsx`: signature `EnergyPanel({ energy, riverFlow }: { energy: EnergyStats; riverFlow: number })`. Include hydro in `totalGeneration`. After the wind row:
 
 ```tsx
-        <div className="energy-row" data-testid="energy-hydro">
-          <span>{t('energy.hydro', { flow: Math.round(riverFlow * 100) })}</span>
-          <span>{formatEnergy(energy.generation.hydro)}</span>
-        </div>
+<div className="energy-row" data-testid="energy-hydro">
+  <span>{t('energy.hydro', { flow: Math.round(riverFlow * 100) })}</span>
+  <span>{formatEnergy(energy.generation.hydro)}</span>
+</div>
 ```
 
 After the battery `soc-block`, a second block shown only when installed:
 
 ```tsx
-      {energy.pumpedCapacity > 0 && (
-        <div className="soc-block" data-testid="energy-pumped-soc">
-          <div className="soc-label">
-            <span>{t('energy.pumpedStorage')}</span>
-            <span>{`${Math.round((energy.pumpedStoredEnergy / energy.pumpedCapacity) * 100)}%`}</span>
-          </div>
-          <div className="soc-track">
-            <div
-              className="soc-fill"
-              style={{ width: `${(energy.pumpedStoredEnergy / energy.pumpedCapacity) * 100}%` }}
-            />
-          </div>
-        </div>
-      )}
+{
+  energy.pumpedCapacity > 0 && (
+    <div className="soc-block" data-testid="energy-pumped-soc">
+      <div className="soc-label">
+        <span>{t('energy.pumpedStorage')}</span>
+        <span>{`${Math.round((energy.pumpedStoredEnergy / energy.pumpedCapacity) * 100)}%`}</span>
+      </div>
+      <div className="soc-track">
+        <div
+          className="soc-fill"
+          style={{ width: `${(energy.pumpedStoredEnergy / energy.pumpedCapacity) * 100}%` }}
+        />
+      </div>
+    </div>
+  );
+}
 ```
 
 `src/ui/App.tsx` line ~242: `<EnergyPanel energy={stats.energy} riverFlow={stats.weather.riverFlow} />`.
@@ -2085,6 +2142,7 @@ Co-Authored-By: Claude Fable 5.1 <noreply@anthropic.com>"
 ### Task 13: e2e assertion, README, final verification
 
 **Files:**
+
 - Modify: `e2e/game.spec.ts`, `README.md`
 
 - [ ] **Step 1: e2e**
@@ -2092,7 +2150,7 @@ Co-Authored-By: Claude Fable 5.1 <noreply@anthropic.com>"
 In `e2e/game.spec.ts`, in the test that asserts `energy-panel` is visible (line ~72), add:
 
 ```ts
-  await expect(page.getByTestId('energy-hydro')).toBeVisible();
+await expect(page.getByTestId('energy-hydro')).toBeVisible();
 ```
 
 - [ ] **Step 2: README**
