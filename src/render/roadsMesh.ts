@@ -1,7 +1,7 @@
 import * as THREE from 'three';
-import { DIRECTIONS } from '../shared/grid.ts';
+import { DIR_E, DIR_N, DIR_S, DIR_W, DIRECTIONS } from '../shared/grid.ts';
 import type { TileDiff } from '../shared/types.ts';
-import { TileType } from '../shared/types.ts';
+import { Terrain, TileType } from '../shared/types.ts';
 import { PALETTE } from './scene.ts';
 import type { DiffLayer, RenderEnvironment } from './renderer.ts';
 
@@ -10,6 +10,13 @@ const CENTER_SIZE = 0.62;
 const ARM_LENGTH = (1 - CENTER_SIZE) / 2;
 /** Instances per road tile: 1 center + up to 4 arms. */
 const INSTANCES_PER_TILE = 5;
+
+const DECK_COLOR = 0x8a9099;
+const RAIL_COLOR = 0xd8d8d0;
+const DECK_SIZE = 0.96;
+const DECK_HEIGHT = 0.04;
+const RAIL_THICKNESS = 0.06;
+const RAIL_HEIGHT = 0.14;
 
 /**
  * Instanced road tiles. Each road tile is composed of a center pad plus an
@@ -21,13 +28,17 @@ export class RoadsMesh implements DiffLayer {
   private readonly lampPoles: THREE.InstancedMesh;
   private readonly lampHeads: THREE.InstancedMesh;
   private readonly lampHeadMaterial: THREE.MeshBasicMaterial;
+  private readonly decks: THREE.InstancedMesh;
+  private readonly rails: THREE.InstancedMesh;
   private readonly gridSize: number;
   private readonly roadMasks: Int16Array; // -1 = no road, else mask 0..15
+  private readonly terrain: Uint8Array;
   private readonly matrix = new THREE.Matrix4();
 
   constructor(scene: THREE.Scene, gridSize: number) {
     this.gridSize = gridSize;
     this.roadMasks = new Int16Array(gridSize * gridSize).fill(-1);
+    this.terrain = new Uint8Array(gridSize * gridSize);
     const geometry = new THREE.BoxGeometry(1, 1, 1);
     const material = new THREE.MeshLambertMaterial({ color: PALETTE.road });
     this.mesh = new THREE.InstancedMesh(
@@ -68,6 +79,29 @@ export class RoadsMesh implements DiffLayer {
     this.lampHeads.frustumCulled = false;
     this.lampHeads.count = 0;
     scene.add(this.lampHeads);
+
+    const deckGeometry = new THREE.BoxGeometry(1, 1, 1);
+    this.decks = new THREE.InstancedMesh(
+      deckGeometry,
+      new THREE.MeshLambertMaterial({ color: DECK_COLOR }),
+      gridSize * gridSize,
+    );
+    // Instance transforms live across the whole grid; the base geometry's
+    // bounds would wrongly cull the mesh, so culling is disabled.
+    this.decks.frustumCulled = false;
+    this.decks.count = 0;
+    scene.add(this.decks);
+
+    this.rails = new THREE.InstancedMesh(
+      deckGeometry,
+      new THREE.MeshLambertMaterial({ color: RAIL_COLOR }),
+      gridSize * gridSize * 2,
+    );
+    // Instance transforms live across the whole grid; the base geometry's
+    // bounds would wrongly cull the mesh, so culling is disabled.
+    this.rails.frustumCulled = false;
+    this.rails.count = 0;
+    scene.add(this.rails);
   }
 
   /** Streetlamps glow warmly at night. */
@@ -80,6 +114,10 @@ export class RoadsMesh implements DiffLayer {
     let changed = false;
     for (const diff of diffs) {
       const mask = diff.tileType === TileType.Road ? diff.roadMask : -1;
+      if (this.terrain[diff.index] !== diff.terrain) {
+        this.terrain[diff.index] = diff.terrain;
+        changed = true;
+      }
       if (this.roadMasks[diff.index] !== mask) {
         this.roadMasks[diff.index] = mask;
         changed = true;
@@ -112,6 +150,7 @@ export class RoadsMesh implements DiffLayer {
     this.mesh.count = count;
     this.mesh.instanceMatrix.needsUpdate = true;
     this.rebuildLamps();
+    this.rebuildBridges();
   }
 
   /** One streetlamp on every other road tile, at a fixed corner. */
@@ -135,6 +174,44 @@ export class RoadsMesh implements DiffLayer {
     this.lampHeads.count = count;
     this.lampPoles.instanceMatrix.needsUpdate = true;
     this.lampHeads.instanceMatrix.needsUpdate = true;
+  }
+
+  /**
+   * Roads on river tiles are bridges: a deck slab under the road pad and
+   * a railing on each side of the carriageway. Crossings and isolated
+   * tiles get the deck only.
+   */
+  private rebuildBridges(): void {
+    let deckCount = 0;
+    let railCount = 0;
+    for (let index = 0; index < this.roadMasks.length; index++) {
+      const mask = this.roadMasks[index];
+      if (mask < 0 || this.terrain[index] !== Terrain.River) continue;
+      const x = (index % this.gridSize) + 0.5;
+      const z = Math.floor(index / this.gridSize) + 0.5;
+      this.matrix.makeScale(DECK_SIZE, DECK_HEIGHT, DECK_SIZE);
+      this.matrix.setPosition(x, DECK_HEIGHT / 2, z);
+      this.decks.setMatrixAt(deckCount++, this.matrix);
+
+      const alongZ = (mask & (DIR_N | DIR_S)) !== 0 && (mask & (DIR_E | DIR_W)) === 0;
+      const alongX = (mask & (DIR_E | DIR_W)) !== 0 && (mask & (DIR_N | DIR_S)) === 0;
+      if (!alongZ && !alongX) continue;
+      const offset = DECK_SIZE / 2 - RAIL_THICKNESS / 2;
+      for (const side of [-1, 1]) {
+        if (alongZ) {
+          this.matrix.makeScale(RAIL_THICKNESS, RAIL_HEIGHT, DECK_SIZE);
+          this.matrix.setPosition(x + side * offset, RAIL_HEIGHT / 2, z);
+        } else {
+          this.matrix.makeScale(DECK_SIZE, RAIL_HEIGHT, RAIL_THICKNESS);
+          this.matrix.setPosition(x, RAIL_HEIGHT / 2, z + side * offset);
+        }
+        this.rails.setMatrixAt(railCount++, this.matrix);
+      }
+    }
+    this.decks.count = deckCount;
+    this.rails.count = railCount;
+    this.decks.instanceMatrix.needsUpdate = true;
+    this.rails.instanceMatrix.needsUpdate = true;
   }
 
   private setInstance(slot: number, x: number, z: number, sizeX: number, sizeZ: number): void {
