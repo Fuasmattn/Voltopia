@@ -80,7 +80,7 @@ export const BALANCE = {
     /** Dispatchable biogas output per plant per tick. */
     biogasMaxOutput: 90,
     /** Run-of-river output per plant per tick at full river flow. */
-    hydroPeakOutput: 70,
+    hydroPeakOutput: 40,
     /** Pumped storage: one plant's capacity, power limit and efficiency. */
     pumpedStorageCapacity: 12_000,
     pumpedStoragePowerLimit: 200,
