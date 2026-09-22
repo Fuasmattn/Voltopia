@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { BALANCE, TICKS_PER_DAY } from '../shared/constants.ts';
-import { Terrain } from '../shared/types.ts';
+import { tileIndex } from '../shared/grid.ts';
+import { PlantType, Terrain } from '../shared/types.ts';
 import { SimEngine } from './engine.ts';
 import { timeOfDay, dayNumber } from './tick.ts';
 
@@ -112,6 +113,24 @@ describe('SimEngine basics', () => {
     const loadedWater = engine.state.layers.terrain.filter((t) => t !== Terrain.Land).length;
     expect(loadedWater).toBe(1);
     expect(engine.state.layers.terrain[0]).toBe(Terrain.River);
+  });
+
+  it('reports dispatchable biogas capacity in the energy stats', () => {
+    const engine = new SimEngine(1, 16);
+    engine.applyCommand({ type: 'init', seed: 1, size: 16 });
+    let event = engine.tick();
+    if (event.type !== 'tick') throw new Error('expected tick event');
+    expect(event.stats.energy.biogasCapacity).toBe(0);
+
+    engine.state.money = 1e9;
+    engine.applyCommand({
+      type: 'placePlant',
+      tile: tileIndex(2, 2, 16),
+      plant: PlantType.BiogasPlant,
+    });
+    event = engine.tick();
+    if (event.type !== 'tick') throw new Error('expected tick event');
+    expect(event.stats.energy.biogasCapacity).toBe(BALANCE.energy.biogasMaxOutput);
   });
 });
 

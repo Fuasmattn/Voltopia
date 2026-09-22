@@ -81,6 +81,8 @@ export interface EnergyStats {
   pumpedStoredEnergy: number;
   /** Installed pumped storage capacity. */
   pumpedCapacity: number;
+  /** Dispatchable biogas output available per tick (0 without a plant). */
+  biogasCapacity: number;
   /** Generation that had to be curtailed this tick (storage full, no demand). */
   curtailment: number;
   /** Consumption that could not be served this tick. */

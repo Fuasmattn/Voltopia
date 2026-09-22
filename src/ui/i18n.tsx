@@ -41,6 +41,7 @@ const en = {
   'energy.wind': '🌀 Wind',
   'energy.hydro': '💧 Hydro (flow {flow}%)',
   'energy.biogas': '♻️ Biogas',
+  'energy.standby': 'standby',
   'energy.rooftop': '🏠 Rooftop PV',
   'energy.consumption': '🏙 Consumption',
   'energy.charging': '🔌 EV charging',
@@ -102,7 +103,7 @@ const en = {
     'Drag roads, then paint residential, commercial and retail zones next to them. Buildings appear on their own when there is demand (see the R/C/S bars) and densify over time — but only while they are fully supplied with energy.',
   'help.energy.title': 'Energy',
   'help.energy.body':
-    'Every plant supplies a radius around it. Solar peaks at noon and suffers under clouds; wind follows the weather day and night. Batteries store the midday surplus for the evening; the biogas plant is dispatchable backup — reliable but expensive to run. Dense buildings add rooftop PV automatically.',
+    'Every plant supplies a radius around it. Solar peaks at noon and suffers under clouds; wind follows the weather day and night. Batteries store the midday surplus for the evening; the biogas plant is dispatchable backup — reliable but expensive to run, and it only fires when sun, wind, water and storage cannot cover the load, so it usually sits on standby. Dense buildings add rooftop PV automatically.',
   'help.water.title': 'Water and hydro',
   'help.water.body':
     'Every map has a river and a lake. Roads cross the river as bridges (pricier per tile). A run-of-river plant on the river generates day and night — more after rainy spells, less in a drought. Pumped storage on the lake shore is a large but slower store that fills after your batteries.',
@@ -236,6 +237,7 @@ const de: Record<TranslationKey, string> = {
   'energy.wind': '🌀 Wind',
   'energy.hydro': '💧 Wasserkraft (Abfluss {flow}%)',
   'energy.biogas': '♻️ Biogas',
+  'energy.standby': 'Bereitschaft',
   'energy.rooftop': '🏠 Dach-PV',
   'energy.consumption': '🏙 Verbrauch',
   'energy.charging': '🔌 E-Auto-Laden',
@@ -297,7 +299,7 @@ const de: Record<TranslationKey, string> = {
     'Ziehe Straßen und male daneben Wohn-, Gewerbe- und Einzelhandelszonen. Gebäude entstehen von selbst, wenn Nachfrage besteht (siehe die R/C/S-Balken), und verdichten sich mit der Zeit — aber nur, solange sie vollständig mit Energie versorgt sind.',
   'help.energy.title': 'Energie',
   'help.energy.body':
-    'Jede Anlage versorgt einen Radius um sich herum. Solar liefert mittags am meisten und leidet unter Wolken; Wind folgt dem Wetter, Tag und Nacht. Batterien speichern den Mittagsüberschuss für den Abend; die Biogasanlage ist regelbare Reserve — zuverlässig, aber teuer im Betrieb. Dichte Gebäude bekommen automatisch Dach-PV.',
+    'Jede Anlage versorgt einen Radius um sich herum. Solar liefert mittags am meisten und leidet unter Wolken; Wind folgt dem Wetter, Tag und Nacht. Batterien speichern den Mittagsüberschuss für den Abend; die Biogasanlage ist regelbare Reserve — zuverlässig, aber teuer im Betrieb, und sie springt nur an, wenn Sonne, Wind, Wasser und Speicher die Last nicht decken; meist steht sie in Bereitschaft. Dichte Gebäude bekommen automatisch Dach-PV.',
   'help.water.title': 'Wasser und Wasserkraft',
   'help.water.body':
     'Jede Karte hat einen Fluss und einen See. Straßen überqueren den Fluss als Brücken (teurer pro Feld). Ein Laufwasserkraftwerk auf dem Fluss erzeugt Tag und Nacht Strom — mehr nach Regenphasen, weniger in Trockenzeiten. Ein Pumpspeicher am Seeufer ist ein großer, aber trägerer Speicher, der sich nach den Batterien füllt.',

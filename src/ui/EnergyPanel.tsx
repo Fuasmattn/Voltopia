@@ -61,7 +61,13 @@ export function EnergyPanel({ energy, riverFlow }: { energy: EnergyStats; riverF
         </div>
         <div className="energy-row" data-testid="energy-biogas">
           <span>{t('energy.biogas')}</span>
-          <span>{formatEnergy(energy.generation.biogas)}</span>
+          {/* Biogas is dispatchable backup: an installed but idle plant is
+              on standby, not broken. */}
+          <span>
+            {energy.biogasCapacity > 0 && energy.generation.biogas <= 0
+              ? t('energy.standby')
+              : formatEnergy(energy.generation.biogas)}
+          </span>
         </div>
         {energy.generation.rooftop > 0.05 && (
           <div className="energy-row" data-testid="energy-rooftop">

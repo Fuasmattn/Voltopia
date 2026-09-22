@@ -10,6 +10,7 @@ import { updateWeather } from './weather.ts';
 import {
   countPopulationAndJobs,
   TileType,
+  totalBiogasCapacity,
   totalPumpedStorageCapacity,
   totalStorageCapacity,
   Zone,
@@ -119,6 +120,7 @@ export function buildStats(state: SimState): GlobalStats {
       storageCapacity: totalStorageCapacity(state),
       pumpedStoredEnergy: state.pumpedStorageEnergy,
       pumpedCapacity: totalPumpedStorageCapacity(state),
+      biogasCapacity: totalBiogasCapacity(state),
       curtailment: e.curtailment,
       deficit: e.deficit,
       gridImport: e.gridImport,

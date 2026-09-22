@@ -374,6 +374,11 @@ export function totalStorageCapacity(state: SimState): number {
   return countPlants(state, PlantType.Battery) * BALANCE.energy.batteryCapacity;
 }
 
+/** Biogas output the city could dispatch per tick if every plant ran flat out. */
+export function totalBiogasCapacity(state: SimState): number {
+  return countPlants(state, PlantType.BiogasPlant) * BALANCE.energy.biogasMaxOutput;
+}
+
 export function totalPumpedStorageCapacity(state: SimState): number {
   return countPlants(state, PlantType.PumpedStorage) * BALANCE.energy.pumpedStorageCapacity;
 }
