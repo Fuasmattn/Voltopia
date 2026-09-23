@@ -38,10 +38,10 @@ const EXPENSE_COLORS: Record<string, string> = {
   [PlantType.RunOfRiver]: '#4f8fd6',
   [PlantType.PumpedStorage]: '#3f6fa8',
   fuel: '#d98f54',
-  import: '#e0788a',
+  import: 'var(--hud-negative)',
 };
 
-const INCOME_COLORS = { tax: '#7be07f', export: '#3f9d63' };
+const INCOME_COLORS = { tax: 'var(--hud-positive)', export: '#3f9d63' };
 
 interface Slice {
   key: string;
@@ -82,7 +82,7 @@ function StackedBar({ slices, scale }: { slices: Slice[]; scale: number }) {
         width={BAR_WIDTH}
         height={BAR_HEIGHT}
         rx="3"
-        fill="rgba(255,255,255,0.06)"
+        style={{ fill: 'var(--hud-hover-strong)' }}
       />
       {slices.map((slice) => {
         const width = scale > 0 ? (slice.value / scale) * BAR_WIDTH : 0;
@@ -93,7 +93,7 @@ function StackedBar({ slices, scale }: { slices: Slice[]; scale: number }) {
             y="0"
             width={Math.max(0, width)}
             height={BAR_HEIGHT}
-            fill={slice.color}
+            style={{ fill: slice.color }}
           >
             <title>{`${slice.label}: ${money(slice.value)}`}</title>
           </rect>

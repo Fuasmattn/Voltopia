@@ -40,7 +40,13 @@ function Chart({
     <section className="stats-chart">
       <h3>{title}</h3>
       <svg viewBox={`0 0 ${WIDTH} ${HEIGHT}`} role="img" aria-label={title}>
-        <line x1="0" y1={HEIGHT - 3} x2={WIDTH} y2={HEIGHT - 3} stroke="#3a4048" />
+        <line
+          x1="0"
+          y1={HEIGHT - 3}
+          x2={WIDTH}
+          y2={HEIGHT - 3}
+          style={{ stroke: 'var(--hud-border)' }}
+        />
         {series.map((s) => (
           <path
             key={s.label}
