@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import type { GameRenderer, PickedTile, RendererCallbacks } from '../render/renderer.ts';
 import { lShapedPath, rectTiles } from '../shared/grid.ts';
 import { BALANCE } from '../shared/constants.ts';
@@ -79,8 +79,12 @@ export function useTools(
   setTool: (tool: ToolId) => void;
   /** Tile count and cost of the pending drag (road/zone), else null. */
   costPreview: DragCostPreview | null;
+  /** Tile clicked with the select tool, null when none. */
+  selectedTile: number | null;
+  clearSelectedTile: () => void;
 } {
   const [tool, setTool] = useState<ToolId>('select');
+  const [selectedTile, setSelectedTile] = useState<number | null>(null);
   const [costPreview, setCostPreview] = useState<DragCostPreview | null>(null);
   // Depend on the stable send callback, not the bridge object — the
   // bridge changes identity on every stats tick, which would re-run this
@@ -130,7 +134,10 @@ export function useTools(
     };
 
     const callbacks: RendererCallbacks = {};
-    if (tool === 'road' || tool === 'power-line') {
+    if (tool === 'select') {
+      // Clicking with the select tool inspects the tile.
+      callbacks.onBuildStart = (tile) => setSelectedTile(tile.index);
+    } else if (tool === 'road' || tool === 'power-line') {
       const line = tool === 'power-line';
       callbacks.onBuildStart = (tile) => {
         anchor = tile;
@@ -221,5 +228,14 @@ export function useTools(
     return () => window.removeEventListener('keydown', onKeyDown);
   }, []);
 
-  return { tool, setTool, costPreview };
+  // Keep the worker's inspected tile and the world highlight in sync
+  // with the click.
+  useEffect(() => {
+    send({ type: 'inspectTile', tile: selectedTile });
+    rendererRef.current?.setSelectedTile(selectedTile);
+  }, [selectedTile, send, rendererRef]);
+
+  const clearSelectedTile = useCallback(() => setSelectedTile(null), []);
+
+  return { tool, setTool, costPreview, selectedTile, clearSelectedTile };
 }

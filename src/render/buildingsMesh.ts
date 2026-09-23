@@ -117,6 +117,13 @@ export function buildingParts(zone: Zone, density: number, variant: number): Bui
   return withRooftopPanel(parts, density);
 }
 
+/** Top of the tallest part — how high the building rises above the tile. */
+export function buildingHeight(zone: Zone, density: number, variant: number): number {
+  let top = 0;
+  for (const p of buildingParts(zone, density, variant)) top = Math.max(top, p.oy + p.sy);
+  return top;
+}
+
 function part(
   sx: number,
   sy: number,

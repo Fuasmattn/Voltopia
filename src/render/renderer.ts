@@ -1,6 +1,6 @@
 import * as THREE from 'three';
 import type { GlobalStats, TileDiff, VehicleState } from '../shared/types.ts';
-import { Terrain } from '../shared/types.ts';
+import { PlantType, Terrain, TileType } from '../shared/types.ts';
 import { IsoCamera } from './camera.ts';
 import { pickTile } from './picking.ts';
 import { nightFactor, sunIntensity } from '../shared/daylight.ts';
@@ -9,8 +9,8 @@ import { createTerrain } from './terrain.ts';
 import { BALANCE } from '../shared/constants.ts';
 import { RoadsMesh } from './roadsMesh.ts';
 import { PowerLinesMesh } from './powerLinesMesh.ts';
-import { BuildingsMesh } from './buildingsMesh.ts';
-import { PlantsMesh } from './plantsMesh.ts';
+import { BuildingsMesh, buildingHeight } from './buildingsMesh.ts';
+import { PlantsMesh, plantHeight } from './plantsMesh.ts';
 import { VehiclesMesh } from './vehiclesMesh.ts';
 import { OverlaysMesh } from './overlays.ts';
 import { MinimapLayer } from './minimapLayer.ts';
@@ -73,6 +73,11 @@ export interface DiffLayer {
 }
 
 const HOVER_COLOR = 0xffffff;
+const SELECTION_COLOR = 0xffd166;
+/** Headroom above the tile's content so the cage does not touch the roof. */
+const SELECTION_HEADROOM = 0.12;
+/** Cage height on flat tiles (roads, water, bare land). */
+const SELECTION_MIN_HEIGHT = 0.3;
 const SKY_DAY_COLOR = new THREE.Color(PALETTE.skyDay);
 const SKY_NIGHT_COLOR = new THREE.Color(PALETTE.skyNight);
 const SKY_DUSK_COLOR = new THREE.Color(0xf2a05e);
@@ -82,6 +87,17 @@ const SUN_WINTER_COLOR = new THREE.Color(0xe8eefc);
 const AMBIENT_DAY_COLOR = new THREE.Color(0xdfeef5);
 const AMBIENT_NIGHT_COLOR = new THREE.Color(0x46557a);
 const WINTER_SOLAR_STRENGTH = BALANCE.seasons.winterSolarStrength;
+
+/** How high whatever stands on a tile rises above the ground. */
+function contentHeight(diff: TileDiff): number {
+  if (diff.tileType === TileType.Plant && diff.plantType !== PlantType.None) {
+    return plantHeight(diff.plantType);
+  }
+  if (diff.tileType === TileType.Empty && diff.density > 0) {
+    return buildingHeight(diff.zone, diff.density, diff.variant);
+  }
+  return 0;
+}
 
 /** Warm dusk tint peaks when the sun is low but not gone. */
 function duskAmount(sunFactor: number, night: number): number {
@@ -99,7 +115,17 @@ export class GameRenderer {
   private readonly diffLayers: DiffLayer[] = [];
   /** Per-tile terrain, tracked from diffs so tools can price bridges vs. roads. */
   private readonly terrain: Uint8Array;
+  /** Per-tile world height of whatever stands there, tracked from diffs. */
+  private readonly tileHeights: Float32Array;
   private readonly hoverMarker: THREE.Mesh;
+  /** Highlight of the tile open in the inspector. */
+  private readonly selectionMarker: THREE.Group;
+  private selectedIndex: number | null = null;
+  private readonly selectionFill: THREE.Mesh<THREE.BufferGeometry, THREE.MeshBasicMaterial>;
+  private readonly selectionOutline: THREE.LineSegments<
+    THREE.BufferGeometry,
+    THREE.LineBasicMaterial
+  >;
   private previewMesh!: THREE.InstancedMesh;
   private radiusRing!: THREE.Mesh;
   private radiusTiles = 0;
@@ -131,6 +157,7 @@ export class GameRenderer {
     this.gridSize = gridSize;
     this.callbacks = callbacks;
     this.terrain = new Uint8Array(gridSize * gridSize);
+    this.tileHeights = new Float32Array(gridSize * gridSize);
 
     const { scene, lights } = createScene();
     this.scene = scene;
@@ -208,6 +235,30 @@ export class GameRenderer {
     this.hoverMarker.visible = false;
     scene.add(this.hoverMarker);
 
+    // Marker for the tile shown in the inspector: a filled square plus a
+    // bright cage, pulsing so it reads against the city. The cage's unit
+    // box sits on the ground so its y scale is the tile's height.
+    this.selectionFill = new THREE.Mesh(
+      new THREE.PlaneGeometry(1, 1).rotateX(-Math.PI / 2),
+      new THREE.MeshBasicMaterial({
+        color: SELECTION_COLOR,
+        transparent: true,
+        opacity: 0.3,
+        depthWrite: false,
+      }),
+    );
+    this.selectionOutline = new THREE.LineSegments(
+      new THREE.EdgesGeometry(new THREE.BoxGeometry(1, 1, 1).translate(0, 0.5, 0)),
+      new THREE.LineBasicMaterial({ color: SELECTION_COLOR, transparent: true, depthTest: false }),
+    );
+    // Keep the fill clear of the ground and the road decals below it.
+    this.selectionFill.position.y = 0.06;
+    this.selectionOutline.renderOrder = 10;
+    this.selectionMarker = new THREE.Group();
+    this.selectionMarker.add(this.selectionFill, this.selectionOutline);
+    this.selectionMarker.visible = false;
+    scene.add(this.selectionMarker);
+
     this.handleResize();
     this.attachInput();
     window.addEventListener('resize', this.handleResize);
@@ -225,8 +276,15 @@ export class GameRenderer {
   }
 
   applyDiffs(diffs: TileDiff[]): void {
-    for (const diff of diffs) this.terrain[diff.index] = diff.terrain;
+    let selectionChanged = false;
+    for (const diff of diffs) {
+      this.terrain[diff.index] = diff.terrain;
+      this.tileHeights[diff.index] = contentHeight(diff);
+      if (diff.index === this.selectedIndex) selectionChanged = true;
+    }
     for (const layer of this.diffLayers) layer.applyDiffs(diffs);
+    // A building that grows (or is bulldozed) while selected resizes the cage.
+    if (selectionChanged) this.setSelectedTile(this.selectedIndex);
   }
 
   /** Terrain of the given tile, tracked from diffs (build tools price bridges vs. roads). */
@@ -310,6 +368,30 @@ export class GameRenderer {
     }
     this.previewMesh.count = count;
     this.previewMesh.instanceMatrix.needsUpdate = true;
+  }
+
+  /**
+   * Mark the tile the inspector is showing (null hides it), so the panel
+   * and the world are visually connected. The cage grows with whatever
+   * stands on the tile — a tower gets a tall cage, a road a flat one.
+   */
+  setSelectedTile(index: number | null): void {
+    if (index === null || index < 0 || index >= this.gridSize * this.gridSize) {
+      this.selectedIndex = null;
+      this.selectionMarker.visible = false;
+      return;
+    }
+    this.selectedIndex = index;
+    this.selectionMarker.visible = true;
+    this.selectionMarker.position.set(
+      (index % this.gridSize) + 0.5,
+      0.02,
+      Math.floor(index / this.gridSize) + 0.5,
+    );
+    this.selectionOutline.scale.y = Math.max(
+      SELECTION_MIN_HEIGHT,
+      this.tileHeights[index] + SELECTION_HEADROOM,
+    );
   }
 
   setOverlayMode(mode: OverlayMode): void {
@@ -546,6 +628,11 @@ export class GameRenderer {
     for (const layer of this.diffLayers) layer.update?.(deltaSeconds, now / 1000);
     this.vehiclesMesh.update(now / 1000);
     for (const listener of this.frameListeners) listener(deltaSeconds, now / 1000);
+    if (this.selectionMarker.visible) {
+      const pulse = 0.5 + 0.5 * Math.sin((now / 1000) * 3);
+      this.selectionFill.material.opacity = 0.18 + 0.22 * pulse;
+      this.selectionOutline.material.opacity = 0.55 + 0.45 * pulse;
+    }
     this.webgl.render(this.scene, this.isoCamera.camera);
     this.animationFrame = requestAnimationFrame(this.renderLoop);
   };

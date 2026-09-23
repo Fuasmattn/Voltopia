@@ -42,7 +42,8 @@ self.onmessage = (message: MessageEvent<SimCommand>) => {
   if (!engine) return;
   const events = engine.applyCommand(command);
   for (const event of events) post(event);
-  const flushed = engine.flush();
+  // Selecting a tile must refresh the inspector even while paused.
+  const flushed = command.type === 'inspectTile' ? engine.snapshot() : engine.flush();
   if (flushed) post(flushed);
   if (command.type === 'setSpeed') reschedule();
 };

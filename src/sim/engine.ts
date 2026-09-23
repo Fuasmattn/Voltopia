@@ -54,6 +54,9 @@ export class SimEngine {
         state.smartCharging = command.enabled;
         state.statsDirty = true;
         return [];
+      case 'inspectTile':
+        state.inspectedTile = command.tile ?? -1;
+        return [];
       case 'requestSave':
         return [{ type: 'saveData', save: serializeState(state) }];
       case 'requestLifetime':
@@ -93,6 +96,14 @@ export class SimEngine {
   flush(): SimEvent | null {
     if (this.state.dirty.size === 0 && !this.state.statsDirty) return null;
     this.state.statsDirty = false;
+    return this.snapshot();
+  }
+
+  /**
+   * Stats snapshot without advancing time, so selecting a tile fills the
+   * inspector even while the game is paused.
+   */
+  snapshot(): SimEvent {
     return {
       type: 'tick',
       diffs: collectDiffs(this.state),

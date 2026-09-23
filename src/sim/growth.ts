@@ -57,7 +57,7 @@ function normalize(difference: number, scale: number): number {
   return Math.min(Math.max(difference / scale, -1), 1);
 }
 
-function demandFor(demand: DemandStats, zone: Zone): number {
+export function demandFor(demand: DemandStats, zone: Zone): number {
   switch (zone) {
     case Zone.Residential:
       return demand.residential;
@@ -70,7 +70,7 @@ function demandFor(demand: DemandStats, zone: Zone): number {
   }
 }
 
-function hasRoadAccess(state: SimState, index: number): boolean {
+export function hasRoadAccess(state: SimState, index: number): boolean {
   const { tileType } = state.layers;
   return neighbors4(index, state.size).some((neighbor) => tileType[neighbor] === TileType.Road);
 }
