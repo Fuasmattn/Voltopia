@@ -42,9 +42,11 @@ export class MinimapLayer implements DiffLayer {
   version = 0;
   private readonly context: CanvasRenderingContext2D;
   private readonly gridSize: number;
+  private readonly elevations: Uint8Array;
 
   constructor(gridSize: number) {
     this.gridSize = gridSize;
+    this.elevations = new Uint8Array(gridSize * gridSize);
     this.canvas = document.createElement('canvas');
     this.canvas.width = gridSize;
     this.canvas.height = gridSize;
@@ -55,6 +57,7 @@ export class MinimapLayer implements DiffLayer {
 
   applyDiffs(diffs: TileDiff[]): void {
     for (const diff of diffs) {
+      this.elevations[diff.index] = diff.elevation;
       this.context.fillStyle = this.tileColor(diff);
       this.context.fillRect(
         diff.index % this.gridSize,
@@ -76,7 +79,18 @@ export class MinimapLayer implements DiffLayer {
     }
     if (diff.density > 0) return COLORS.building[diff.zone] ?? COLORS.ground;
     if (diff.powerLine !== 0) return COLORS.powerLine;
-    if (diff.zone !== Zone.None) return COLORS.zoned[diff.zone] ?? COLORS.ground;
-    return COLORS.ground;
+    if (diff.zone !== Zone.None) {
+      return this.shade(COLORS.zoned[diff.zone] ?? COLORS.ground, this.elevations[diff.index]);
+    }
+    return this.shade(COLORS.ground, this.elevations[diff.index]);
+  }
+
+  /** Darken valleys, lighten hills (levels 0..7 around a level-2 baseline). */
+  private shade(hex: string, level: number): string {
+    const factor = 0.9 + 0.05 * (level - 2);
+    const value = parseInt(hex.slice(1), 16);
+    const channel = (shift: number): number =>
+      Math.min(255, Math.round(((value >> shift) & 0xff) * factor));
+    return `rgb(${channel(16)}, ${channel(8)}, ${channel(0)})`;
   }
 }
