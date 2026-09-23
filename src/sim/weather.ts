@@ -6,12 +6,29 @@ import { SUNRISE, SUNSET, sunIntensity } from '../shared/daylight.ts';
 
 export { SUNRISE, SUNSET, sunIntensity };
 
+export interface SolarSeason {
+  sunrise: number;
+  sunset: number;
+  solarStrength: number;
+}
+
+const NO_SEASON: SolarSeason = { sunrise: SUNRISE, sunset: SUNSET, solarStrength: 1 };
+
 /**
- * Photovoltaic output factor 0..1: sun position attenuated by clouds.
- * Overcast skies still deliver some diffuse irradiance.
+ * Photovoltaic output factor 0..1: sun position within the seasonal day
+ * window, sun elevation (strength), attenuated by clouds. Overcast skies
+ * still deliver some diffuse irradiance.
  */
-export function solarFactor(time: number, cloudCover: number): number {
-  return sunIntensity(time) * (1 - 0.85 * cloudCover);
+export function solarFactor(
+  time: number,
+  cloudCover: number,
+  season: SolarSeason = NO_SEASON,
+): number {
+  return (
+    sunIntensity(time, season.sunrise, season.sunset) *
+    season.solarStrength *
+    (1 - 0.85 * cloudCover)
+  );
 }
 
 /**
@@ -24,17 +41,29 @@ export function windFactor(windSpeed: number): number {
   return Math.min(1, windSpeed ** 3 / 0.6 ** 3);
 }
 
+export interface FrontBias {
+  cloudBias: number;
+  windBias: number;
+}
+
+const NO_BIAS: FrontBias = { cloudBias: 0, windBias: 0 };
+
 /**
  * Multi-day pressure systems: slowly moving fronts shift the mean that
  * the short-term weather noise reverts to. Stateless in (seed, tick), so
  * save games reproduce the same fronts. When a high-cloud front meets a
- * low-wind front, the city faces a genuine Dunkelflaute.
+ * low-wind front, the city faces a genuine Dunkelflaute. The season
+ * shifts the base means (winter: more cloud and wind).
  */
-export function frontMeans(seed: number, tick: number): { cloudMean: number; windMean: number } {
+export function frontMeans(
+  seed: number,
+  tick: number,
+  bias: FrontBias = NO_BIAS,
+): { cloudMean: number; windMean: number } {
   const { cloud, wind } = BALANCE.weather.fronts;
   return {
-    cloudMean: frontValue(seed, tick, cloud, 0),
-    windMean: frontValue(seed, tick, wind, 1),
+    cloudMean: frontValue(seed, tick, cloud, 0, bias.cloudBias),
+    windMean: frontValue(seed, tick, wind, 1, bias.windBias),
   };
 }
 
@@ -47,8 +76,9 @@ function frontValue(
     base: number;
   },
   channel: number,
+  bias: number,
 ): number {
-  let value = config.base;
+  let value = config.base + bias;
   for (let i = 0; i < config.periodsDays.length; i++) {
     // Seed-derived phase per wave so every city gets its own fronts.
     const phase = (((seed >>> (channel * 8 + i * 4)) & 0xff) / 255) * 2 * Math.PI;
@@ -59,17 +89,20 @@ function frontValue(
 }
 
 /**
- * Advance cloud cover and wind speed by one tick: a seeded random walk
- * with mean reversion toward the current front means, so weather varies
- * smoothly, reproducibly, and with multi-day character.
+ * Advance cloud cover, wind speed, river flow and snowpack by one tick: a
+ * seeded random walk with mean reversion toward the current (seasonally
+ * biased) front means, so weather varies smoothly, reproducibly, and
+ * with multi-day character.
  */
 export function updateWeather(state: SimState): void {
   const { cloudDrift, windDrift } = BALANCE.weather;
-  const { cloudMean, windMean } = frontMeans(state.seed, state.tick);
+  const { cloudMean, windMean } = frontMeans(state.seed, state.tick, state.season);
   const w = state.weather;
   w.cloudCover = drift(w.cloudCover, state.rng.next(), cloudDrift, cloudMean);
   w.windSpeed = drift(w.windSpeed, state.rng.next(), windDrift, windMean);
-  w.riverFlow = nextRiverFlow(w.riverFlow, w.cloudCover);
+  const water = nextWaterStep(w.riverFlow, w.snowpack, w.cloudCover, state.season.temperature);
+  w.riverFlow = water.flow;
+  w.snowpack = water.snowpack;
 }
 
 function drift(value: number, random: number, step: number, mean: number): number {
@@ -79,17 +112,45 @@ function drift(value: number, random: number, step: number, mean: number): numbe
 }
 
 /**
- * River flow rises while it rains (cloud cover above the rain threshold,
- * faster the heavier the overcast) and otherwise relaxes toward a dry
- * baseline, so run-of-river output follows multi-day weather.
+ * River flow and snowpack for the next tick. Precipitation (cloud cover
+ * above the rain threshold) feeds the river when it is warm enough and
+ * the snowpack when it is freezing; warm weather melts the snowpack into
+ * the river. Without precipitation the flow relaxes toward the dry
+ * baseline, so run-of-river output follows multi-day weather and the
+ * seasons (little in winter, a melt surge in spring).
  */
-function nextRiverFlow(flow: number, cloudCover: number): number {
+export function nextWaterStep(
+  flow: number,
+  snowpack: number,
+  cloudCover: number,
+  temperature: number,
+): { flow: number; snowpack: number } {
   const { rainCloudThreshold, rainRate, dryRate, dryBaselineFlow } = BALANCE.water;
-  if (cloudCover > rainCloudThreshold) {
-    const intensity = (cloudCover - rainCloudThreshold) / (1 - rainCloudThreshold);
-    return Math.min(1, flow + rainRate * intensity);
+  const { snowTemperature, meltTemperature, meltRate } = BALANCE.seasons;
+  const precipitation =
+    cloudCover > rainCloudThreshold
+      ? (rainRate * (cloudCover - rainCloudThreshold)) / (1 - rainCloudThreshold)
+      : 0;
+  const snowing = temperature < snowTemperature;
+  const melt =
+    temperature > meltTemperature
+      ? Math.min(snowpack, meltRate * (temperature - meltTemperature))
+      : 0;
+
+  let nextSnow = snowpack - melt;
+  let nextFlow = flow + melt;
+  if (precipitation > 0 && snowing) {
+    nextSnow += precipitation;
+    nextFlow += (dryBaselineFlow - nextFlow) * dryRate;
+  } else if (precipitation > 0) {
+    nextFlow += precipitation;
+  } else {
+    nextFlow += (dryBaselineFlow - nextFlow) * dryRate;
   }
-  return flow + (dryBaselineFlow - flow) * dryRate;
+  return {
+    flow: Math.min(1, Math.max(0, nextFlow)),
+    snowpack: Math.min(1, Math.max(0, nextSnow)),
+  };
 }
 
 /** Run-of-river output multiplier: a drought halves output, never stops it. */
@@ -100,7 +161,7 @@ export function riverFlowFactor(state: SimState): number {
 
 /** Convenience: current solar factor of the simulation state. */
 export function currentSolarFactor(state: SimState): number {
-  return solarFactor(timeOfDay(state.tick), state.weather.cloudCover);
+  return solarFactor(timeOfDay(state.tick), state.weather.cloudCover, state.season);
 }
 
 /** Convenience: current wind factor of the simulation state. */

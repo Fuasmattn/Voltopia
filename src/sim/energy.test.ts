@@ -19,6 +19,7 @@ import {
   Zone,
   type SimState,
 } from './state.ts';
+import { SUNRISE, SUNSET } from './weather.ts';
 
 const SIZE = 32;
 const at = (x: number, y: number) => tileIndex(x, y, SIZE);
@@ -33,11 +34,17 @@ function addBuilding(state: SimState, index: number, zone: Zone, density: number
   state.layers.density[index] = density;
 }
 
-/** Set the clock to noon with clear skies for predictable solar output. */
+/**
+ * Set the clock to noon with clear skies for predictable solar output.
+ * Also neutralizes the season's day window and solar strength (this
+ * state is otherwise created at day 0 midnight, i.e. mid-strength), so
+ * pre-existing literal expectations keep their pre-season meaning.
+ */
 function setNoonClearSky(state: SimState): void {
   state.tick = TICKS_PER_DAY / 2;
   state.weather.cloudCover = 0;
   state.weather.windSpeed = 0;
+  state.season = { ...state.season, sunrise: SUNRISE, sunset: SUNSET, solarStrength: 1 };
 }
 
 describe('placePlant', () => {

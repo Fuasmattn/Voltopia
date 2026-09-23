@@ -4,6 +4,7 @@ import { BALANCE, TICKS_PER_DAY } from '../shared/constants.ts';
 import { createSimState } from './state.ts';
 import {
   frontMeans,
+  nextWaterStep,
   riverFlowFactor,
   solarFactor,
   sunIntensity,
@@ -234,5 +235,92 @@ describe('river flow', () => {
       updateWeather(b);
     }
     expect(a.weather.riverFlow).toBe(b.weather.riverFlow);
+  });
+});
+
+describe('seasonal fronts and solar strength', () => {
+  it('shifts the front means by the season biases', () => {
+    const base = frontMeans(5, 1000);
+    const winter = frontMeans(5, 1000, { cloudBias: 0.1, windBias: 0.1 });
+    expect(winter.cloudMean).toBeCloseTo(Math.min(0.95, base.cloudMean + 0.1), 9);
+    expect(winter.windMean).toBeCloseTo(Math.min(0.95, base.windMean + 0.1), 9);
+  });
+
+  it('scales solar output by strength and the seasonal day window', () => {
+    const summer = { sunrise: 0.2, sunset: 0.8, solarStrength: 1 };
+    const winter = { sunrise: 0.3, sunset: 0.7, solarStrength: 0.45 };
+    expect(solarFactor(0.5, 0, summer)).toBeCloseTo(1, 5);
+    expect(solarFactor(0.5, 0, winter)).toBeCloseTo(0.45, 5);
+    expect(solarFactor(0.28, 0, summer)).toBeGreaterThan(0);
+    expect(solarFactor(0.28, 0, winter)).toBe(0);
+  });
+
+  it('the weather walk uses the state season', () => {
+    const state = createSimState(31, 8);
+    state.season = { ...state.season, cloudBias: 0.3, windBias: 0 };
+    let sumBiased = 0;
+    for (let t = 0; t < 3 * TICKS_PER_DAY; t++) {
+      state.tick = t;
+      updateWeather(state);
+      sumBiased += state.weather.cloudCover;
+    }
+    const plain = createSimState(31, 8);
+    plain.season = { ...plain.season, cloudBias: 0, windBias: 0 };
+    let sumPlain = 0;
+    for (let t = 0; t < 3 * TICKS_PER_DAY; t++) {
+      plain.tick = t;
+      updateWeather(plain);
+      sumPlain += plain.weather.cloudCover;
+    }
+    expect(sumBiased).toBeGreaterThan(sumPlain);
+  });
+});
+
+describe('snowpack', () => {
+  const { rainCloudThreshold, dryBaselineFlow } = BALANCE.water;
+  const { snowTemperature, meltTemperature } = BALANCE.seasons;
+
+  it('sub-zero precipitation grows the snowpack and leaves the river on the dry path', () => {
+    const start = { flow: 0.5, snowpack: 0 };
+    const next = nextWaterStep(start.flow, start.snowpack, 1, snowTemperature - 5);
+    expect(next.snowpack).toBeGreaterThan(0);
+    expect(next.flow).toBeLessThan(0.5);
+    expect(next.flow).toBeGreaterThan(dryBaselineFlow);
+  });
+
+  it('rain above freezing feeds the river, not the snowpack', () => {
+    const next = nextWaterStep(0.5, 0, 1, meltTemperature + 5);
+    expect(next.snowpack).toBe(0);
+    expect(next.flow).toBeGreaterThan(0.5);
+  });
+
+  it('warm weather melts the snowpack into the river', () => {
+    const next = nextWaterStep(dryBaselineFlow, 0.5, 0, meltTemperature + 10);
+    expect(next.snowpack).toBeLessThan(0.5);
+    expect(next.flow).toBeGreaterThan(dryBaselineFlow);
+    expect(next.snowpack + (next.flow - dryBaselineFlow)).toBeGreaterThan(0.49);
+  });
+
+  it('never melts more than there is and caps the snowpack at 1', () => {
+    expect(nextWaterStep(0.3, 0.00001, 0, 40).snowpack).toBe(0);
+    let snow = 0.999;
+    for (let i = 0; i < 100; i++) snow = nextWaterStep(0.3, snow, 1, snowTemperature - 1).snowpack;
+    expect(snow).toBe(1);
+  });
+
+  it('does not melt at or below the melt temperature without precipitation', () => {
+    const cold = nextWaterStep(0.3, 0.5, rainCloudThreshold - 0.1, meltTemperature);
+    expect(cold.snowpack).toBe(0.5);
+  });
+
+  it('is applied by updateWeather from the state season', () => {
+    const state = createSimState(9, 8);
+    state.season = { ...state.season, temperature: -5 };
+    for (let i = 0; i < 200; i++) {
+      state.tick++;
+      updateWeather(state);
+      state.weather.cloudCover = 1;
+    }
+    expect(state.weather.snowpack).toBeGreaterThan(0);
   });
 });
