@@ -114,7 +114,17 @@ export function EnergyStrip({
   const balanceLabel = balance >= 0 ? t('energy.surplus') : t('energy.deficit');
 
   return (
-    <div className="hud-row hud-row-energy" data-testid="energy-strip">
+    // The whole row is the handle for the drawer: a separate button kept
+    // wrapping out of the row on narrower windows. The chevron at the end
+    // says "this opens"; the label lives in the tooltip and for readers.
+    <button
+      type="button"
+      className="hud-row hud-row-energy hud-details-toggle"
+      data-testid="hud-details-toggle"
+      aria-expanded={open}
+      title={t('hud.details')}
+      onClick={onToggle}
+    >
       {generation.map(chip)}
       <span className="energy-chip-divider" aria-hidden="true" />
       {consumption.map(chip)}
@@ -130,15 +140,12 @@ export function EnergyStrip({
         <span className="sr-only">{balanceLabel}</span>
       </span>
       <EnergySparkline energy={energy} timeOfDay={timeOfDay} collapsed={open} />
-      <button
-        type="button"
-        className="hud-details-toggle"
-        data-testid="hud-details-toggle"
-        aria-expanded={open}
-        onClick={onToggle}
-      >
-        {t('hud.details')} <span aria-hidden="true">{open ? '▴' : '▾'}</span>
-      </button>
-    </div>
+      <span className="sr-only">{t('hud.details')}</span>
+      {/* Same glyphs as the goals panel header, so every expandable HUD
+          card reads the same way. */}
+      <span className="hud-details-chevron" aria-hidden="true">
+        {open ? '▾' : '▸'}
+      </span>
+    </button>
   );
 }

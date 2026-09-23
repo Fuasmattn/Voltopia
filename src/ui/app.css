@@ -309,18 +309,39 @@ body,
   font-size: 12px;
 }
 
+/* The energy row doubles as the drawer handle: a bare button that keeps
+   the row's layout and only lights up on hover. */
 .hud-details-toggle {
-  margin-left: auto;
-  background: rgba(255, 255, 255, 0.05);
-  border: 1px solid var(--hud-border);
-  border-radius: 8px;
-  color: var(--hud-muted);
-  padding: 3px 10px;
+  width: 100%;
+  background: none;
+  border: none;
+  border-top: 1px solid var(--hud-border);
+  color: inherit;
+  font-family: inherit;
+  text-align: left;
   cursor: pointer;
+  transition: background-color 0.15s ease;
+}
+
+.hud-details-toggle:hover,
+.hud-details-toggle:focus-visible {
+  background: var(--hud-hover);
+}
+
+.hud-details-toggle:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: -2px;
+}
+
+/* Pinned to the right end of the row; same glyphs as .goals-chevron. */
+.hud-details-chevron {
+  margin-left: auto;
+  padding-left: 4px;
+  color: var(--hud-muted);
   font-size: 11px;
 }
 
-.hud-details-toggle:hover {
+.hud-details-toggle:hover .hud-details-chevron {
   color: var(--hud-text);
 }
 
