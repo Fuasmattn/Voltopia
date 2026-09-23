@@ -1,9 +1,11 @@
 /**
- * Bottom-centre build menu: category tabs over a row of icon buttons.
+ * Bottom-centre build menu. On a wide enough window every category sits
+ * in one row, grouped under small labels; when the row would overflow
+ * its slot the menu folds into category tabs over the active group.
  * Icons alone are unreadable, so hovering or focusing a button raises a
  * tooltip with the tool's name, cost, hotkey and a one-line description.
  */
-import { useEffect, useState } from 'react';
+import { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { BALANCE } from '../shared/constants.ts';
 import { PlantType } from '../shared/types.ts';
 import { useI18n, type TranslationKey } from './i18n.tsx';
@@ -92,6 +94,37 @@ export function BuildBar({
 }) {
   const { t } = useI18n();
   const [openCategory, setOpenCategory] = useState(CATEGORIES[0].id);
+  const [layout, setLayout] = useState<'row' | 'tabs'>('row');
+  const clusterRef = useRef<HTMLDivElement>(null);
+  const barRef = useRef<HTMLElement>(null);
+  // What the full row needs, remembered while folded so the menu can
+  // unfold again once the slot grows back.
+  const rowNeedRef = useRef<{ bar: number; overhead: number } | null>(null);
+
+  // Fold into tabs when the full row overflows its slot, unfold when the
+  // slot has room again. Measured before paint so a fold never flashes.
+  useLayoutEffect(() => {
+    const cluster = clusterRef.current;
+    if (!cluster) return;
+    const slot = cluster.parentElement ?? cluster;
+    const measure = (): void => {
+      const available = slot.clientWidth;
+      if (layout === 'row') {
+        const bar = barRef.current;
+        if (!bar) return;
+        const needed = bar.scrollWidth;
+        rowNeedRef.current = { bar: needed, overhead: available - bar.clientWidth };
+        if (needed > bar.clientWidth + 1) setLayout('tabs');
+      } else if (rowNeedRef.current) {
+        const { bar, overhead } = rowNeedRef.current;
+        if (available - overhead >= bar + 4) setLayout('row');
+      }
+    };
+    measure();
+    const observer = new ResizeObserver(measure);
+    observer.observe(slot);
+    return () => observer.disconnect();
+  }, [layout]);
 
   // Hotkeys can select a tool from a category that is not on screen; follow
   // the selection so the active button is always visible.
@@ -140,30 +173,50 @@ export function BuildBar({
   };
 
   return (
-    <div className="build-cluster">
+    <div className="build-cluster" ref={clusterRef}>
       <div className="hud-card build-select" data-testid="select-tool">
         {renderButton(SELECT_BUTTON)}
       </div>
-      <nav className="hud-card build-bar" data-testid="toolbar">
-        <div className="build-tabs" role="tablist">
-          {CATEGORIES.map((category) => (
-            <button
+      <nav
+        ref={barRef}
+        className={`hud-card build-bar build-bar-${layout}`}
+        data-testid="toolbar"
+        data-layout={layout}
+      >
+        {layout === 'row' ? (
+          CATEGORIES.map((category) => (
+            <div
               key={category.id}
-              type="button"
-              role="tab"
-              aria-selected={category.id === active.id}
-              className={`build-tab ${category.id === active.id ? 'active' : ''}`}
-              data-testid={`build-category-${category.id}`}
-              onClick={() => setOpenCategory(category.id)}
+              className="build-group"
+              data-testid={`build-group-${category.id}`}
             >
-              {t(category.label)}
-            </button>
-          ))}
-        </div>
+              <span className="build-group-label">{t(category.label)}</span>
+              <div className="build-tools">{category.buttons.map(renderButton)}</div>
+            </div>
+          ))
+        ) : (
+          <>
+            <div className="build-tabs" role="tablist">
+              {CATEGORIES.map((category) => (
+                <button
+                  key={category.id}
+                  type="button"
+                  role="tab"
+                  aria-selected={category.id === active.id}
+                  className={`build-tab ${category.id === active.id ? 'active' : ''}`}
+                  data-testid={`build-category-${category.id}`}
+                  onClick={() => setOpenCategory(category.id)}
+                >
+                  {t(category.label)}
+                </button>
+              ))}
+            </div>
 
-        <div className="build-tools" role="tabpanel">
-          {active.buttons.map(renderButton)}
-        </div>
+            <div className="build-tools" role="tabpanel">
+              {active.buttons.map(renderButton)}
+            </div>
+          </>
+        )}
       </nav>
     </div>
   );
