@@ -9,9 +9,12 @@ const TOAST_MS = 4000;
  */
 export function GoalsPanel({
   goals,
+  services,
   onAchievement,
 }: {
   goals: GoalState[];
+  /** Share of buildings with fire / police coverage, 0..1; drives the safeCity progress line. */
+  services: { fire: number; police: number };
   /** Called once per newly achieved goal (e.g. to play a chime). */
   onAchievement?: (id: string) => void;
 }) {
@@ -69,6 +72,14 @@ export function GoalsPanel({
                   <strong>{t(`goal.${goal.id}.title` as TranslationKey)}</strong>
                   <br />
                   <small>{t(`goal.${goal.id}.body` as TranslationKey)}</small>
+                  {goal.id === 'safeCity' && !goal.achieved && (
+                    <div className="goal-progress" data-testid="goal-safeCity-progress">
+                      {t('goal.safeCity.progress', {
+                        fire: Math.round(services.fire * 100),
+                        police: Math.round(services.police * 100),
+                      })}
+                    </div>
+                  )}
                 </span>
               </li>
             ))}

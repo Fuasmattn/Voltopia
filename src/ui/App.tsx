@@ -251,7 +251,11 @@ function Game({ save, options }: { save: SaveGame | null; options: NewGameOption
         <div className="hud-slot hud-slot-left">
           <div className="hud-rail-bottom">
             {stats && (
-              <GoalsPanel goals={stats.goals} onAchievement={() => sound.play('achievement')} />
+              <GoalsPanel
+                goals={stats.goals}
+                services={stats.services}
+                onAchievement={() => sound.play('achievement')}
+              />
             )}
             {/* One plate in the corner: minimap, overlay switch and the
                 controls hint share it, so the corner has a single edge. */}

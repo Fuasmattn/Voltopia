@@ -1368,6 +1368,12 @@ body,
   flex-shrink: 0;
 }
 
+.goal-progress {
+  font-size: 11px;
+  color: var(--hud-muted);
+  white-space: nowrap;
+}
+
 .goal-toast {
   position: absolute;
   top: 76px;

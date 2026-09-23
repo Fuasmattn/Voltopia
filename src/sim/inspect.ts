@@ -142,11 +142,18 @@ export function inspectTile(state: SimState, index: number): TileInfo | null {
       ? hasLineAttached(state, index)
       : isTileConnected(state, index);
 
+  const isStationPlant = tileType === TileType.Plant && isStation(plant);
   const loadFactor = isBuilding ? loadProfileFactor(zone, time) : 0;
-  const consumption = isBuilding ? buildingConsumption(zone, density, time) : 0;
+  const consumption = isBuilding
+    ? buildingConsumption(zone, density, time)
+    : isStationPlant && connected
+      ? BALANCE.services.stationConsumption
+      : 0;
   const peakConsumption = isBuilding
     ? (BALANCE.energy.consumptionByZoneAndDensity[zone]?.[density] ?? 0)
-    : 0;
+    : isStationPlant
+      ? BALANCE.services.stationConsumption
+      : 0;
 
   const rooftopPeak = isBuilding ? (BALANCE.energy.rooftopSolarPeakByDensity[density] ?? 0) : 0;
   const rooftop = connected ? rooftopPeak * currentSolarFactor(state) : 0;

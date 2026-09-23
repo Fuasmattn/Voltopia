@@ -245,4 +245,16 @@ describe('services in the inspector', () => {
     info = inspectTile(state, at(10, 10))!;
     expect(info.stationActive).toBe(true);
   });
+
+  it('reports a station load once it is energised', () => {
+    const state = createSimState(1, SIZE);
+    buildRoads(state, [at(10, 11)]);
+    placePlant(state, at(10, 10), PlantType.PoliceStation);
+    let info = inspectTile(state, at(10, 10))!;
+    expect(info.consumption).toBe(0);
+    expect(info.peakConsumption).toBe(BALANCE.services.stationConsumption);
+    placePlant(state, at(11, 10), PlantType.WindTurbine);
+    info = inspectTile(state, at(10, 10))!;
+    expect(info.consumption).toBe(BALANCE.services.stationConsumption);
+  });
 });

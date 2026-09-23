@@ -172,14 +172,16 @@ export function TileInspector({ info, onClose }: { info: TileInfo; onClose: () =
 
       <section>
         <h3>{t('inspect.section.energy')}</h3>
+        {(isBuilding || isStation) && (
+          <Row
+            label={t('inspect.consumption')}
+            value={`${energy(info.consumption)} / ${energy(info.peakConsumption)} EU`}
+            hint={t('inspect.nowPeak')}
+            testId="inspect-consumption"
+          />
+        )}
         {isBuilding && (
           <>
-            <Row
-              label={t('inspect.consumption')}
-              value={`${energy(info.consumption)} / ${energy(info.peakConsumption)} EU`}
-              hint={t('inspect.nowPeak')}
-              testId="inspect-consumption"
-            />
             <div className="inspect-meter" title={t('inspect.loadFactor')}>
               <div
                 className="inspect-meter-fill"

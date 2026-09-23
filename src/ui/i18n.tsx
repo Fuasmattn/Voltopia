@@ -267,6 +267,7 @@ const en = {
     'Get through a whole summer without a single undersupplied tick (50+ residents).',
   'goal.safeCity.title': 'Safe city',
   'goal.safeCity.body': 'Fire and police cover 90% of buildings (100+ residents).',
+  'goal.safeCity.progress': 'Fire {fire} % · Police {police} %',
 
   // Budget panel and tile inspector.
   'budget.title': 'Budget',
@@ -599,6 +600,7 @@ const de: Record<TranslationKey, string> = {
     'Überstehe einen ganzen Sommer ohne einen einzigen unterversorgten Tick (ab 50 Einwohnern).',
   'goal.safeCity.title': 'Sichere Stadt',
   'goal.safeCity.body': 'Feuerwehr und Polizei decken 90 % der Gebäude ab (ab 100 Einwohnern).',
+  'goal.safeCity.progress': 'Feuerwehr {fire} % · Polizei {police} %',
 
   // Budget-Panel und Kachel-Inspektor.
   'budget.title': 'Budget',
