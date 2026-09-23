@@ -9,16 +9,27 @@ const SUPPLY_COLORS: Record<number, number> = {
   [SupplyStatus.NotConnected]: 0xe05263,
 };
 
+const SERVICE_FIRE = 1;
+const SERVICE_POLICE = 2;
+const SERVICE_COLORS = {
+  both: 0x4cd964,
+  fireOnly: 0xffb347,
+  policeOnly: 0x5b9bd5,
+  none: 0xe05263,
+};
+
 interface OverlayTile {
   zone: Zone;
   density: number;
   supplied: SupplyStatus;
   tileType: TileType;
+  services: number;
 }
 
 /**
  * Toggleable color maps over the city: supply status of every building,
- * or growth demand tinting all zoned tiles.
+ * growth demand tinting all zoned tiles, or fire/police service coverage
+ * of every building.
  */
 export class OverlaysMesh implements DiffLayer {
   private readonly mesh: THREE.InstancedMesh;
@@ -65,6 +76,7 @@ export class OverlaysMesh implements DiffLayer {
           density: diff.density,
           supplied: diff.supplied,
           tileType: diff.tileType,
+          services: diff.services,
         });
       } else {
         this.tiles.delete(diff.index);
@@ -101,6 +113,19 @@ export class OverlaysMesh implements DiffLayer {
             // Hue from red (negative demand) over yellow to green (high).
             this.color.setHSL(THREE.MathUtils.clamp((0.33 * (demand + 1)) / 2, 0, 0.33), 0.85, 0.5);
             colorHex = this.color.getHex();
+          }
+        } else if (this.mode === OverlayMode.Services) {
+          if (tile.tileType === TileType.Empty && tile.density > 0) {
+            const fire = (tile.services & SERVICE_FIRE) !== 0;
+            const police = (tile.services & SERVICE_POLICE) !== 0;
+            colorHex =
+              fire && police
+                ? SERVICE_COLORS.both
+                : fire
+                  ? SERVICE_COLORS.fireOnly
+                  : police
+                    ? SERVICE_COLORS.policeOnly
+                    : SERVICE_COLORS.none;
           }
         }
         if (colorHex === null) continue;

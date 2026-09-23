@@ -43,6 +43,12 @@ const COLORS = {
   powerhouse: 0x5d6b7a,
   penstock: 0x7a8593,
   waterLight: 0x7fb6dd,
+  fireHall: 0xc0392b,
+  fireRoof: 0xf4f1ec,
+  fireTower: 0x8e2a1f,
+  policeBlock: 0x2f5fa8,
+  policeRoof: 0xd7dde8,
+  policeLight: 0x7fd0ff,
 } as const;
 
 /** Where a plant stands: which neighbours are water (for hydro shapes). */
@@ -187,6 +193,21 @@ function plantBoxParts(plant: PlantType, site: PlantSite): BoxPart[] {
         },
       ];
     }
+    case PlantType.FireStation:
+      return [
+        // Hall with a white roof stripe and a hose tower at the back.
+        { sx: 0.8, sy: 0.36, sz: 0.6, ox: 0, oy: 0, oz: 0.05, color: COLORS.fireHall },
+        { sx: 0.84, sy: 0.05, sz: 0.64, ox: 0, oy: 0.36, oz: 0.05, color: COLORS.fireRoof },
+        { sx: 0.2, sy: 0.62, sz: 0.2, ox: 0.25, oy: 0, oz: -0.3, color: COLORS.fireTower },
+        { sx: 0.24, sy: 0.04, sz: 0.24, ox: 0.25, oy: 0.62, oz: -0.3, color: COLORS.fireRoof },
+      ];
+    case PlantType.PoliceStation:
+      return [
+        // Blue block with a pale roof and a light bar.
+        { sx: 0.74, sy: 0.42, sz: 0.66, ox: 0, oy: 0, oz: 0, color: COLORS.policeBlock },
+        { sx: 0.78, sy: 0.05, sz: 0.7, ox: 0, oy: 0.42, oz: 0, color: COLORS.policeRoof },
+        { sx: 0.3, sy: 0.06, sz: 0.1, ox: 0, oy: 0.47, oz: 0, color: COLORS.policeLight },
+      ];
     default:
       return [];
   }

@@ -27,6 +27,8 @@ const COLORS = {
     [PlantType.Park]: '#3f7d46',
     [PlantType.RunOfRiver]: '#9aa3ad',
     [PlantType.PumpedStorage]: '#5d6b7a',
+    [PlantType.FireStation]: '#c0392b',
+    [PlantType.PoliceStation]: '#2f5fa8',
   } as Record<number, string>,
 } as const;
 
