@@ -557,9 +557,41 @@ body,
   display: flex;
   align-items: flex-end;
   justify-content: center;
-  flex-wrap: wrap;
   gap: 8px;
   max-width: 100%;
+}
+
+/* Wide layout: every category in one row under small labels, hairlines
+   between the groups. The bar folds into tabs (below) when this overflows. */
+.build-bar.build-bar-row {
+  flex-direction: row;
+  align-items: flex-end;
+  gap: 0;
+  min-width: 0;
+}
+
+.build-group {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 5px;
+  padding: 0 8px;
+}
+
+.build-group + .build-group {
+  border-left: 1px solid var(--hud-border);
+}
+
+.build-group-label {
+  color: var(--hud-muted);
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  white-space: nowrap;
+}
+
+.build-bar-row .build-tools {
+  flex-wrap: nowrap;
 }
 
 /* Both stand on the bottom edge of the screen, like a command card. */

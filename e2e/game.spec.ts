@@ -155,7 +155,26 @@ test('HUD islands never overlap, down to a phone-sized window', async ({ page })
   }
 });
 
+test('build menu shows every tool in one row when the window is wide', async ({ page }) => {
+  await page.setViewportSize({ width: 1920, height: 1080 });
+  await expect(page.getByTestId('toolbar')).toHaveAttribute('data-layout', 'row');
+  await expect(page.getByTestId('build-category-energy')).toHaveCount(0);
+  await expect(page.getByTestId('tool-road')).toBeVisible();
+  await expect(page.getByTestId('tool-plant-wind')).toBeVisible();
+  await expect(page.getByTestId('tool-plant-park')).toBeVisible();
+
+  // Shrinking the window folds the row into tabs; growing unfolds it.
+  await page.setViewportSize({ width: 1024, height: 768 });
+  await expect(page.getByTestId('toolbar')).toHaveAttribute('data-layout', 'tabs');
+  await expect(page.getByTestId('tool-plant-wind')).toHaveCount(0);
+  await page.setViewportSize({ width: 1920, height: 1080 });
+  await expect(page.getByTestId('toolbar')).toHaveAttribute('data-layout', 'row');
+});
+
 test('build menu switches categories and explains its icons', async ({ page }) => {
+  // Narrow enough that the menu folds into tabs.
+  await page.setViewportSize({ width: 1024, height: 768 });
+  await expect(page.getByTestId('toolbar')).toHaveAttribute('data-layout', 'tabs');
   // Basics is the category shown on load.
   await expect(page.getByTestId('tool-road')).toBeVisible();
   await expect(page.getByTestId('tool-plant-wind')).toHaveCount(0);
