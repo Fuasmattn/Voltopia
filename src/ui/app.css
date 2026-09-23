@@ -175,15 +175,12 @@ body,
   padding-right: 14px;
 }
 
-/* Bottom-left corner: minimap, overlay switch and the controls hint. */
+/* Bottom-left card: minimap, overlay switch and the controls hint. */
 .hud-corner-plate {
   display: flex;
   flex-direction: column;
   gap: 8px;
   padding: 8px 8px 6px;
-  border-left: none;
-  border-bottom: none;
-  border-radius: 0 12px 0 0;
   box-shadow: var(--hud-shadow);
 }
 
@@ -207,8 +204,11 @@ body,
   overflow: hidden;
 }
 
+/* The left cluster floats a little off the corner: minimap and goals are
+   cards you look at, not frame chrome like the top bar or build bar. */
 .hud-slot-left {
   grid-column: 1;
+  padding: 0 0 12px 12px;
 }
 
 .hud-slot-right {
@@ -229,12 +229,14 @@ body,
 }
 
 /* The inspector is the one card that can outgrow its rail: let it shrink
-   and scroll rather than push the cluster off screen. */
+   and scroll rather than push the cluster off screen. Like the minimap it
+   floats a little off the edge; only the footer below it stays docked. */
 .hud-rail-bottom > .tile-inspector {
   flex: 0 1 auto;
   min-height: 0;
   overflow-y: auto;
   overscroll-behavior: contain;
+  margin: 0 12px 4px 0;
 }
 
 .hud-slot-bottom-center {
@@ -1259,8 +1261,7 @@ body,
 .goals-panel {
   background: var(--hud-bg);
   border: 1px solid var(--hud-border);
-  border-left: none;
-  border-radius: 0 12px 12px 0;
+  border-radius: 12px;
   backdrop-filter: blur(8px);
   user-select: none;
 }
@@ -1747,11 +1748,10 @@ body,
 
 /* Fills the right rail of the HUD grid; the grid row caps its height. */
 .tile-inspector {
-  width: 100%;
   background: var(--hud-bg);
   border: 1px solid var(--hud-border);
-  border-right: none;
-  border-radius: 12px 0 0 12px;
+  border-radius: 12px;
+  box-shadow: var(--hud-shadow);
   color: var(--hud-text);
   backdrop-filter: blur(8px);
   padding: 10px 12px 12px;
@@ -1966,11 +1966,6 @@ body,
     justify-content: flex-end;
     align-items: flex-end;
     overflow: visible;
-  }
-
-  .hud-slot-right .tile-inspector {
-    border-right: 1px solid var(--hud-border);
-    border-radius: 12px 12px 0 0;
   }
 
   /* Full width down here, so the inspector needs its own height cap. */
