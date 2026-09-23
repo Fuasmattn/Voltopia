@@ -8,11 +8,12 @@
  * numbers track the running simulation.
  */
 import { BALANCE, TICKS_PER_DAY } from '../shared/constants.ts';
-import { tileX, tileY } from '../shared/grid.ts';
+import { neighbors4, tileX, tileY } from '../shared/grid.ts';
 import type { GrowthBlocker, TileInfo } from '../shared/types.ts';
 import { PlantType, SupplyStatus, Terrain, TileType, Zone } from '../shared/types.ts';
 import { buildingConsumption, censusPlants, isTileConnected, loadProfileFactor } from './energy.ts';
 import { demandFor, energySystemActive, hasRoadAccess } from './growth.ts';
+import { isSupplySource } from './powerGrid.ts';
 import type { SimState } from './state.ts';
 import { currentSolarFactor, currentWindFactor, riverFlowFactor } from './weather.ts';
 
@@ -84,6 +85,30 @@ function growthBlockers(state: SimState, index: number, connected: boolean): Gro
   return blockers;
 }
 
+/** Does a power line touch this tile on any side? */
+function hasLineAttached(state: SimState, index: number): boolean {
+  const { powerLine } = state.layers;
+  for (const n of neighbors4(index, state.size)) {
+    if (powerLine[n] !== 0) return true;
+  }
+  return false;
+}
+
+/** The ring a tile projects on the map (see TileInfo.ringRadius). */
+function ringRadius(state: SimState, index: number, connected: boolean): number {
+  const { tileType, plantType, powerLine } = state.layers;
+  if (tileType[index] === TileType.Plant) {
+    const plant = plantType[index] as PlantType;
+    if (plant === PlantType.Park) return BALANCE.happiness.parkRadius;
+    if (plant === PlantType.ChargingHub) return BALANCE.vehicles.hubRadius;
+    if (isSupplySource(plant)) return BALANCE.energy.lineSupplyRadius;
+    return 0;
+  }
+  // A dead line (not reached from any plant) supplies nothing.
+  if (powerLine[index] !== 0 && connected) return BALANCE.energy.lineSupplyRadius;
+  return 0;
+}
+
 /** Full inspector snapshot for one tile, or null when out of bounds. */
 export function inspectTile(state: SimState, index: number): TileInfo | null {
   const { layers } = state;
@@ -95,7 +120,14 @@ export function inspectTile(state: SimState, index: number): TileInfo | null {
   const density = layers.density[index];
   const time = (state.tick % TICKS_PER_DAY) / TICKS_PER_DAY;
   const isBuilding = tileType === TileType.Empty && density > 0;
-  const connected = isTileConnected(state, index);
+  // A supply plant always energises its own ring, so the energized layer
+  // says nothing about whether it is tied into the network. For those,
+  // "connected" means a power line is attached; every other tile asks
+  // whether the network reaches it.
+  const connected =
+    tileType === TileType.Plant && isSupplySource(plant)
+      ? hasLineAttached(state, index)
+      : isTileConnected(state, index);
 
   const loadFactor = isBuilding ? loadProfileFactor(zone, time) : 0;
   const consumption = isBuilding ? buildingConsumption(zone, density, time) : 0;
@@ -136,6 +168,7 @@ export function inspectTile(state: SimState, index: number): TileInfo | null {
     plantType: plant,
     supplied: layers.supplied[index] as SupplyStatus,
     connected,
+    ringRadius: ringRadius(state, index, connected),
     upkeepPerTick,
     fuelCostPerTick,
     taxPerTick:

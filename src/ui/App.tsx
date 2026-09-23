@@ -170,6 +170,16 @@ function Game({ save, options }: { save: SaveGame | null; options: NewGameOption
     if (stats) rendererRef.current?.setStats(stats);
   }, [stats]);
 
+  // Ring around the inspected tile showing what it supplies or serves.
+  // Only trust inspection data for the tile that is actually selected —
+  // the worker answers a tick later than the click.
+  const inspected = stats?.inspected;
+  const selectionRadius =
+    selectedTile !== null && inspected?.index === selectedTile ? inspected.ringRadius : 0;
+  useEffect(() => {
+    rendererRef.current?.setSelectionRadius(selectionRadius);
+  }, [selectionRadius, selectedTile]);
+
   // Apply settings to sound and renderer; re-applied once the renderer
   // exists (stats implies the app is fully booted).
   const rendererReady = stats !== null;
