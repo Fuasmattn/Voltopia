@@ -20,6 +20,12 @@ const MODES: Array<{
     label: 'overlay.demand',
     title: 'overlay.demand.title',
   },
+  {
+    mode: OverlayMode.Services,
+    id: 'services',
+    label: 'overlay.services',
+    title: 'overlay.services.title',
+  },
 ];
 
 export function OverlayToggle({

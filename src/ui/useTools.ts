@@ -19,6 +19,8 @@ export type ToolId =
   | 'plant-biogas'
   | 'plant-hub'
   | 'plant-park'
+  | 'plant-fire'
+  | 'plant-police'
   | 'plant-hydro'
   | 'plant-pumped'
   | 'bulldoze';
@@ -29,7 +31,7 @@ const ZONE_BY_TOOL: Partial<Record<ToolId, Zone>> = {
   'zone-retail': Zone.Retail,
 };
 
-/** Keyboard shortcuts for tools (digits row plus B, P, H, U and L). */
+/** Keyboard shortcuts for tools (digits row plus B, P, H, U, L, F and C). */
 export const TOOL_HOTKEYS: Record<string, ToolId> = {
   '1': 'select',
   '2': 'road',
@@ -46,6 +48,8 @@ export const TOOL_HOTKEYS: Record<string, ToolId> = {
   h: 'plant-hydro',
   u: 'plant-pumped',
   l: 'power-line',
+  f: 'plant-fire',
+  c: 'plant-police',
 };
 
 export interface DragCostPreview {
@@ -60,6 +64,8 @@ export const PLANT_BY_TOOL: Partial<Record<ToolId, PlantType>> = {
   'plant-biogas': PlantType.BiogasPlant,
   'plant-hub': PlantType.ChargingHub,
   'plant-park': PlantType.Park,
+  'plant-fire': PlantType.FireStation,
+  'plant-police': PlantType.PoliceStation,
   'plant-hydro': PlantType.RunOfRiver,
   'plant-pumped': PlantType.PumpedStorage,
 };

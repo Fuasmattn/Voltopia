@@ -134,6 +134,14 @@ in balance.
 - Use technically correct energy terminology in code and UI (e.g. generation,
   consumption, state of charge, curtailment, peak load)
 
+### Services
+
+- Fire and police stations cover a ring of tiles while connected to the
+  grid. Fire cover unlocks the top building density; police cover keeps
+  happiness and tax income up once the city has 100 residents. A
+  services overlay shows coverage (added after the MVP; see the services
+  spec).
+
 ## Visual Style
 
 - Reduced, harmonious color palette, soft shadows, gentle lighting
@@ -144,7 +152,7 @@ in balance.
 
 ## Out of Scope for the MVP
 
-Real pathfinding/traffic simulation, water, police/fire services, disasters,
+Real pathfinding/traffic simulation, water, disasters,
 terrain elevation, sound, multiplayer, electricity market/import/
 export. Design the architecture so that additional layers, building types,
 and energy sources can easily be added later.

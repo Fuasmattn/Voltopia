@@ -65,7 +65,9 @@ _Screenshots coming soon — run `pnpm dev`, build a city, and snap away._
 Beyond the core loop: **multi-day weather fronts** (including genuine
 Dunkelflaute spells), **rooftop PV** that grows with density, a limited
 **grid interconnector** (expensive imports, modest export revenue),
-**abandonment** of chronically unpowered buildings, **city goals**, an
+**abandonment** of chronically unpowered buildings, **fire and police
+stations** with powered coverage rings, a services overlay and a
+safe-city goal, **city goals**, an
 **interactive tutorial**, warning icons in the world, touch gestures,
 tool hotkeys, synthesized sound effects, and a settings panel with save
 slots and JSON save export/import. UI in **English and German**.

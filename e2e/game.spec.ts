@@ -162,6 +162,8 @@ test('build menu shows every tool in one row when the window is wide', async ({ 
   await expect(page.getByTestId('tool-road')).toBeVisible();
   await expect(page.getByTestId('tool-plant-wind')).toBeVisible();
   await expect(page.getByTestId('tool-plant-park')).toBeVisible();
+  await expect(page.getByTestId('tool-plant-fire')).toBeVisible();
+  await expect(page.getByTestId('tool-plant-police')).toBeVisible();
 
   // Shrinking the window folds the row into tabs; growing unfolds it.
   await page.setViewportSize({ width: 1024, height: 768 });
@@ -241,6 +243,8 @@ test('tax slider and smart charging are interactive', async ({ page }) => {
 test('overlay toggle switches modes', async ({ page }) => {
   await page.getByTestId('overlay-supply').click();
   await expect(page.getByTestId('overlay-supply')).toHaveClass(/active/);
+  await page.getByTestId('overlay-services').click();
+  await expect(page.getByTestId('overlay-services')).toHaveClass(/active/);
   await page.getByTestId('overlay-off').click();
   await expect(page.getByTestId('overlay-off')).toHaveClass(/active/);
 });

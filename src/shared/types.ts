@@ -51,6 +51,7 @@ export const OverlayMode = {
   None: 0,
   Supply: 1,
   Demand: 2,
+  Services: 3,
 } as const;
 export type OverlayMode = (typeof OverlayMode)[keyof typeof OverlayMode];
 

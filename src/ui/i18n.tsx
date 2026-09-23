@@ -37,6 +37,8 @@ const en = {
   'tool.plant-biogas': 'Biogas plant',
   'tool.plant-hub': 'Charging hub',
   'tool.plant-park': 'Park',
+  'tool.plant-fire': 'Fire station',
+  'tool.plant-police': 'Police station',
   'tool.plant-hydro': 'Run-of-river plant',
   'tool.plant-pumped': 'Pumped storage',
   'tool.bulldoze': 'Bulldozer',
@@ -62,6 +64,9 @@ const en = {
   'tool.plant-biogas.desc': 'Dispatchable generation, but burns fuel that costs money.',
   'tool.plant-hub.desc': 'Charges EVs in its service radius. Pairs with smart charging.',
   'tool.plant-park.desc': 'Raises happiness nearby. Generates nothing.',
+  'tool.plant-fire.desc':
+    'Buildings in its ring may reach the top density. Needs a road and power.',
+  'tool.plant-police.desc': 'Keeps happiness and taxes up in its ring. Needs a road and power.',
   'tool.plant-hydro.desc': 'Built on the river. Output follows the river flow.',
   'tool.plant-pumped.desc': 'Large storage on a lake shore. Pumps up on surplus.',
   'tool.bulldoze.desc': 'Clears roads, zones and plants. Drag to clear an area.',
@@ -119,6 +124,8 @@ const en = {
   'overlay.supply.title':
     'Supply status: green = supplied, orange = undersupplied, red = not connected',
   'overlay.demand.title': 'Growth demand per zone: red = none, green = high',
+  'overlay.services': 'Services',
+  'overlay.services.title': 'Fire and police coverage of every building',
 
   'rejection.notEnoughMoney': 'Not enough money',
   'rejection.tileOccupied': 'This tile is already occupied',
@@ -128,6 +135,7 @@ const en = {
   'rejection.needsLakeShore': 'Pumped storage must stand on the lake shore',
   'rejection.cannotBuildOnWater': 'Cannot build on water',
   'rejection.needsLineSite': 'Power lines need free land, a road or water',
+  'rejection.needsRoad': 'Needs a road next to it',
   'rejection.alreadyInsulated': 'Building insulation is already installed',
 
   'footer.hint': 'right mouse/WASD: pan · wheel: zoom · Q/E: rotate',
@@ -156,6 +164,9 @@ const en = {
   'help.ev.title': 'E-mobility',
   'help.ev.body':
     'Your citizens drive EVs. Home charging peaks in the evening — right when solar is gone. Charging hubs shift the load into the sunny midday, and the smart-charging upgrade follows the surplus automatically.',
+  'help.services.title': 'City services',
+  'help.services.body':
+    'Fire and police stations protect every building within their ring, but only while connected to the grid. Buildings need fire cover to reach the highest density; without police cover, happiness and tax income fall once the city has 100 residents. The services overlay shows who is covered.',
   'help.controls.title': 'Controls',
   'help.controls.body':
     'Left mouse: use the selected tool (drag for roads and zones). Right or middle mouse drag: pan. Mouse wheel: zoom. Q/E: rotate the view. WASD/arrows: pan. Ctrl+S: quick-save. The game autosaves every 30 seconds.',
@@ -254,6 +265,8 @@ const en = {
   'goal.summerResilience.title': 'Heat-proof',
   'goal.summerResilience.body':
     'Get through a whole summer without a single undersupplied tick (50+ residents).',
+  'goal.safeCity.title': 'Safe city',
+  'goal.safeCity.body': 'Fire and police cover 90% of buildings (100+ residents).',
 
   // Budget panel and tile inspector.
   'budget.title': 'Budget',
@@ -277,6 +290,7 @@ const en = {
   'inspect.section.money': 'Money',
   'inspect.section.energy': 'Energy',
   'inspect.section.growth': 'Demand & growth',
+  'inspect.section.services': 'Services',
   'inspect.upkeep': 'Upkeep',
   'inspect.tax': 'Tax contribution',
   'inspect.net': 'Net',
@@ -297,6 +311,13 @@ const en = {
   'inspect.supply.notConnected': 'not connected',
   'inspect.supply.undersupplied': 'undersupplied',
   'inspect.supply.supplied': 'supplied',
+  'inspect.fire': 'Fire cover',
+  'inspect.police': 'Police cover',
+  'inspect.covered': 'covered',
+  'inspect.uncovered': 'not covered',
+  'inspect.stationStatus': 'Station',
+  'inspect.stationActive': 'active',
+  'inspect.stationUnpowered': 'unpowered, covers nothing',
   'inspect.blocker.noRoad': 'No road next to this tile',
   'inspect.blocker.lowDemand': 'Too little demand for this zone',
   'inspect.blocker.notConnected': 'No connected power line in reach',
@@ -346,6 +367,8 @@ const de: Record<TranslationKey, string> = {
   'tool.plant-biogas': 'Biogasanlage',
   'tool.plant-hub': 'Ladepark',
   'tool.plant-park': 'Park',
+  'tool.plant-fire': 'Feuerwehr',
+  'tool.plant-police': 'Polizei',
   'tool.plant-hydro': 'Laufwasserkraftwerk',
   'tool.plant-pumped': 'Pumpspeicher',
   'tool.bulldoze': 'Abriss',
@@ -371,6 +394,10 @@ const de: Record<TranslationKey, string> = {
   'tool.plant-biogas.desc': 'Regelbare Erzeugung, verbraucht aber kostenpflichtigen Brennstoff.',
   'tool.plant-hub.desc': 'Lädt E-Autos im Umkreis. Passt zum Smart Charging.',
   'tool.plant-park.desc': 'Erhöht die Zufriedenheit in der Nähe. Erzeugt nichts.',
+  'tool.plant-fire.desc':
+    'Gebäude in ihrem Ring dürfen die höchste Dichte erreichen. Braucht Straße und Strom.',
+  'tool.plant-police.desc':
+    'Hält Zufriedenheit und Steuern in ihrem Ring hoch. Braucht Straße und Strom.',
   'tool.plant-hydro.desc': 'Am Fluss gebaut. Leistung folgt dem Abfluss.',
   'tool.plant-pumped.desc': 'Großer Speicher am Seeufer. Pumpt bei Überschuss hoch.',
   'tool.bulldoze.desc': 'Entfernt Straßen, Gebiete und Anlagen. Ziehen räumt eine Fläche.',
@@ -428,6 +455,8 @@ const de: Record<TranslationKey, string> = {
   'overlay.supply.title':
     'Versorgungsstatus: grün = versorgt, orange = unterversorgt, rot = nicht angeschlossen',
   'overlay.demand.title': 'Wachstumsnachfrage pro Zone: rot = keine, grün = hoch',
+  'overlay.services': 'Dienste',
+  'overlay.services.title': 'Feuerwehr- und Polizeiabdeckung jedes Gebäudes',
 
   'rejection.notEnoughMoney': 'Nicht genug Geld',
   'rejection.tileOccupied': 'Dieses Feld ist bereits belegt',
@@ -437,6 +466,7 @@ const de: Record<TranslationKey, string> = {
   'rejection.needsLakeShore': 'Pumpspeicher müssen am Seeufer stehen',
   'rejection.cannotBuildOnWater': 'Auf Wasser kann nicht gebaut werden',
   'rejection.needsLineSite': 'Leitungen brauchen freies Land, eine Straße oder Wasser',
+  'rejection.needsRoad': 'Braucht eine Straße daneben',
   'rejection.alreadyInsulated': 'Die Gebäudedämmung ist bereits installiert',
 
   'footer.hint': 'rechte Maustaste/WASD: bewegen · Mausrad: zoomen · Q/E: drehen',
@@ -465,6 +495,9 @@ const de: Record<TranslationKey, string> = {
   'help.ev.title': 'E-Mobilität',
   'help.ev.body':
     'Deine Bürger fahren E-Autos. Das Laden zu Hause hat abends seinen Höhepunkt — genau dann, wenn die Sonne weg ist. Ladeparks verschieben die Last in den sonnigen Mittag, und das Smart-Charging-Upgrade folgt dem Überschuss automatisch.',
+  'help.services.title': 'Stadtdienste',
+  'help.services.body':
+    'Feuerwehr und Polizei schützen jedes Gebäude in ihrem Ring, aber nur mit Netzanschluss. Für die höchste Dichte brauchen Gebäude Feuerwehrschutz; ohne Polizeischutz sinken Zufriedenheit und Steuereinnahmen, sobald die Stadt 100 Einwohner hat. Das Dienste-Overlay zeigt, wer abgedeckt ist.',
   'help.controls.title': 'Steuerung',
   'help.controls.body':
     'Linke Maustaste: gewähltes Werkzeug benutzen (für Straßen und Zonen ziehen). Rechte oder mittlere Maustaste ziehen: Ansicht bewegen. Mausrad: zoomen. Q/E: Ansicht drehen. WASD/Pfeile: bewegen. Strg+S: Schnellspeichern. Das Spiel speichert alle 30 Sekunden automatisch.',
@@ -564,6 +597,8 @@ const de: Record<TranslationKey, string> = {
   'goal.summerResilience.title': 'Hitzefest',
   'goal.summerResilience.body':
     'Überstehe einen ganzen Sommer ohne einen einzigen unterversorgten Tick (ab 50 Einwohnern).',
+  'goal.safeCity.title': 'Sichere Stadt',
+  'goal.safeCity.body': 'Feuerwehr und Polizei decken 90 % der Gebäude ab (ab 100 Einwohnern).',
 
   // Budget-Panel und Kachel-Inspektor.
   'budget.title': 'Budget',
@@ -587,6 +622,7 @@ const de: Record<TranslationKey, string> = {
   'inspect.section.money': 'Geld',
   'inspect.section.energy': 'Energie',
   'inspect.section.growth': 'Nachfrage & Wachstum',
+  'inspect.section.services': 'Dienste',
   'inspect.upkeep': 'Unterhalt',
   'inspect.tax': 'Steuerbeitrag',
   'inspect.net': 'Saldo',
@@ -607,6 +643,13 @@ const de: Record<TranslationKey, string> = {
   'inspect.supply.notConnected': 'nicht angeschlossen',
   'inspect.supply.undersupplied': 'unterversorgt',
   'inspect.supply.supplied': 'versorgt',
+  'inspect.fire': 'Feuerwehrschutz',
+  'inspect.police': 'Polizeischutz',
+  'inspect.covered': 'abgedeckt',
+  'inspect.uncovered': 'nicht abgedeckt',
+  'inspect.stationStatus': 'Station',
+  'inspect.stationActive': 'aktiv',
+  'inspect.stationUnpowered': 'ohne Strom, deckt nichts ab',
   'inspect.blocker.noRoad': 'Keine Straße an dieser Kachel',
   'inspect.blocker.lowDemand': 'Zu wenig Nachfrage für diese Zone',
   'inspect.blocker.notConnected': 'Keine angeschlossene Stromleitung in Reichweite',

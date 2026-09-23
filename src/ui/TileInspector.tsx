@@ -28,8 +28,8 @@ const PLANT_LABEL: Record<PlantType, TranslationKey | null> = {
   [PlantType.Park]: 'tool.plant-park',
   [PlantType.RunOfRiver]: 'tool.plant-hydro',
   [PlantType.PumpedStorage]: 'tool.plant-pumped',
-  [PlantType.FireStation]: null,
-  [PlantType.PoliceStation]: null,
+  [PlantType.FireStation]: 'tool.plant-fire',
+  [PlantType.PoliceStation]: 'tool.plant-police',
 };
 
 const ZONE_LABEL: Record<Zone, TranslationKey | null> = {
@@ -113,6 +113,9 @@ export function TileInspector({ info, onClose }: { info: TileInfo; onClose: () =
   const { t } = useI18n();
   const isBuilding = info.tileType === TileType.Empty && info.density > 0;
   const isZoned = info.tileType === TileType.Empty && info.zone !== Zone.None;
+  const isStation =
+    info.tileType === TileType.Plant &&
+    (info.plantType === PlantType.FireStation || info.plantType === PlantType.PoliceStation);
   const upkeepPerDay = (info.upkeepPerTick + info.fuelCostPerTick) * TICKS_PER_DAY;
   const taxPerDay = info.taxPerTick * TICKS_PER_DAY;
   const netPerDay = taxPerDay - upkeepPerDay;
@@ -223,6 +226,38 @@ export function TileInspector({ info, onClose }: { info: TileInfo; onClose: () =
           />
         )}
       </section>
+
+      {(isBuilding || isStation) && (
+        <section data-testid="inspect-services">
+          <h3>{t('inspect.section.services')}</h3>
+          {isBuilding && (
+            <>
+              <Row
+                label={t('inspect.fire')}
+                value={info.fireCovered ? t('inspect.covered') : t('inspect.uncovered')}
+                tone={info.fireCovered ? 'positive' : 'negative'}
+                testId="inspect-fire"
+              />
+              <Row
+                label={t('inspect.police')}
+                value={info.policeCovered ? t('inspect.covered') : t('inspect.uncovered')}
+                tone={info.policeCovered ? 'positive' : 'negative'}
+                testId="inspect-police"
+              />
+            </>
+          )}
+          {isStation && (
+            <Row
+              label={t('inspect.stationStatus')}
+              value={
+                info.stationActive ? t('inspect.stationActive') : t('inspect.stationUnpowered')
+              }
+              tone={info.stationActive ? 'positive' : 'negative'}
+              testId="inspect-station"
+            />
+          )}
+        </section>
+      )}
 
       {(isBuilding || isZoned) && (
         <section>
