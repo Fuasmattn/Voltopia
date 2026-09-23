@@ -137,6 +137,7 @@ const en = {
   'rejection.needsLineSite': 'Power lines need free land, a road or water',
   'rejection.needsRoad': 'Needs a road next to it',
   'rejection.alreadyInsulated': 'Building insulation is already installed',
+  'rejection.tooSteep': 'Too steep to build on',
 
   'footer.hint': 'right mouse/WASD: pan · wheel: zoom · Q/E: rotate',
   'footer.help': 'Help',
@@ -173,6 +174,9 @@ const en = {
   'help.icons.title': 'Warning icons',
   'help.icons.body':
     'A red bolt above a building means it is not connected to any plant; an orange bolt means the grid cannot cover its demand right now.',
+  'help.terrain.title': 'Hills and slopes',
+  'help.terrain.body':
+    'Every map has hills. Steep slopes cannot be built on, and building on a gentle slope costs extra. Wind turbines generate more on high ground, run-of-river plants gain from a drop in the river, and pumped storage stores more the higher it sits above the lake.',
 
   'imprint.title': 'Imprint',
   'imprint.according': 'Information in accordance with § 5 DDG',
@@ -328,6 +332,9 @@ const en = {
   'inspect.blocker.cityUnhappy': 'City too unhappy to grow',
   'inspect.blocker.notLand': 'Cannot build on water',
   'inspect.blocker.noFireCoverage': 'No fire station in reach for the next density',
+  'inspector.elevation': 'Elevation',
+  'inspector.steepSlope': 'Steep slope — cannot be built on',
+  'inspector.terrainBonus': 'Terrain bonus',
 } as const;
 
 export type TranslationKey = keyof typeof en;
@@ -469,6 +476,7 @@ const de: Record<TranslationKey, string> = {
   'rejection.needsLineSite': 'Leitungen brauchen freies Land, eine Straße oder Wasser',
   'rejection.needsRoad': 'Braucht eine Straße daneben',
   'rejection.alreadyInsulated': 'Die Gebäudedämmung ist bereits installiert',
+  'rejection.tooSteep': 'Zu steil zum Bebauen',
 
   'footer.hint': 'rechte Maustaste/WASD: bewegen · Mausrad: zoomen · Q/E: drehen',
   'footer.help': 'Hilfe',
@@ -505,6 +513,9 @@ const de: Record<TranslationKey, string> = {
   'help.icons.title': 'Warnsymbole',
   'help.icons.body':
     'Ein roter Blitz über einem Gebäude bedeutet: nicht an eine Anlage angeschlossen. Ein oranger Blitz: das Netz kann den Bedarf gerade nicht decken.',
+  'help.terrain.title': 'Hügel und Hänge',
+  'help.terrain.body':
+    'Jede Karte hat Hügel. Steilhänge sind nicht bebaubar, Bauen am Hang kostet einen Aufschlag. Windräder erzeugen auf Anhöhen mehr, Laufwasserkraft profitiert vom Gefälle des Flusses, und Pumpspeicher speichern umso mehr, je höher sie über dem See liegen.',
 
   'imprint.title': 'Impressum',
   'imprint.according': 'Angaben gemäß § 5 DDG',
@@ -661,6 +672,9 @@ const de: Record<TranslationKey, string> = {
   'inspect.blocker.cityUnhappy': 'Stadt zu unzufrieden zum Wachsen',
   'inspect.blocker.notLand': 'Bauen auf Wasser nicht möglich',
   'inspect.blocker.noFireCoverage': 'Keine Feuerwehr in Reichweite für die nächste Dichte',
+  'inspector.elevation': 'Höhenstufe',
+  'inspector.steepSlope': 'Steilhang — nicht bebaubar',
+  'inspector.terrainBonus': 'Geländebonus',
 };
 
 const translations: Record<Locale, Record<TranslationKey, string>> = { en, de };

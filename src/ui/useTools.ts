@@ -114,9 +114,12 @@ export function useTools(
       setCostPreview(null);
     };
 
-    const showCost = (tileCount: number, perTile: number): void => {
-      setCostPreview({ tiles: tileCount, cost: tileCount * perTile });
-    };
+    // Mirrors the sim's slope surcharge (src/sim/state.ts, slopeCostMultiplier):
+    // any sloped tile (slope >= 1) costs BALANCE.terrain.slopeCostFactor times as much.
+    // Reads rendererRef fresh (not the `renderer` captured at effect setup)
+    // so it still works once the renderer mounts after this effect ran.
+    const slopeFactorAt = (index: number): number =>
+      (rendererRef.current?.slopeAt(index) ?? 0) > 0 ? BALANCE.terrain.slopeCostFactor : 1;
 
     // Mirrors the sim's per-tile pricing (src/sim/roads.ts, powerLines.ts):
     // river tiles are bridges; lines over river or lake are crossings.
@@ -125,17 +128,35 @@ export function useTools(
       const renderer = rendererRef.current;
       const cost = tiles.reduce((sum, index) => {
         const terrain = renderer?.terrainAt(index);
+        const factor = slopeFactorAt(index);
         if (line) {
           const water = terrain !== undefined && terrain !== Terrain.Land;
           return (
-            sum + (water ? BALANCE.costs.powerLineWaterPerTile : BALANCE.costs.powerLinePerTile)
+            sum +
+            Math.round(
+              (water ? BALANCE.costs.powerLineWaterPerTile : BALANCE.costs.powerLinePerTile) *
+                factor,
+            )
           );
         }
         return (
           sum +
-          (terrain === Terrain.River ? BALANCE.costs.bridgePerTile : BALANCE.costs.roadPerTile)
+          Math.round(
+            (terrain === Terrain.River ? BALANCE.costs.bridgePerTile : BALANCE.costs.roadPerTile) *
+              factor,
+          )
         );
       }, 0);
+      setCostPreview({ tiles: tiles.length, cost });
+    };
+
+    // Mirrors the sim's per-tile pricing for zones (src/sim/zones.ts): each
+    // tile is rounded individually after applying the slope surcharge.
+    const showZoneCost = (tiles: number[]): void => {
+      const cost = tiles.reduce(
+        (sum, index) => sum + Math.round(BALANCE.costs.zonePerTile * slopeFactorAt(index)),
+        0,
+      );
       setCostPreview({ tiles: tiles.length, cost });
     };
 
@@ -173,13 +194,13 @@ export function useTools(
         anchor = tile;
         path = [tile.index];
         rendererRef.current?.setPreviewTiles(path);
-        showCost(1, BALANCE.costs.zonePerTile);
+        showZoneCost(path);
       };
       callbacks.onBuildDrag = (tile) => {
         if (!anchor) return;
         path = rectTiles(anchor.x, anchor.y, tile.x, tile.y, gridSize);
         rendererRef.current?.setPreviewTiles(path);
-        showCost(path.length, BALANCE.costs.zonePerTile);
+        showZoneCost(path);
       };
       callbacks.onBuildEnd = (tile) => {
         if (anchor && tile) {

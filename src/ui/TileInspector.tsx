@@ -139,6 +139,29 @@ export function TileInspector({ info, onClose }: { info: TileInfo; onClose: () =
         </button>
       </header>
 
+      {info.terrain === Terrain.Land && (
+        <section>
+          <Row
+            label={t('inspector.elevation')}
+            value={`${info.elevation}`}
+            testId="inspect-elevation"
+          />
+          {info.terrainBonus > 1 && (
+            <Row
+              label={t('inspector.terrainBonus')}
+              value={`+${Math.round((info.terrainBonus - 1) * 100)} %`}
+              tone="positive"
+              testId="inspect-terrain-bonus"
+            />
+          )}
+          {info.slope > 1 && (
+            <p className="inspect-blockers" data-testid="inspect-steep-slope">
+              ⚠ {t('inspector.steepSlope')}
+            </p>
+          )}
+        </section>
+      )}
+
       <section>
         <h3>{t('inspect.section.money')}</h3>
         <Row
