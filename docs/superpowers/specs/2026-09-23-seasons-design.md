@@ -42,7 +42,8 @@ fields (no `SAVE_VERSION` bump):
   `0` for new games. `deserializeState` sets it to
   `dayNumber(save.tick)` when the field is missing, so a legacy city
   starts its year on the day it is loaded.
-- `snowpack: number` 0..1 — see Section 2. Default `0`.
+- `weather.snowpack: number` 0..1 — see Section 2. Default `0`. Lives
+  next to `riverFlow` on the `Weather` record so stats carry it for free.
 
 Undo snapshots do not include either (they are not build actions).
 
@@ -102,9 +103,10 @@ season's values.
 
 ### Stats
 
-`GlobalStats` gains `season: SeasonStats` mirroring `SeasonState` plus
-`snowpack`. `EnergyStats.consumption` gains `heating`. Legacy JSON
-imports that predate the fields are fine because stats are not persisted.
+`GlobalStats` gains `season: SeasonState` and `insulation: boolean`;
+`snowpack` travels with the other weather values in `stats.weather`.
+`EnergyStats.consumption` gains `heating`. Legacy JSON imports that
+predate the fields are fine because stats are not persisted.
 
 ## Section 2: Weather, generation, water, heating
 
@@ -145,9 +147,10 @@ spring, the existing summer drought. `dryBaselineFlow` stays constant.
 
 ### Heating load
 
-`buildingConsumption(zone, density, time, season, insulation)` becomes
-`base × loadProfileFactor + base × heatingDegree × heatingWeight[zone] × (insulation ? insulationFactor : 1)`
-where
+`buildingConsumption(zone, density, time)` keeps returning the profile
+term. A new `heatingConsumption(zone, density, temperature, insulation)`
+returns `base × heatingDegree × heatingWeight[zone] × (insulation ? insulationFactor : 1)`
+and `energyStep` adds both per connected building, where
 
 - `base = consumptionByZoneAndDensity[zone][density]`,
 - `heatingDegree = clamp((comfortTemperature − temperature) / heatingRange, 0, 1)`
