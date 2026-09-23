@@ -258,8 +258,13 @@ export const BALANCE = {
     smartChargeFloor: 0.35,
     /** A hub serves workplaces within this Chebyshev radius. */
     hubRadius: 5,
-    /** Vehicles queuing on one road tile before followers must wait. */
+    /** Vehicles per road tile AND direction (one lane each way) before followers must wait. */
     maxPerRoadTile: 2,
+    /**
+     * Ticks a blocked vehicle waits before it squeezes past anyway. Breaks
+     * gridlocks (rings of full tiles) that would otherwise never clear.
+     */
+    maxWaitTicks: 40,
     /**
      * Commuting: vehicles drive home -> workplace in the morning and
      * back in the evening (hours of the in-game day). Departures are
