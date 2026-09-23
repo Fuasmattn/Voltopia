@@ -3,7 +3,12 @@ import { BALANCE } from '../shared/constants.ts';
 import { DIR_E, DIR_W, LINE_PRESENT, tileIndex } from '../shared/grid.ts';
 import { PlantType, Terrain } from '../shared/types.ts';
 import { placePlant } from './energy.ts';
-import { buildPowerLines, countPowerLineTiles, hasPowerLines } from './powerLines.ts';
+import {
+  buildPowerLines,
+  countPowerLineTiles,
+  hasPowerLines,
+  powerLineTileCost,
+} from './powerLines.ts';
 import { buildRoads, bulldozeTiles, undoLastAction } from './roads.ts';
 import { collectDiffs, createSimState, TileType, type SimState } from './state.ts';
 
@@ -38,6 +43,14 @@ describe('buildPowerLines', () => {
     buildPowerLines(state, [at(7, 5), at(8, 5)]);
     expect(state.money).toBe(
       before - BALANCE.costs.powerLinePerTile - BALANCE.costs.powerLineWaterPerTile,
+    );
+  });
+
+  it('charges the slope surcharge on a sloped land tile', () => {
+    const state = makeState();
+    state.layers.elevation[at(6, 5)] = 1; // makes tile (5,5) slope 1
+    expect(powerLineTileCost(state, at(5, 5))).toBe(
+      Math.round(BALANCE.costs.powerLinePerTile * BALANCE.terrain.slopeCostFactor),
     );
   });
 

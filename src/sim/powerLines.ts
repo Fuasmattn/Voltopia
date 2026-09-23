@@ -7,6 +7,7 @@ import {
   bumpGridVersion,
   isBuildable,
   markDirty,
+  slopeCostMultiplier,
   snapshotTile,
   Terrain,
   withNeighbors,
@@ -37,9 +38,11 @@ export function recomputePowerLineMask(state: SimState, index: number): void {
 
 /** Price of one line tile: overhead crossings over water cost more. */
 export function powerLineTileCost(state: SimState, index: number): number {
-  return state.layers.terrain[index] === Terrain.Land
-    ? BALANCE.costs.powerLinePerTile
-    : BALANCE.costs.powerLineWaterPerTile;
+  const base =
+    state.layers.terrain[index] === Terrain.Land
+      ? BALANCE.costs.powerLinePerTile
+      : BALANCE.costs.powerLineWaterPerTile;
+  return Math.round(base * slopeCostMultiplier(state, index));
 }
 
 /**

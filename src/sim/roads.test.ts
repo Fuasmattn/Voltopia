@@ -57,6 +57,16 @@ describe('buildRoads', () => {
     expect(state.money).toBe(before - 3 * BALANCE.costs.roadPerTile);
   });
 
+  it('charges the slope surcharge on sloped road tiles', () => {
+    const state = createSimState(1, 8);
+    state.layers.elevation[tileIndex(1, 0, 8)] = 1; // makes tile (0,0) slope 1
+    const before = state.money;
+    buildRoads(state, [tileIndex(0, 0, 8)]);
+    expect(before - state.money).toBe(
+      Math.round(BALANCE.costs.roadPerTile * BALANCE.terrain.slopeCostFactor),
+    );
+  });
+
   it('rejects when there is not enough money', () => {
     const state = makeState();
     state.money = BALANCE.costs.roadPerTile - 1;

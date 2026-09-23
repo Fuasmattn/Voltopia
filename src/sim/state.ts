@@ -409,6 +409,7 @@ export function buildRejection(
     if (layers.density[index] !== 0 || layers.tileType[index] === TileType.Plant) {
       return 'needsLineSite';
     }
+    if (slopeAt(state, index) > BALANCE.terrain.maxBuildSlope) return 'tooSteep';
     return null;
   }
   if (layers.tileType[index] !== TileType.Empty || layers.density[index] !== 0) {
@@ -421,11 +422,13 @@ export function buildRejection(
   const terrain = layers.terrain[index] as Terrain;
   const wantsRiver = intent === BuildIntent.Plant && plant === PlantType.RunOfRiver;
   if (terrain === Terrain.Lake) return 'cannotBuildOnWater';
-  if (terrain === Terrain.River) {
-    if (intent === BuildIntent.Road || wantsRiver) return null;
+  if (terrain === Terrain.River && !(intent === BuildIntent.Road || wantsRiver)) {
     return 'cannotBuildOnWater';
   }
-  if (wantsRiver) return 'needsRiverTile';
+  if (wantsRiver && terrain !== Terrain.River) return 'needsRiverTile';
+  // Steep tiles reject everything the water rules did not already veto.
+  if (slopeAt(state, index) > BALANCE.terrain.maxBuildSlope) return 'tooSteep';
+  if (terrain === Terrain.River) return null; // bridge or run-of-river
   if (
     intent === BuildIntent.Plant &&
     plant === PlantType.PumpedStorage &&

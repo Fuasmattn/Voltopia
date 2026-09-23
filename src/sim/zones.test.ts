@@ -30,6 +30,16 @@ describe('paintZones', () => {
     expect(state.layers.zone[at(4, 4)]).toBe(Zone.Commercial);
   });
 
+  it('charges the slope surcharge on a sloped tile', () => {
+    const state = createSimState(1, SIZE);
+    state.layers.elevation[at(2, 1)] = 1; // makes tile (1,1) slope 1
+    const before = state.money;
+    paintZones(state, [at(1, 1)], Zone.Residential);
+    expect(before - state.money).toBe(
+      Math.round(BALANCE.costs.zonePerTile * BALANCE.terrain.slopeCostFactor),
+    );
+  });
+
   it('repainting the same zone is free', () => {
     const state = createSimState(1, SIZE);
     paintZones(state, [at(1, 1)], Zone.Retail);

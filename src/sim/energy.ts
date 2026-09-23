@@ -9,6 +9,7 @@ import {
   bumpGridVersion,
   markDirty,
   pushEnergyHistory,
+  slopeCostMultiplier,
   snapshotTile,
   SupplyStatus,
   TileType,
@@ -42,7 +43,7 @@ export function placePlant(state: SimState, tile: number, plant: PlantType): Bui
   if (plant === PlantType.None) return { rejected: 'noPlantSelected' };
   const rejection = buildRejection(state, tile, BuildIntent.Plant, plant);
   if (rejection) return { rejected: rejection };
-  const cost = BALANCE.costs.plant[plant];
+  const cost = Math.round(BALANCE.costs.plant[plant] * slopeCostMultiplier(state, tile));
   if (cost > state.money) {
     return { rejected: 'notEnoughMoney' };
   }

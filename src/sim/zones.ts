@@ -5,6 +5,7 @@ import {
   BuildIntent,
   isBuildable,
   markDirty,
+  slopeCostMultiplier,
   snapshotTile,
   type SimState,
   type UndoEntry,
@@ -21,7 +22,10 @@ export function paintZones(state: SimState, tiles: number[], zone: Zone): BuildR
   );
   if (paintable.length === 0) return {};
 
-  const cost = paintable.length * BALANCE.costs.zonePerTile;
+  const cost = paintable.reduce(
+    (sum, index) => sum + Math.round(BALANCE.costs.zonePerTile * slopeCostMultiplier(state, index)),
+    0,
+  );
   if (cost > state.money) {
     return { rejected: 'notEnoughMoney' };
   }

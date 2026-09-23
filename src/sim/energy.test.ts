@@ -69,6 +69,16 @@ describe('placePlant', () => {
     expect(state.money).toBe(before - BALANCE.costs.plant[PlantType.SolarFarm]);
   });
 
+  it('charges the slope surcharge on a sloped tile', () => {
+    const state = makeState();
+    state.layers.elevation[at(6, 5)] = 1; // makes tile (5,5) slope 1
+    const before = state.money;
+    placePlant(state, at(5, 5), PlantType.SolarFarm);
+    expect(before - state.money).toBe(
+      Math.round(BALANCE.costs.plant[PlantType.SolarFarm] * BALANCE.terrain.slopeCostFactor),
+    );
+  });
+
   it('rejects occupied tiles and missing funds', () => {
     const state = makeState();
     placePlant(state, at(5, 5), PlantType.SolarFarm);

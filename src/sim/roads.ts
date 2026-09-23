@@ -6,6 +6,7 @@ import {
   bumpGridVersion,
   isBuildable,
   markDirty,
+  slopeCostMultiplier,
   snapshotTile,
   Terrain,
   TileType,
@@ -50,7 +51,12 @@ export function buildRoads(state: SimState, tiles: number[]): BuildResult {
 
   const { roadPerTile, bridgePerTile } = BALANCE.costs;
   const cost = buildable.reduce(
-    (sum, index) => sum + (layers.terrain[index] === Terrain.River ? bridgePerTile : roadPerTile),
+    (sum, index) =>
+      sum +
+      Math.round(
+        (layers.terrain[index] === Terrain.River ? bridgePerTile : roadPerTile) *
+          slopeCostMultiplier(state, index),
+      ),
     0,
   );
   if (cost > state.money) {

@@ -317,3 +317,35 @@ describe('elevation', () => {
     expect(slopeCostMultiplier(state, 0)).toBe(BALANCE.terrain.slopeCostFactor);
   });
 });
+
+describe('tooSteep', () => {
+  function steepState() {
+    const state = createSimState(1, 8);
+    // A cliff: centre at 3, east neighbour at 0 -> slope 3 on both tiles.
+    state.layers.elevation[tileIndex(3, 3, 8)] = 3;
+    return state;
+  }
+
+  it('rejects every intent on a steep tile', () => {
+    const state = steepState();
+    const steep = tileIndex(3, 3, 8);
+    expect(buildRejection(state, steep, BuildIntent.Road)).toBe('tooSteep');
+    expect(buildRejection(state, steep, BuildIntent.Zone)).toBe('tooSteep');
+    expect(buildRejection(state, steep, BuildIntent.Plant, PlantType.SolarFarm)).toBe('tooSteep');
+    expect(buildRejection(state, steep, BuildIntent.PowerLine)).toBe('tooSteep');
+  });
+
+  it('water rejections win over tooSteep', () => {
+    const state = steepState();
+    const steep = tileIndex(3, 3, 8);
+    state.layers.terrain[steep] = Terrain.Lake;
+    expect(buildRejection(state, steep, BuildIntent.Zone)).toBe('cannotBuildOnWater');
+  });
+
+  it('a steep river tile cannot carry a bridge', () => {
+    const state = steepState();
+    const steep = tileIndex(3, 3, 8);
+    state.layers.terrain[steep] = Terrain.River;
+    expect(buildRejection(state, steep, BuildIntent.Road)).toBe('tooSteep');
+  });
+});
