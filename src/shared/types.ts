@@ -99,7 +99,7 @@ export interface EnergyHistoryPoint {
 
 export interface EnergyStats {
   generation: { solar: number; wind: number; biogas: number; rooftop: number; hydro: number };
-  consumption: { buildings: number; charging: number; heating: number };
+  consumption: { buildings: number; charging: number; heating: number; cooling: number };
   /** Absolute stored energy across all batteries. */
   storedEnergy: number;
   /** Total installed battery capacity. */
@@ -138,6 +138,8 @@ export interface LifetimeSample {
   temperature?: number;
   /** Average heating consumption per tick over the day (absent in older samples). */
   heating?: number;
+  /** Average cooling consumption per tick over the day (absent in older samples). */
+  cooling?: number;
 }
 
 export interface GoalState {

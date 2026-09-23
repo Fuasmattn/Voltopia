@@ -149,6 +149,7 @@ export interface SimState {
       generation: number;
       consumption: number;
       heating: number;
+      cooling: number;
       temperature: number;
       ticks: number;
     };
@@ -230,7 +231,7 @@ export function createSimState(
     commuteCongestion: 1,
     lifetime: {
       samples: [],
-      daySums: { generation: 0, consumption: 0, heating: 0, temperature: 0, ticks: 0 },
+      daySums: { generation: 0, consumption: 0, heating: 0, cooling: 0, temperature: 0, ticks: 0 },
     },
     lastEnergy: {
       solar: 0,

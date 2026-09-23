@@ -59,8 +59,10 @@ function recordLifetime(state: SimState, population: number, jobs: number): void
   const e = state.lastEnergy;
   const sums = state.lifetime.daySums;
   sums.generation += e.solar + e.wind + e.rooftop + e.hydro + e.biogas;
-  sums.consumption += e.buildingConsumption + e.chargingConsumption + e.heatingConsumption;
+  sums.consumption +=
+    e.buildingConsumption + e.chargingConsumption + e.heatingConsumption + e.coolingConsumption;
   sums.heating += e.heatingConsumption;
+  sums.cooling += e.coolingConsumption;
   sums.temperature += state.season.temperature;
   sums.ticks++;
 
@@ -76,6 +78,7 @@ function recordLifetime(state: SimState, population: number, jobs: number): void
     money: state.money,
     temperature: sums.temperature / ticks,
     heating: sums.heating / ticks,
+    cooling: sums.cooling / ticks,
   });
   if (state.lifetime.samples.length > MAX_LIFETIME_SAMPLES) {
     state.lifetime.samples.shift();
@@ -83,6 +86,7 @@ function recordLifetime(state: SimState, population: number, jobs: number): void
   sums.generation = 0;
   sums.consumption = 0;
   sums.heating = 0;
+  sums.cooling = 0;
   sums.temperature = 0;
   sums.ticks = 0;
 }
@@ -140,6 +144,7 @@ export function buildStats(state: SimState): GlobalStats {
         buildings: e.buildingConsumption,
         charging: e.chargingConsumption,
         heating: e.heatingConsumption,
+        cooling: e.coolingConsumption,
       },
       storedEnergy: state.storedEnergy,
       storageCapacity: totalStorageCapacity(state),

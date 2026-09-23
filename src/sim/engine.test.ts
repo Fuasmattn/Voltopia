@@ -1,9 +1,11 @@
 import { describe, expect, it } from 'vitest';
 import { BALANCE, TICKS_PER_DAY } from '../shared/constants.ts';
 import { tileIndex } from '../shared/grid.ts';
-import { PlantType, Terrain } from '../shared/types.ts';
+import { PlantType, Terrain, Zone } from '../shared/types.ts';
 import { SimEngine } from './engine.ts';
 import { timeOfDay, dayNumber } from './tick.ts';
+import { placePlant } from './energy.ts';
+import { buildPowerLines } from './powerLines.ts';
 
 function makeEngine(seed = 42, size = 16): SimEngine {
   return new SimEngine(seed, size);
@@ -167,11 +169,33 @@ describe('SimEngine basics', () => {
     expect(first.stats.season.year).toBe(1);
     expect(first.stats.insulation).toBe(false);
     expect(first.stats.energy.consumption.heating).toBe(0);
+    expect(first.stats.energy.consumption.cooling).toBe(0);
     engine.state.tick = TICKS_PER_DAY * BALANCE.seasons.daysPerSeason - 1;
     const next = engine.tick();
     if (next.type !== 'tick') throw new Error('expected tick');
     expect(next.stats.season.season).toBe('summer');
     expect(next.stats.season.dayOfSeason).toBe(1);
+  });
+
+  it('reports the cooling load in stats on a hot summer afternoon', () => {
+    const engine = makeEngine();
+    const at = (x: number, y: number) => tileIndex(x, y, 16);
+    const { comfortTemperature } = BALANCE.seasons.cooling;
+    // Same powered block as the energy tests: turbine, one residential
+    // building next to it, a power line tile touching both.
+    placePlant(engine.state, at(5, 5), PlantType.WindTurbine);
+    engine.state.layers.zone[at(6, 5)] = Zone.Residential;
+    engine.state.layers.density[at(6, 5)] = 2;
+    buildPowerLines(engine.state, [at(6, 6)]);
+    // Midsummer, warmest hour of the day (see BALANCE.seasons.coldestTime + 0.5).
+    engine.state.seasonOriginDay = -Math.floor(BALANCE.seasons.daysPerSeason * 1.5);
+    engine.state.tick = Math.floor(TICKS_PER_DAY * 0.7);
+    const hot = engine.tick();
+    if (hot.type !== 'tick') throw new Error('expected tick');
+    expect(hot.stats.season.season).toBe('summer');
+    expect(hot.stats.season.temperature).toBeGreaterThan(comfortTemperature);
+    expect(hot.stats.energy.consumption.cooling).toBeGreaterThan(0);
+    expect(hot.stats.energy.consumption.heating).toBe(0);
   });
 
   it('sells building insulation once', () => {
