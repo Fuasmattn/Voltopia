@@ -2,6 +2,7 @@ import * as THREE from 'three';
 import type { TileDiff } from '../shared/types.ts';
 import { SupplyStatus, TileType, Zone } from '../shared/types.ts';
 import type { DiffLayer, RenderEnvironment } from './renderer.ts';
+import type { ElevationField } from './elevationField.ts';
 
 /** Max boxes composing one building. */
 const PARTS_PER_TILE = 3;
@@ -152,7 +153,11 @@ export class BuildingsMesh implements DiffLayer {
   private reducedMotion = false;
   private readonly matrix = new THREE.Matrix4();
 
-  constructor(scene: THREE.Scene, gridSize: number) {
+  constructor(
+    scene: THREE.Scene,
+    gridSize: number,
+    private readonly elevation: ElevationField,
+  ) {
     this.gridSize = gridSize;
     const geometry = new THREE.BoxGeometry(1, 1, 1);
     geometry.translate(0, 0.5, 0); // origin at the base for easy scaling
@@ -300,6 +305,7 @@ export class BuildingsMesh implements DiffLayer {
       if (!main) continue;
       const cx = (index % this.gridSize) + 0.5 + main.ox;
       const cz = Math.floor(index / this.gridSize) + 0.5 + main.oz;
+      const lift = this.elevation.centerY(index);
       const cols = Math.min(3, Math.max(1, Math.round(main.sx / 0.24)));
       const rows = Math.min(4, Math.max(1, Math.round(main.sy / 0.28)));
       let windowId = 0;
@@ -311,7 +317,7 @@ export class BuildingsMesh implements DiffLayer {
             if ((index * 7 + windowId * 13 + building.variant) % 3 === 0) continue;
             if (slot >= this.windowsMesh.instanceMatrix.count) break;
             const x = cx + ((col + 0.5) / cols - 0.5) * main.sx * 0.8;
-            const y = main.oy + ((row + 0.55) / rows) * main.sy * 0.82;
+            const y = main.oy + ((row + 0.55) / rows) * main.sy * 0.82 + lift;
             const z = cz + face * (main.sz / 2 + 0.012);
             if (face === 1) matrix.identity();
             else matrix.copy(rotationBack);
@@ -332,10 +338,11 @@ export class BuildingsMesh implements DiffLayer {
     const parts = buildingParts(building.zone, building.density, building.variant);
     const cx = (index % this.gridSize) + 0.5;
     const cz = Math.floor(index / this.gridSize) + 0.5;
+    const lift = this.elevation.centerY(index);
     for (let i = 0; i < parts.length; i++) {
       const p = parts[i];
       this.matrix.makeScale(p.sx * scale, p.sy * scale, p.sz * scale);
-      this.matrix.setPosition(cx + p.ox * scale, p.oy * scale, cz + p.oz * scale);
+      this.matrix.setPosition(cx + p.ox * scale, p.oy * scale + lift, cz + p.oz * scale);
       this.mesh.setMatrixAt(slots.start + i, this.matrix);
     }
   }

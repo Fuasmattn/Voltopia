@@ -4,6 +4,7 @@ import type { TileDiff } from '../shared/types.ts';
 import { Terrain, TileType } from '../shared/types.ts';
 import { PALETTE } from './scene.ts';
 import type { DiffLayer, RenderEnvironment } from './renderer.ts';
+import type { ElevationField } from './elevationField.ts';
 
 const ROAD_HEIGHT = 0.05;
 const CENTER_SIZE = 0.62;
@@ -35,7 +36,11 @@ export class RoadsMesh implements DiffLayer {
   private readonly terrain: Uint8Array;
   private readonly matrix = new THREE.Matrix4();
 
-  constructor(scene: THREE.Scene, gridSize: number) {
+  constructor(
+    scene: THREE.Scene,
+    gridSize: number,
+    private readonly elevation: ElevationField,
+  ) {
     this.gridSize = gridSize;
     this.roadMasks = new Int16Array(gridSize * gridSize).fill(-1);
     this.terrain = new Uint8Array(gridSize * gridSize);
@@ -137,12 +142,13 @@ export class RoadsMesh implements DiffLayer {
       const x = (index % this.gridSize) + 0.5;
       const z = Math.floor(index / this.gridSize) + 0.5;
 
-      this.setInstance(count++, x, z, CENTER_SIZE, CENTER_SIZE);
+      this.setInstance(count++, index, x, z, CENTER_SIZE, CENTER_SIZE);
       for (const { dx, dy, bit } of DIRECTIONS) {
         if ((mask & bit) === 0) continue;
         const offset = CENTER_SIZE / 2 + ARM_LENGTH / 2;
         this.setInstance(
           count++,
+          index,
           x + dx * offset,
           z + dy * offset,
           dx !== 0 ? ARM_LENGTH : CENTER_SIZE,
@@ -166,10 +172,11 @@ export class RoadsMesh implements DiffLayer {
       if ((x + y) % 2 !== 0) continue;
       const px = x + 0.88;
       const pz = y + 0.88;
+      const lift = this.elevation.centerY(index);
       this.matrix.identity();
-      this.matrix.setPosition(px, 0, pz);
+      this.matrix.setPosition(px, 0 + lift, pz);
       this.lampPoles.setMatrixAt(count, this.matrix);
-      this.matrix.setPosition(px, 0.33, pz);
+      this.matrix.setPosition(px, 0.33 + lift, pz);
       this.lampHeads.setMatrixAt(count, this.matrix);
       count++;
     }
@@ -194,8 +201,9 @@ export class RoadsMesh implements DiffLayer {
       if (mask < 0 || this.terrain[index] !== Terrain.River) continue;
       const x = (index % this.gridSize) + 0.5;
       const z = Math.floor(index / this.gridSize) + 0.5;
+      const lift = this.elevation.centerY(index);
       this.matrix.makeScale(DECK_SIZE, DECK_HEIGHT, DECK_SIZE);
-      this.matrix.setPosition(x, DECK_HEIGHT / 2, z);
+      this.matrix.setPosition(x, DECK_HEIGHT / 2 + lift, z);
       this.decks.setMatrixAt(deckCount++, this.matrix);
 
       const alongZ = (mask & (DIR_N | DIR_S)) !== 0 && (mask & (DIR_E | DIR_W)) === 0;
@@ -205,10 +213,10 @@ export class RoadsMesh implements DiffLayer {
       for (const side of [-1, 1]) {
         if (alongZ) {
           this.matrix.makeScale(RAIL_THICKNESS, RAIL_HEIGHT, DECK_SIZE);
-          this.matrix.setPosition(x + side * offset, RAIL_HEIGHT / 2, z);
+          this.matrix.setPosition(x + side * offset, RAIL_HEIGHT / 2 + lift, z);
         } else {
           this.matrix.makeScale(DECK_SIZE, RAIL_HEIGHT, RAIL_THICKNESS);
-          this.matrix.setPosition(x, RAIL_HEIGHT / 2, z + side * offset);
+          this.matrix.setPosition(x, RAIL_HEIGHT / 2 + lift, z + side * offset);
         }
         this.rails.setMatrixAt(railCount++, this.matrix);
       }
@@ -219,9 +227,16 @@ export class RoadsMesh implements DiffLayer {
     this.rails.instanceMatrix.needsUpdate = true;
   }
 
-  private setInstance(slot: number, x: number, z: number, sizeX: number, sizeZ: number): void {
+  private setInstance(
+    slot: number,
+    index: number,
+    x: number,
+    z: number,
+    sizeX: number,
+    sizeZ: number,
+  ): void {
     this.matrix.makeScale(sizeX, ROAD_HEIGHT, sizeZ);
-    this.matrix.setPosition(x, ROAD_HEIGHT / 2, z);
+    this.matrix.setPosition(x, ROAD_HEIGHT / 2 + this.elevation.centerY(index), z);
     this.mesh.setMatrixAt(slot, this.matrix);
   }
 }

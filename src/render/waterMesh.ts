@@ -3,6 +3,7 @@ import type { TileDiff } from '../shared/types.ts';
 import { Terrain } from '../shared/types.ts';
 import { PALETTE } from './scene.ts';
 import type { DiffLayer, RenderEnvironment } from './renderer.ts';
+import type { ElevationField } from './elevationField.ts';
 
 /** Just above the ground plane, below roads (0.05) and the build grid. */
 const WATER_HEIGHT = 0.015;
@@ -24,7 +25,11 @@ export class WaterMesh implements DiffLayer {
   private nightFactor = 0;
   private reducedMotion = false;
 
-  constructor(scene: THREE.Scene, gridSize: number) {
+  constructor(
+    scene: THREE.Scene,
+    gridSize: number,
+    private readonly elevation: ElevationField,
+  ) {
     this.gridSize = gridSize;
     this.terrain = new Uint8Array(gridSize * gridSize);
     const geometry = new THREE.PlaneGeometry(1, 1);
@@ -72,8 +77,9 @@ export class WaterMesh implements DiffLayer {
       if (terrain === Terrain.Land) continue;
       const x = (index % this.gridSize) + 0.5;
       const z = Math.floor(index / this.gridSize) + 0.5;
+      const lift = this.elevation.centerY(index);
       this.matrix.identity();
-      this.matrix.setPosition(x, WATER_HEIGHT, z);
+      this.matrix.setPosition(x, WATER_HEIGHT + lift, z);
       this.mesh.setMatrixAt(count, this.matrix);
       this.mesh.setColorAt(
         count,

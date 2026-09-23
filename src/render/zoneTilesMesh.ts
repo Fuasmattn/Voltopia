@@ -2,6 +2,7 @@ import * as THREE from 'three';
 import type { TileDiff } from '../shared/types.ts';
 import { TileType, Zone } from '../shared/types.ts';
 import type { DiffLayer } from './renderer.ts';
+import type { ElevationField } from './elevationField.ts';
 
 const ZONE_TINTS: Record<number, THREE.Color> = {
   [Zone.Residential]: new THREE.Color(0x67c26b),
@@ -19,7 +20,11 @@ export class ZoneTilesMesh implements DiffLayer {
   private readonly zones = new Map<number, Zone>();
   private readonly matrix = new THREE.Matrix4();
 
-  constructor(scene: THREE.Scene, gridSize: number) {
+  constructor(
+    scene: THREE.Scene,
+    gridSize: number,
+    private readonly elevation: ElevationField,
+  ) {
     this.gridSize = gridSize;
     const geometry = new THREE.PlaneGeometry(0.92, 0.92).rotateX(-Math.PI / 2);
     const material = new THREE.MeshBasicMaterial({
@@ -58,7 +63,7 @@ export class ZoneTilesMesh implements DiffLayer {
     for (const [index, zone] of this.zones) {
       this.matrix.setPosition(
         (index % this.gridSize) + 0.5,
-        0.04,
+        0.04 + this.elevation.centerY(index),
         Math.floor(index / this.gridSize) + 0.5,
       );
       this.mesh.setMatrixAt(slot, this.matrix);

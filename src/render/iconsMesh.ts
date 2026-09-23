@@ -2,6 +2,7 @@ import * as THREE from 'three';
 import type { TileDiff } from '../shared/types.ts';
 import { SupplyStatus, TileType } from '../shared/types.ts';
 import type { DiffLayer } from './renderer.ts';
+import type { ElevationField } from './elevationField.ts';
 
 const MAX_ICONS = 512;
 const ICON_SIZE = 0.55;
@@ -59,7 +60,12 @@ export class IconsMesh implements DiffLayer {
   private readonly position = new THREE.Vector3();
   private readonly scale = new THREE.Vector3(ICON_SIZE, ICON_SIZE, ICON_SIZE);
 
-  constructor(scene: THREE.Scene, gridSize: number, camera: THREE.Camera) {
+  constructor(
+    scene: THREE.Scene,
+    gridSize: number,
+    camera: THREE.Camera,
+    private readonly elevation: ElevationField,
+  ) {
     this.gridSize = gridSize;
     this.camera = camera;
     const material = new THREE.MeshBasicMaterial({
@@ -120,7 +126,7 @@ export class IconsMesh implements DiffLayer {
       const bob = this.reducedMotion ? 0 : Math.sin(nowSeconds * 3 + index * 0.7) * 0.07;
       this.position.set(
         (index % this.gridSize) + 0.5,
-        ICON_HEIGHT + bob,
+        ICON_HEIGHT + bob + this.elevation.centerY(index),
         Math.floor(index / this.gridSize) + 0.5,
       );
       this.matrix.compose(this.position, this.camera.quaternion, this.scale);

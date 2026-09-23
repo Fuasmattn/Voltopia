@@ -3,6 +3,7 @@ import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
 import { TICK_MS } from '../shared/constants.ts';
 import type { VehicleState } from '../shared/types.ts';
 import type { RenderEnvironment } from './renderer.ts';
+import type { ElevationField } from './elevationField.ts';
 
 const MAX_VEHICLES = 256;
 const CAR_COLORS = [0xe8e6e0, 0x8fb3c9, 0xd9a066, 0x9aa88f, 0x707a86, 0xc9788f];
@@ -36,7 +37,10 @@ export class VehiclesMesh {
   private readonly up = new THREE.Vector3(0, 1, 0);
   private readonly unitScale = new THREE.Vector3(1, 1, 1);
 
-  constructor(scene: THREE.Scene) {
+  constructor(
+    scene: THREE.Scene,
+    private readonly elevation: ElevationField,
+  ) {
     this.mesh = new THREE.InstancedMesh(
       createCarGeometry(),
       new THREE.MeshLambertMaterial(),
@@ -103,7 +107,7 @@ export class VehiclesMesh {
       const x = jump ? target.x : source.x + (target.x - source.x) * blend;
       const y = jump ? target.y : source.y + (target.y - source.y) * blend;
       const angle = jump ? target.angle : lerpAngle(source.angle, target.angle, blend);
-      this.position.set(x, 0.03, y);
+      this.position.set(x, 0.03 + this.elevation.surfaceY(x, y), y);
       this.quaternion.setFromAxisAngle(this.up, -angle);
       this.matrix.compose(this.position, this.quaternion, this.unitScale);
       this.mesh.setMatrixAt(i, this.matrix);

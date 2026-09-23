@@ -178,14 +178,14 @@ export class GameRenderer {
     this.setTerrainEnvironment = (environment) => this.groundMesh.setEnvironment(environment);
     scene.add(this.groundMesh.group);
 
-    this.addDiffLayer(new WaterMesh(scene, gridSize));
-    this.addDiffLayer(new RoadsMesh(scene, gridSize));
-    this.addDiffLayer(new PowerLinesMesh(scene, gridSize));
-    this.addDiffLayer(new ZoneTilesMesh(scene, gridSize));
-    this.addDiffLayer(new BuildingsMesh(scene, gridSize));
-    this.addDiffLayer(new PlantsMesh(scene, gridSize));
-    this.vehiclesMesh = new VehiclesMesh(scene);
-    this.overlays = new OverlaysMesh(scene, gridSize);
+    this.addDiffLayer(new WaterMesh(scene, gridSize, this.elevation));
+    this.addDiffLayer(new RoadsMesh(scene, gridSize, this.elevation));
+    this.addDiffLayer(new PowerLinesMesh(scene, gridSize, this.elevation));
+    this.addDiffLayer(new ZoneTilesMesh(scene, gridSize, this.elevation));
+    this.addDiffLayer(new BuildingsMesh(scene, gridSize, this.elevation));
+    this.addDiffLayer(new PlantsMesh(scene, gridSize, this.elevation));
+    this.vehiclesMesh = new VehiclesMesh(scene, this.elevation);
+    this.overlays = new OverlaysMesh(scene, gridSize, this.elevation);
     this.addDiffLayer(this.overlays);
     this.minimap = new MinimapLayer(gridSize);
     this.addDiffLayer(this.minimap);
@@ -240,7 +240,7 @@ export class GameRenderer {
     scene.add(this.previewMesh);
 
     this.isoCamera = new IsoCamera(gridSize);
-    this.addDiffLayer(new IconsMesh(scene, gridSize, this.isoCamera.camera));
+    this.addDiffLayer(new IconsMesh(scene, gridSize, this.isoCamera.camera, this.elevation));
 
     this.webgl = new THREE.WebGLRenderer({ antialias: true });
     this.webgl.shadowMap.enabled = true;

@@ -9,6 +9,7 @@ import {
   Zone,
 } from '../shared/types.ts';
 import type { DiffLayer, RenderEnvironment } from './renderer.ts';
+import type { ElevationField } from './elevationField.ts';
 
 const SUPPLY_COLORS: Record<number, number> = {
   [SupplyStatus.Supplied]: 0x4cd964,
@@ -45,7 +46,11 @@ export class OverlaysMesh implements DiffLayer {
   private readonly matrix = new THREE.Matrix4();
   private readonly color = new THREE.Color();
 
-  constructor(scene: THREE.Scene, gridSize: number) {
+  constructor(
+    scene: THREE.Scene,
+    gridSize: number,
+    private readonly elevation: ElevationField,
+  ) {
     this.gridSize = gridSize;
     const geometry = new THREE.PlaneGeometry(0.96, 0.96).rotateX(-Math.PI / 2);
     const material = new THREE.MeshBasicMaterial({
@@ -136,7 +141,7 @@ export class OverlaysMesh implements DiffLayer {
         if (colorHex === null) continue;
         this.matrix.setPosition(
           (index % this.gridSize) + 0.5,
-          0.07,
+          0.07 + this.elevation.centerY(index),
           Math.floor(index / this.gridSize) + 0.5,
         );
         this.mesh.setMatrixAt(slot, this.matrix);

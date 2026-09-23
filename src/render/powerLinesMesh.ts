@@ -3,6 +3,7 @@ import { DIR_E, DIR_S } from '../shared/grid.ts';
 import type { TileDiff } from '../shared/types.ts';
 import { TileType } from '../shared/types.ts';
 import type { DiffLayer } from './renderer.ts';
+import type { ElevationField } from './elevationField.ts';
 
 const PYLON_COLOR = 0x6b6f75;
 const CABLE_COLOR = 0x2b2f33;
@@ -26,7 +27,11 @@ export class PowerLinesMesh implements DiffLayer {
   private readonly tileTypes: Uint8Array;
   private readonly dummy = new THREE.Object3D();
 
-  constructor(scene: THREE.Scene, gridSize: number) {
+  constructor(
+    scene: THREE.Scene,
+    gridSize: number,
+    private readonly elevation: ElevationField,
+  ) {
     this.gridSize = gridSize;
     this.masks = new Uint8Array(gridSize * gridSize);
     this.tileTypes = new Uint8Array(gridSize * gridSize);
@@ -76,12 +81,12 @@ export class PowerLinesMesh implements DiffLayer {
   }
 
   /** World position of a tile's pylon (kerb on roads, centre elsewhere). */
-  private pylonAt(index: number): { x: number; z: number } {
+  private pylonAt(index: number): { x: number; z: number; y: number } {
     const tx = index % this.gridSize;
     const tz = Math.floor(index / this.gridSize);
     const onRoad = this.tileTypes[index] === TileType.Road;
     const offset = onRoad ? KERB_OFFSET : 0.5;
-    return { x: tx + offset, z: tz + offset };
+    return { x: tx + offset, z: tz + offset, y: this.elevation.centerY(index) };
   }
 
   private rebuild(): void {
@@ -91,7 +96,7 @@ export class PowerLinesMesh implements DiffLayer {
       const mask = this.masks[index];
       if (mask === 0) continue;
       const here = this.pylonAt(index);
-      this.dummy.position.set(here.x, 0, here.z);
+      this.dummy.position.set(here.x, here.y, here.z);
       this.dummy.rotation.set(0, 0, 0);
       this.dummy.scale.set(1, 1, 1);
       this.dummy.updateMatrix();
@@ -104,8 +109,12 @@ export class PowerLinesMesh implements DiffLayer {
         const there = this.pylonAt(neighbor);
         const dx = there.x - here.x;
         const dz = there.z - here.z;
-        const length = Math.hypot(dx, dz);
-        this.dummy.position.set((here.x + there.x) / 2, PYLON_HEIGHT, (here.z + there.z) / 2);
+        const length = Math.hypot(dx, dz, there.y - here.y);
+        this.dummy.position.set(
+          (here.x + there.x) / 2,
+          (here.y + there.y) / 2 + PYLON_HEIGHT,
+          (here.z + there.z) / 2,
+        );
         this.dummy.rotation.set(0, -Math.atan2(dz, dx), 0);
         this.dummy.scale.set(length, 1, 1);
         this.dummy.updateMatrix();

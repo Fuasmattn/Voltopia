@@ -3,6 +3,7 @@ import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
 import type { TileDiff } from '../shared/types.ts';
 import { PlantType, Terrain, TileType } from '../shared/types.ts';
 import type { DiffLayer, RenderEnvironment } from './renderer.ts';
+import type { ElevationField } from './elevationField.ts';
 
 const MAX_BOX_PARTS_PER_PLANT = 8;
 const ROTOR_MAX_SPEED_RAD_PER_S = 6;
@@ -268,7 +269,11 @@ export class PlantsMesh implements DiffLayer {
   private readonly scale = new THREE.Vector3();
   private readonly position = new THREE.Vector3();
 
-  constructor(scene: THREE.Scene, gridSize: number) {
+  constructor(
+    scene: THREE.Scene,
+    gridSize: number,
+    private readonly elevation: ElevationField,
+  ) {
     this.gridSize = gridSize;
     const capacity = gridSize * gridSize;
     this.terrain = new Uint8Array(capacity);
@@ -371,9 +376,10 @@ export class PlantsMesh implements DiffLayer {
     for (const [index, plant] of this.plants) {
       const cx = (index % this.gridSize) + 0.5;
       const cz = Math.floor(index / this.gridSize) + 0.5;
+      const lift = this.elevation.centerY(index);
       const site = this.siteOf(index);
       for (const part of plantBoxParts(plant, site)) {
-        this.position.set(cx + part.ox, part.oy, cz + part.oz);
+        this.position.set(cx + part.ox, part.oy + lift, cz + part.oz);
         this.quaternion.setFromEuler(new THREE.Euler(part.rotX ?? 0, 0, 0));
         this.scale.set(part.sx, part.sy, part.sz);
         this.matrix.compose(this.position, this.quaternion, this.scale);
@@ -382,13 +388,13 @@ export class PlantsMesh implements DiffLayer {
         boxSlot++;
       }
       if (plant === PlantType.WindTurbine) {
-        this.rotorPositions.push(new THREE.Vector3(cx, HUB_HEIGHT, cz + 0.09));
+        this.rotorPositions.push(new THREE.Vector3(cx, HUB_HEIGHT + lift, cz + 0.09));
       } else if (plant === PlantType.BiogasPlant) {
         this.matrix.makeScale(1, DOME_SQUASH, 1);
-        this.matrix.setPosition(cx - 0.12, DOME_BASE, cz - 0.05);
+        this.matrix.setPosition(cx - 0.12, DOME_BASE + lift, cz - 0.05);
         this.domeMesh.setMatrixAt(domeSlot++, this.matrix);
       } else if (plant === PlantType.Battery) {
-        this.batteryPositions.push(new THREE.Vector3(cx, 0, cz));
+        this.batteryPositions.push(new THREE.Vector3(cx, lift, cz));
       }
     }
 
@@ -443,7 +449,7 @@ export class PlantsMesh implements DiffLayer {
     for (let i = 0; i < this.batteryPositions.length; i++) {
       const p = this.batteryPositions[i];
       this.matrix.makeScale(0.1, height, 0.03);
-      this.matrix.setPosition(p.x + 0.18, 0.03, p.z + 0.2);
+      this.matrix.setPosition(p.x + 0.18, 0.03 + p.y, p.z + 0.2);
       this.socFillMesh.setMatrixAt(i, this.matrix);
     }
     this.socFillMesh.count = this.batteryPositions.length;
