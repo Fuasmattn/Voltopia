@@ -11,6 +11,7 @@ import { BALANCE, TICKS_PER_DAY } from '../shared/constants.ts';
 import { neighbors4, tileX, tileY } from '../shared/grid.ts';
 import type { GrowthBlocker, TileInfo } from '../shared/types.ts';
 import { PlantType, SupplyStatus, Terrain, TileType, Zone } from '../shared/types.ts';
+import { policeTaxFactor } from './economy.ts';
 import {
   buildingConsumption,
   censusPlants,
@@ -21,7 +22,7 @@ import {
 import { demandFor, energySystemActive, hasRoadAccess } from './growth.ts';
 import { isSupplySource } from './powerGrid.ts';
 import { SERVICE_FIRE, SERVICE_POLICE } from './services.ts';
-import type { SimState } from './state.ts';
+import { countPopulationAndJobs, type SimState } from './state.ts';
 import { currentSolarFactor, currentWindFactor, riverFlowFactor } from './weather.ts';
 
 /** Generation of one plant tile this tick, and at ideal conditions. */
@@ -169,6 +170,12 @@ export function inspectTile(state: SimState, index: number): TileInfo | null {
       ? plantOutput.generation * BALANCE.upkeepPerTick.biogasFuelCostPerEnergyUnit
       : 0;
 
+  const cityPopulation = countPopulationAndJobs(state).population;
+  const tileTaxFactor =
+    isBuilding && (layers.services[index] & SERVICE_POLICE) === 0
+      ? policeTaxFactor(0, cityPopulation)
+      : 1;
+
   return {
     index,
     x: tileX(index, state.size),
@@ -184,6 +191,7 @@ export function inspectTile(state: SimState, index: number): TileInfo | null {
     upkeepPerTick,
     fuelCostPerTick,
     taxPerTick:
+      tileTaxFactor *
       state.taxRate *
       (population * BALANCE.tax.incomePerResident + jobs * BALANCE.tax.incomePerJob),
     consumption,

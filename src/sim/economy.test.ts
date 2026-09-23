@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { BALANCE } from '../shared/constants.ts';
 import { tileIndex } from '../shared/grid.ts';
-import { economyStep } from './economy.ts';
+import { economyStep, policeTaxFactor } from './economy.ts';
 import { placePlant } from './energy.ts';
 import { goalsStep } from './goals.ts';
 import { energySystemActive } from './growth.ts';
@@ -16,6 +16,7 @@ const at = (x: number, y: number) => tileIndex(x, y, SIZE);
 describe('economyStep', () => {
   it('collects taxes from residents and jobs', () => {
     const state = createSimState(1, SIZE);
+    state.lastServices = { fire: 1, police: 1 }; // full coverage: isolate the plain tax formula
     const before = state.money;
     const breakdown = economyStep(state, 100, 50);
     const expected =
@@ -78,6 +79,21 @@ describe('economyStep', () => {
     const breakdown = economyStep(state, 0, 0);
     expect(breakdown.gridUpkeep).toBeCloseTo(2 * BALANCE.upkeepPerTick.powerLinePerTile, 9);
   });
+
+  it('scales tax income by police coverage once the city is big enough', () => {
+    const { minPopulation, uncoveredTaxFactor } = BALANCE.services;
+    expect(policeTaxFactor(0, minPopulation - 1)).toBe(1);
+    expect(policeTaxFactor(0, minPopulation)).toBeCloseTo(uncoveredTaxFactor, 9);
+    expect(policeTaxFactor(1, minPopulation)).toBe(1);
+    expect(policeTaxFactor(0.5, minPopulation)).toBeCloseTo(0.5 + 0.5 * uncoveredTaxFactor, 9);
+
+    const state = createSimState(1, SIZE);
+    state.lastServices = { fire: 1, police: 0 };
+    const uncovered = economyStep(state, minPopulation, 50).taxIncome;
+    state.lastServices = { fire: 1, police: 1 };
+    const covered = economyStep(state, minPopulation, 50).taxIncome;
+    expect(uncovered).toBeCloseTo(covered * uncoveredTaxFactor, 6);
+  });
 });
 
 describe('happinessStep', () => {
@@ -93,13 +109,13 @@ describe('happinessStep', () => {
 
   it('converges toward the base level in a healthy city', () => {
     const state = withBuildings(SupplyStatus.Supplied);
-    for (let i = 0; i < 2000; i++) happinessStep(state);
+    for (let i = 0; i < 2000; i++) happinessStep(state, 0);
     expect(state.happiness).toBeCloseTo(BALANCE.happiness.base, 2);
   });
 
   it('drops with unpowered buildings', () => {
     const state = withBuildings(SupplyStatus.Undersupplied);
-    for (let i = 0; i < 2000; i++) happinessStep(state);
+    for (let i = 0; i < 2000; i++) happinessStep(state, 0);
     expect(state.happiness).toBeLessThan(
       BALANCE.happiness.base - BALANCE.happiness.undersupplyPenaltyWeight + 0.05,
     );
@@ -108,14 +124,14 @@ describe('happinessStep', () => {
   it('drops with taxes above the neutral rate', () => {
     const state = withBuildings(SupplyStatus.Supplied);
     state.taxRate = BALANCE.tax.maxRate;
-    for (let i = 0; i < 2000; i++) happinessStep(state);
+    for (let i = 0; i < 2000; i++) happinessStep(state, 0);
     expect(state.happiness).toBeLessThan(BALANCE.happiness.base - 0.2);
   });
 
   it('parks near buildings raise happiness toward base + bonus', () => {
     const state = withBuildings(SupplyStatus.Supplied);
     placePlant(state, at(2, 3), PlantType.Park); // adjacent to the row of homes
-    for (let i = 0; i < 3000; i++) happinessStep(state);
+    for (let i = 0; i < 3000; i++) happinessStep(state, 0);
     expect(state.happiness).toBeGreaterThan(BALANCE.happiness.base + 0.02);
   });
 
@@ -123,7 +139,7 @@ describe('happinessStep', () => {
     const state = withBuildings(SupplyStatus.Supplied);
     const far = BALANCE.happiness.parkRadius + 3;
     placePlant(state, at(far, far + 2), PlantType.Park);
-    for (let i = 0; i < 3000; i++) happinessStep(state);
+    for (let i = 0; i < 3000; i++) happinessStep(state, 0);
     expect(state.happiness).toBeLessThanOrEqual(BALANCE.happiness.base + 0.005);
   });
 
@@ -137,17 +153,17 @@ describe('happinessStep', () => {
 
   it('jammed commutes lower happiness', () => {
     const state = withBuildings(SupplyStatus.Supplied);
-    for (let i = 0; i < 2000; i++) happinessStep(state);
+    for (let i = 0; i < 2000; i++) happinessStep(state, 0);
     const calm = state.happiness;
     state.commuteCongestion = 3; // heavy jams
-    for (let i = 0; i < 2000; i++) happinessStep(state);
+    for (let i = 0; i < 2000; i++) happinessStep(state, 0);
     expect(state.happiness).toBeLessThan(calm - 0.05);
   });
 
   it('changes smoothly, not abruptly', () => {
     const state = withBuildings(SupplyStatus.Undersupplied);
     const before = state.happiness;
-    happinessStep(state);
+    happinessStep(state, 0);
     expect(Math.abs(state.happiness - before)).toBeLessThan(0.05);
   });
 });

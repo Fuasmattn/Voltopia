@@ -36,10 +36,11 @@ export function parkCoverage(state: SimState): number {
 
 /**
  * Move city happiness toward its target: a comfortable base, reduced by
- * taxes above the neutral rate and by buildings without (sufficient)
- * power. Smoothing avoids jumpy reactions to single bad ticks.
+ * taxes above the neutral rate, by buildings without (sufficient) power,
+ * and, once the city is big enough, by buildings without police cover.
+ * Smoothing avoids jumpy reactions to single bad ticks.
  */
-export function happinessStep(state: SimState): void {
+export function happinessStep(state: SimState, population: number): void {
   const { layers } = state;
   const config = BALANCE.happiness;
 
@@ -61,10 +62,18 @@ export function happinessStep(state: SimState): void {
     Math.max(0, state.commuteCongestion - config.commuteCongestionThreshold) *
       config.commutePenaltyWeight,
   );
+  const services = BALANCE.services;
+  const policePenalty =
+    population >= services.minPopulation
+      ? (1 - state.lastServices.police) * services.policePenaltyWeight
+      : 0;
 
   const target = Math.min(
     1,
-    Math.max(0, config.base + parkBonus - taxPenalty - supplyPenalty - commutePenalty),
+    Math.max(
+      0,
+      config.base + parkBonus - taxPenalty - supplyPenalty - commutePenalty - policePenalty,
+    ),
   );
   state.happiness += (target - state.happiness) * config.smoothing;
 }

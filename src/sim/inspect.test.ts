@@ -220,6 +220,20 @@ describe('services in the inspector', () => {
     expect(inspectTile(state, at(5, 6))!.growthBlockers).not.toContain('noFireCoverage');
   });
 
+  it('applies the police tax factor per tile', () => {
+    const state = cityWithBuilding(3); // 26 residents on one tile: below minPopulation city-wide
+    const full = inspectTile(state, at(5, 6))!.taxPerTick;
+    // Pretend the city is big: taxPerTick follows the same rule as the budget.
+    for (let i = 0; i < 5; i++) {
+      state.layers.zone[at(10 + i, 6)] = Zone.Residential;
+      state.layers.density[at(10 + i, 6)] = 3;
+    }
+    const uncovered = inspectTile(state, at(5, 6))!.taxPerTick;
+    expect(uncovered).toBeCloseTo(full * BALANCE.services.uncoveredTaxFactor, 9);
+    state.layers.services[at(5, 6)] = SERVICE_POLICE;
+    expect(inspectTile(state, at(5, 6))!.taxPerTick).toBeCloseTo(full, 9);
+  });
+
   it('reports a station ring and whether it is active', () => {
     const state = createSimState(1, SIZE);
     buildRoads(state, [at(10, 11)]);

@@ -50,7 +50,7 @@ export function stepTick(state: SimState): void {
   decayStep(state);
   const { population, jobs } = countPopulationAndJobs(state);
   economyStep(state, population, jobs);
-  happinessStep(state);
+  happinessStep(state, population);
   goalsStep(state);
   recordLifetime(state, population, jobs);
 }

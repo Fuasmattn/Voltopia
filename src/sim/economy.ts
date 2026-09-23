@@ -26,6 +26,17 @@ export function emptyPlantMap(): Record<PlantType, number> {
 }
 
 /**
+ * Tax multiplier for police coverage: 1 while the city is small, then a
+ * blend of full tax for covered buildings and uncoveredTaxFactor for the
+ * rest.
+ */
+export function policeTaxFactor(police: number, population: number): number {
+  const { minPopulation, uncoveredTaxFactor } = BALANCE.services;
+  if (population < minPopulation) return 1;
+  return police + (1 - police) * uncoveredTaxFactor;
+}
+
+/**
  * One tick of the city budget: tax income from residents and jobs minus
  * upkeep for roads and plants (biogas additionally pays per energy unit
  * generated — dispatchable but expensive).
@@ -34,7 +45,9 @@ export function economyStep(state: SimState, population: number, jobs: number): 
   const { tileType, plantType } = state.layers;
 
   const taxIncome =
-    state.taxRate * (population * BALANCE.tax.incomePerResident + jobs * BALANCE.tax.incomePerJob);
+    policeTaxFactor(state.lastServices.police, population) *
+    state.taxRate *
+    (population * BALANCE.tax.incomePerResident + jobs * BALANCE.tax.incomePerJob);
 
   let roadTiles = 0;
   let plantUpkeep = 0;
