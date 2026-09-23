@@ -1,6 +1,8 @@
 import * as THREE from 'three';
-import type { RenderEnvironment } from './renderer.ts';
+import type { DiffLayer, RenderEnvironment } from './renderer.ts';
 import { PALETTE } from './scene.ts';
+import { ElevationField, LEVEL_HEIGHT } from './elevationField.ts';
+import { BALANCE } from '../shared/constants.ts';
 
 const SEASON_KEYS = [
   new THREE.Color(PALETTE.groundSpring),
@@ -24,37 +26,110 @@ export function groundColor(target: THREE.Color, phase: number, snowCover: numbe
     .lerp(SNOW, THREE.MathUtils.clamp(snowCover, 0, 1));
 }
 
-/** Ground plane spanning [0, size] x [0, size] with a subtle grid overlay. */
-export function createTerrain(size: number): {
-  group: THREE.Group;
-  setGridVisible: (visible: boolean) => void;
-  setEnvironment: (environment: RenderEnvironment) => void;
-} {
-  const group = new THREE.Group();
+/** Per-vertex brightness ramp so relief reads from the iso camera. */
+const SHADE_LOW = 0.92;
+const SHADE_SPAN = 0.1;
+/** Ground height at the highest elevation level, for the shade ramp. */
+const MAX_TERRAIN_Y = BALANCE.terrain.maxLevel * LEVEL_HEIGHT;
 
-  const groundGeometry = new THREE.PlaneGeometry(size, size);
-  const groundMaterial = new THREE.MeshLambertMaterial({ color: PALETTE.ground });
-  const ground = new THREE.Mesh(groundGeometry, groundMaterial);
-  ground.rotation.x = -Math.PI / 2;
-  ground.position.set(size / 2, 0, size / 2);
-  ground.receiveShadow = true;
-  group.add(ground);
+/**
+ * Height-field ground spanning [0, size] x [0, size], with a grid overlay
+ * that follows the terrain (a flat GridHelper would clip into hills).
+ */
+export class GroundMesh implements DiffLayer {
+  readonly group: THREE.Group;
+  readonly ground: THREE.Mesh<THREE.PlaneGeometry, THREE.MeshLambertMaterial>;
+  private readonly gridLines: THREE.LineSegments<THREE.BufferGeometry, THREE.LineBasicMaterial>;
+  private readonly field: ElevationField;
+  private readonly size: number;
+  private appliedVersion = -1;
 
-  const grid = new THREE.GridHelper(size, size, PALETTE.grid, PALETTE.grid);
-  grid.position.set(size / 2, 0.02, size / 2);
-  const gridMaterial = grid.material as THREE.LineBasicMaterial;
-  gridMaterial.transparent = true;
-  gridMaterial.opacity = 0.18;
-  gridMaterial.depthWrite = false;
-  group.add(grid);
+  constructor(size: number, field: ElevationField) {
+    this.size = size;
+    this.field = field;
+    this.group = new THREE.Group();
 
-  return {
-    group,
-    setGridVisible: (visible: boolean) => {
-      grid.visible = visible;
-    },
-    setEnvironment: (environment: RenderEnvironment) => {
-      groundColor(groundMaterial.color, environment.phase, environment.snowCover);
-    },
-  };
+    const geometry = new THREE.PlaneGeometry(size, size, size, size);
+    geometry.rotateX(-Math.PI / 2);
+    geometry.translate(size / 2, 0, size / 2);
+    const colors = new Float32Array(geometry.attributes.position.count * 3).fill(1);
+    geometry.setAttribute('color', new THREE.BufferAttribute(colors, 3));
+    const material = new THREE.MeshLambertMaterial({ color: PALETTE.ground, vertexColors: true });
+    this.ground = new THREE.Mesh(geometry, material);
+    this.ground.receiveShadow = true;
+    this.group.add(this.ground);
+
+    // Grid lines follow the terrain (a flat GridHelper would clip into hills).
+    this.gridLines = new THREE.LineSegments(
+      this.buildGridGeometry(),
+      new THREE.LineBasicMaterial({
+        color: PALETTE.grid,
+        transparent: true,
+        opacity: 0.18,
+        depthWrite: false,
+      }),
+    );
+    this.group.add(this.gridLines);
+    this.rebuildHeights();
+  }
+
+  applyDiffs(): void {
+    if (this.field.version !== this.appliedVersion) {
+      this.appliedVersion = this.field.version;
+      this.rebuildHeights();
+    }
+  }
+
+  setEnvironment(environment: RenderEnvironment): void {
+    groundColor(this.ground.material.color, environment.phase, environment.snowCover);
+  }
+
+  setGridVisible(visible: boolean): void {
+    this.gridLines.visible = visible;
+  }
+
+  private rebuildHeights(): void {
+    const position = this.ground.geometry.attributes.position;
+    const color = this.ground.geometry.attributes.color;
+    const maxY = MAX_TERRAIN_Y;
+    for (let i = 0; i < position.count; i++) {
+      const vx = Math.round(position.getX(i));
+      const vz = Math.round(position.getZ(i));
+      const y = this.field.cornerY(vx, vz);
+      position.setY(i, y);
+      const shade = SHADE_LOW + SHADE_SPAN * (maxY > 0 ? y / maxY : 0);
+      color.setXYZ(i, shade, shade, shade);
+    }
+    position.needsUpdate = true;
+    color.needsUpdate = true;
+    this.ground.geometry.computeVertexNormals();
+    this.ground.geometry.computeBoundingSphere();
+    this.rebuildGridHeights();
+  }
+
+  /** One line segment per tile edge, slightly above the ground. */
+  private buildGridGeometry(): THREE.BufferGeometry {
+    const size = this.size;
+    const points: number[] = [];
+    for (let v = 0; v <= size; v++) {
+      for (let a = 0; a < size; a++) {
+        points.push(a, 0, v, a + 1, 0, v); // lines along x at z = v
+        points.push(v, 0, a, v, 0, a + 1); // lines along z at x = v
+      }
+    }
+    const geometry = new THREE.BufferGeometry();
+    geometry.setAttribute('position', new THREE.BufferAttribute(new Float32Array(points), 3));
+    return geometry;
+  }
+
+  private rebuildGridHeights(): void {
+    const position = this.gridLines.geometry.attributes.position;
+    for (let i = 0; i < position.count; i++) {
+      const vx = Math.round(position.getX(i));
+      const vz = Math.round(position.getZ(i));
+      position.setY(i, this.field.cornerY(vx, vz) + 0.02);
+    }
+    position.needsUpdate = true;
+    this.gridLines.geometry.computeBoundingSphere();
+  }
 }

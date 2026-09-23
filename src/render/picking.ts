@@ -22,8 +22,10 @@ export function groundPointAtNdc(
 }
 
 /**
- * Convert a pointer event position to the tile index under the cursor,
- * or null if the pointer is outside the grid.
+ * Convert a pointer event position to the tile index under the cursor, or
+ * null if the pointer is outside the grid. Raycasts the ground mesh first
+ * (so hills pick correctly); falls back to the flat y=0 plane when no mesh
+ * is given or the ray misses it.
  */
 export function pickTile(
   clientX: number,
@@ -31,6 +33,7 @@ export function pickTile(
   element: HTMLElement,
   camera: THREE.Camera,
   gridSize: number,
+  ground?: THREE.Object3D,
 ): { index: number; x: number; y: number } | null {
   const rect = element.getBoundingClientRect();
   pointerNdc.set(
@@ -38,9 +41,17 @@ export function pickTile(
     -((clientY - rect.top) / rect.height) * 2 + 1,
   );
   raycaster.setFromCamera(pointerNdc, camera);
-  if (!raycaster.ray.intersectPlane(groundPlane, hitPoint)) return null;
-  const x = Math.floor(hitPoint.x);
-  const y = Math.floor(hitPoint.z);
+  let point: THREE.Vector3 | null = null;
+  if (ground) {
+    const hit = raycaster.intersectObject(ground, false)[0];
+    if (hit) point = hit.point;
+  }
+  if (!point) {
+    if (!raycaster.ray.intersectPlane(groundPlane, hitPoint)) return null;
+    point = hitPoint;
+  }
+  const x = Math.floor(point.x);
+  const y = Math.floor(point.z);
   if (!inBounds(x, y, gridSize)) return null;
   return { index: tileIndex(x, y, gridSize), x, y };
 }

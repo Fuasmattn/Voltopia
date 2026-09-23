@@ -5,7 +5,8 @@ import { IsoCamera } from './camera.ts';
 import { groundPointAtNdc, pickTile } from './picking.ts';
 import { nightFactor, sunIntensity } from '../shared/daylight.ts';
 import { createScene, PALETTE, type SceneLights } from './scene.ts';
-import { createTerrain } from './terrain.ts';
+import { GroundMesh } from './terrain.ts';
+import { ElevationField } from './elevationField.ts';
 import { BALANCE } from '../shared/constants.ts';
 import { RoadsMesh } from './roadsMesh.ts';
 import { PowerLinesMesh } from './powerLinesMesh.ts';
@@ -113,6 +114,9 @@ export class GameRenderer {
   private readonly gridSize: number;
   private readonly callbacks: RendererCallbacks;
   private readonly diffLayers: DiffLayer[] = [];
+  /** Per-tile elevation, tracked from diffs; drives the ground height field. */
+  private readonly elevation: ElevationField;
+  private readonly groundMesh: GroundMesh;
   /** Per-tile terrain, tracked from diffs so tools can price bridges vs. roads. */
   private readonly terrain: Uint8Array;
   /** Per-tile world height of whatever stands there, tracked from diffs. */
@@ -166,10 +170,13 @@ export class GameRenderer {
     this.scene = scene;
     this.lights = lights;
 
-    const terrain = createTerrain(gridSize);
-    this.setGridVisible = terrain.setGridVisible;
-    this.setTerrainEnvironment = terrain.setEnvironment;
-    scene.add(terrain.group);
+    this.elevation = new ElevationField(gridSize);
+    this.addDiffLayer(this.elevation); // MUST be the first diff layer
+    this.groundMesh = new GroundMesh(gridSize, this.elevation);
+    this.addDiffLayer(this.groundMesh);
+    this.setGridVisible = (visible) => this.groundMesh.setGridVisible(visible);
+    this.setTerrainEnvironment = (environment) => this.groundMesh.setEnvironment(environment);
+    scene.add(this.groundMesh.group);
 
     this.addDiffLayer(new WaterMesh(scene, gridSize));
     this.addDiffLayer(new RoadsMesh(scene, gridSize));
@@ -310,6 +317,16 @@ export class GameRenderer {
     return this.terrain[index] as Terrain;
   }
 
+  /** Elevation level of a tile, tracked from diffs. */
+  levelAt(index: number): number {
+    return this.elevation.levelAt(index);
+  }
+
+  /** Slope (max level difference to a neighbour), tracked from diffs. */
+  slopeAt(index: number): number {
+    return this.elevation.slopeAt(index);
+  }
+
   /** Update day/night lighting and layer environments from sim stats. */
   setStats(stats: GlobalStats): void {
     const { sunrise, sunset, solarStrength } = stats.season;
@@ -379,7 +396,7 @@ export class GameRenderer {
       const index = indices[i];
       matrix.setPosition(
         (index % this.gridSize) + 0.5,
-        0.06,
+        0.06 + this.elevation.centerY(index),
         Math.floor(index / this.gridSize) + 0.5,
       );
       this.previewMesh.setMatrixAt(i, matrix);
@@ -404,8 +421,9 @@ export class GameRenderer {
     this.selectionMarker.visible = true;
     const x = (index % this.gridSize) + 0.5;
     const z = Math.floor(index / this.gridSize) + 0.5;
-    this.selectionMarker.position.set(x, 0.02, z);
-    this.selectionRing.position.set(x, 0.04, z);
+    const centerY = this.elevation.centerY(index);
+    this.selectionMarker.position.set(x, 0.02 + centerY, z);
+    this.selectionRing.position.set(x, 0.04 + centerY, z);
     this.updateSelectionRing();
     this.selectionOutline.scale.y = Math.max(
       SELECTION_MIN_HEIGHT,
@@ -628,6 +646,7 @@ export class GameRenderer {
       this.webgl.domElement,
       this.isoCamera.camera,
       this.gridSize,
+      this.groundMesh.ground,
     );
   }
 
@@ -638,10 +657,11 @@ export class GameRenderer {
       return;
     }
     this.hoverMarker.visible = true;
-    this.hoverMarker.position.set(tile.x + 0.5, 0.03, tile.y + 0.5);
+    const centerY = this.elevation.centerY(tile.index);
+    this.hoverMarker.position.set(tile.x + 0.5, 0.03 + centerY, tile.y + 0.5);
     if (this.radiusTiles > 0) {
       this.radiusRing.visible = true;
-      this.radiusRing.position.set(tile.x + 0.5, 0.05, tile.y + 0.5);
+      this.radiusRing.position.set(tile.x + 0.5, 0.05 + centerY, tile.y + 0.5);
       this.radiusRing.scale.setScalar(this.radiusTiles);
     }
   }
