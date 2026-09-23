@@ -204,6 +204,24 @@ test('pause stops the simulation, play resumes it', async ({ page }) => {
   await expect.poll(async () => readTick(page), { timeout: 5_000 }).toBeGreaterThan(paused);
 });
 
+test('Escape deselects the inspected tile and closes the inspector (needs WebGL)', async ({
+  page,
+}) => {
+  test.skip(!(await has3dView(page)), 'WebGL not available in this environment');
+  await page.getByTestId('hud-details-toggle').click();
+  await expect(page.getByTestId('hud-drawer')).toBeHidden();
+
+  await page.getByTestId('tool-select').click();
+  const canvas = page.locator('.game-view canvas');
+  const box = await canvas.boundingBox();
+  if (!box) throw new Error('canvas has no bounding box');
+  await page.mouse.click(box.x + box.width / 2, box.y + box.height / 2);
+  await expect(page.getByTestId('tile-inspector')).toBeVisible();
+
+  await page.keyboard.press('Escape');
+  await expect(page.getByTestId('tile-inspector')).toHaveCount(0);
+});
+
 test('tax slider and smart charging are interactive', async ({ page }) => {
   const slider = page.getByTestId('tax-slider').locator('input');
   await slider.fill('25');

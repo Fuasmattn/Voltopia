@@ -217,8 +217,11 @@ export function useTools(
       if (target && ['INPUT', 'TEXTAREA', 'SELECT'].includes(target.tagName)) {
         return;
       }
+      // Escape backs out of whatever is in hand: the build tool and the
+      // inspected tile (which closes the inspector).
       if (e.key === 'Escape') {
         setTool('select');
+        setSelectedTile(null);
         return;
       }
       const mapped = TOOL_HOTKEYS[e.key.toLowerCase()];
