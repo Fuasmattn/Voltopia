@@ -186,6 +186,35 @@ describe('SimEngine basics', () => {
     expect(engine.state.money).toBe(before - BALANCE.costs.insulation);
   });
 
+  it('flushes stats after a command that changes no tiles', () => {
+    const engine = makeEngine();
+    const before = engine.state.money;
+    engine.applyCommand({ type: 'buyInsulation' });
+    const flushed = engine.flush();
+    if (flushed?.type !== 'tick') throw new Error('expected a tick event');
+    expect(flushed.stats.insulation).toBe(true);
+    expect(flushed.stats.money).toBe(before - BALANCE.costs.insulation);
+    // The pending stats change is consumed by the first flush.
+    expect(engine.flush()).toBeNull();
+  });
+
+  it('flushes stats after a tax rate change', () => {
+    const engine = makeEngine();
+    engine.applyCommand({ type: 'setTaxRate', rate: 0.2 });
+    const flushed = engine.flush();
+    if (flushed?.type !== 'tick') throw new Error('expected a tick event');
+    expect(flushed.stats.taxRate).toBeCloseTo(0.2);
+    expect(engine.flush()).toBeNull();
+  });
+
+  it('flushes stats after a smart charging change', () => {
+    const engine = makeEngine();
+    engine.applyCommand({ type: 'setSmartCharging', enabled: true });
+    const flushed = engine.flush();
+    if (flushed?.type !== 'tick') throw new Error('expected a tick event');
+    expect(flushed.stats.smartCharging).toBe(true);
+  });
+
   it('rejects insulation when the city cannot afford it', () => {
     const engine = makeEngine();
     engine.state.money = BALANCE.costs.insulation - 1;

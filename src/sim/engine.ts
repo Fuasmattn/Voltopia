@@ -48,9 +48,11 @@ export class SimEngine {
         return [];
       case 'setTaxRate':
         state.taxRate = Math.min(Math.max(command.rate, 0), BALANCE.tax.maxRate);
+        state.statsDirty = true;
         return [];
       case 'setSmartCharging':
         state.smartCharging = command.enabled;
+        state.statsDirty = true;
         return [];
       case 'requestSave':
         return [{ type: 'saveData', save: serializeState(state) }];
@@ -74,6 +76,7 @@ export class SimEngine {
       case 'placePlant':
         return this.toEvents(placePlant(state, command.tile, command.plant));
       case 'buyInsulation':
+        state.statsDirty = true;
         return this.toEvents(buyInsulation(state));
     }
   }
@@ -84,10 +87,12 @@ export class SimEngine {
 
   /**
    * Emit pending tile changes without advancing time — used so build
-   * actions are visible immediately while the game is paused.
+   * actions and stat-only changes (money, tax rate, upgrades) are visible
+   * immediately while the game is paused.
    */
   flush(): SimEvent | null {
-    if (this.state.dirty.size === 0) return null;
+    if (this.state.dirty.size === 0 && !this.state.statsDirty) return null;
+    this.state.statsDirty = false;
     return {
       type: 'tick',
       diffs: collectDiffs(this.state),
@@ -99,6 +104,7 @@ export class SimEngine {
   /** Advance one tick and produce the tick event. */
   tick(): SimEvent {
     stepTick(this.state);
+    this.state.statsDirty = false;
     return {
       type: 'tick',
       diffs: collectDiffs(this.state),

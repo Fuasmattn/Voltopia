@@ -123,6 +123,12 @@ export interface SimState {
   energyHistory: EnergyHistoryPoint[];
   /** Tile indices changed since the last diff collection. */
   dirty: Set<number>;
+  /**
+   * Non-tile state (money, tax rate, upgrades) changed since the last
+   * event, so the HUD needs fresh stats even without a tile diff.
+   * Transient: never persisted.
+   */
+  statsDirty: boolean;
   /** Demand computed during the last tick, shown in the HUD. */
   lastDemand: DemandStats;
   /** Achieved goal ids (persisted with the save game). */
@@ -215,6 +221,7 @@ export function createSimState(
     undoStack: [],
     energyHistory: [],
     dirty: new Set(),
+    statsDirty: false,
     lastDemand: { residential: 0, commercial: 0, retail: 0 },
     goalsAchieved: new Set(),
     goalProgress: { cleanDayTicks: 0, exportedTotal: 0, winterTicks: 0 },
