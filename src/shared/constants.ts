@@ -178,6 +178,35 @@ export const BALANCE = {
     minFlowFactor: 0.4,
   },
 
+  terrain: {
+    /** Highest elevation level; levels run 0..maxLevel. */
+    maxLevel: 7,
+    /** Value-noise cell size in tiles (large = broad hills). */
+    noiseCellSize: 12,
+    /** Octave weights; octave i uses cell size noiseCellSize / 2^i. */
+    octaveWeights: [1, 0.35] as const,
+    /** Exponent shaping the height distribution toward low levels. */
+    noiseExponent: 1.6,
+    /** Levels of seed-chosen edge-to-edge tilt (ridges toward one edge). */
+    tiltLevels: 3,
+    /** Box-blur passes over the raw height field. */
+    smoothingPasses: 2,
+    /** Required fraction of land tiles with slope <= maxBuildSlope. */
+    minBuildableFraction: 0.7,
+    /** Extra blur passes tried before the flatten fallback kicks in. */
+    maxSmoothingAttempts: 6,
+    /** Largest slope (level difference to a neighbour) that stays buildable. */
+    maxBuildSlope: 1,
+    /** Cost multiplier for building on a sloped (slope >= 1) tile. */
+    slopeCostFactor: 1.25,
+    /** Wind turbine output bonus per elevation level of its tile. */
+    windBonusPerLevel: 0.06,
+    /** Run-of-river output bonus per level of drop at the plant tile. */
+    hydroDropBonus: 0.2,
+    /** Pumped-storage capacity/power bonus per level of head above the lake. */
+    headBonusPerLevel: 0.12,
+  },
+
   growth: {
     /** How many growth attempts happen per tick (seeded random tiles). */
     attemptsPerTick: 3,

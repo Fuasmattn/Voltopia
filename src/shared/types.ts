@@ -322,6 +322,8 @@ export interface TileDiff {
   services: number;
   plantType: PlantType;
   terrain: Terrain;
+  /** Elevation level 0..7 (immutable after map generation). */
+  elevation: number;
 }
 
 /** Position and heading of one vehicle, interpolated by the renderer. */

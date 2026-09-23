@@ -86,6 +86,8 @@ export interface TileLayers {
   plantType: Uint8Array;
   /** Immutable ground type (land / river / lake), generated per map. */
   terrain: Uint8Array;
+  /** Elevation level 0..7, generated per map. Immutable afterwards. */
+  elevation: Uint8Array;
   /** Power line mask per tile (0 = none, else LINE_PRESENT | connection bits). */
   powerLine: Uint8Array;
   /** 1 when the tile is within lineSupplyRadius of an energised line or supply plant. Derived, not persisted. */
@@ -201,6 +203,7 @@ export function createTileLayers(size: number): TileLayers {
     supplied: new Uint8Array(tiles),
     plantType: new Uint8Array(tiles),
     terrain: new Uint8Array(tiles),
+    elevation: new Uint8Array(tiles),
     powerLine: new Uint8Array(tiles),
     energized: new Uint8Array(tiles),
     services: new Uint8Array(tiles),
@@ -335,6 +338,7 @@ export function collectDiffs(state: SimState): TileDiff[] {
       services: layers.services[index],
       plantType: layers.plantType[index] as TileDiff['plantType'],
       terrain: layers.terrain[index] as TileDiff['terrain'],
+      elevation: layers.elevation[index],
     });
   }
   state.dirty.clear();
@@ -356,6 +360,21 @@ export type BuildIntent = (typeof BuildIntent)[keyof typeof BuildIntent];
 export function isLakeShore(state: SimState, index: number): boolean {
   const { terrain } = state.layers;
   return neighbors4(index, state.size).some((n) => terrain[n] === Terrain.Lake);
+}
+
+/** Steepness of a tile: the largest level difference to a 4-neighbour. */
+export function slopeAt(state: SimState, index: number): number {
+  const { elevation } = state.layers;
+  let slope = 0;
+  for (const n of neighbors4(index, state.size)) {
+    slope = Math.max(slope, Math.abs(elevation[index] - elevation[n]));
+  }
+  return slope;
+}
+
+/** Building on a slope costs extra earthworks. */
+export function slopeCostMultiplier(state: SimState, index: number): number {
+  return slopeAt(state, index) > 0 ? BALANCE.terrain.slopeCostFactor : 1;
 }
 
 /**

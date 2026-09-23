@@ -7,12 +7,16 @@ import { buildRoads } from './roads.ts';
 import {
   BuildIntent,
   buildRejection,
+  collectDiffs,
   createSimState,
   deserializeState,
   isBuildable,
   isLakeShore,
+  markDirty,
   PlantType,
   serializeState,
+  slopeAt,
+  slopeCostMultiplier,
   TileType,
   Zone,
   type SimState,
@@ -277,5 +281,39 @@ describe('save round trip', () => {
     const restored = deserializeState(serializeState(state));
     expect(restored.season.season).toBe('summer');
     expect(restored.season.dayOfSeason).toBe(3);
+  });
+});
+
+describe('elevation', () => {
+  it('starts flat and carries elevation in diffs', () => {
+    const state = createSimState(1, 8);
+    expect(state.layers.elevation.every((v) => v === 0)).toBe(true);
+    state.layers.elevation[10] = 5;
+    markDirty(state, 10);
+    const diff = collectDiffs(state).find((d) => d.index === 10);
+    expect(diff?.elevation).toBe(5);
+  });
+
+  it('slopeAt is the largest level difference to a 4-neighbour', () => {
+    const state = createSimState(1, 8);
+    const center = tileIndex(3, 3, 8);
+    state.layers.elevation[center] = 4;
+    state.layers.elevation[tileIndex(4, 3, 8)] = 6;
+    state.layers.elevation[tileIndex(2, 3, 8)] = 4;
+    expect(slopeAt(state, center)).toBe(4);
+    expect(slopeAt(state, tileIndex(2, 3, 8))).toBe(4); // vs flat neighbour at 0
+  });
+
+  it('slopeAt ignores off-map neighbours', () => {
+    const state = createSimState(1, 8);
+    state.layers.elevation.fill(7);
+    expect(slopeAt(state, tileIndex(0, 0, 8))).toBe(0);
+  });
+
+  it('slopeCostMultiplier surcharges sloped tiles only', () => {
+    const state = createSimState(1, 8);
+    expect(slopeCostMultiplier(state, 0)).toBe(1);
+    state.layers.elevation[tileIndex(1, 0, 8)] = 1;
+    expect(slopeCostMultiplier(state, 0)).toBe(BALANCE.terrain.slopeCostFactor);
   });
 });
