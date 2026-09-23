@@ -346,7 +346,19 @@ describe('congestion', () => {
       tripTicks: 0,
       tripFreeFlowTicks: 0,
       charging: false,
+      waitTicks: 0,
     });
+  }
+
+  /**
+   * Enough residents next to the road that vehiclesStep keeps the
+   * hand-built drivers (it trims the fleet to population / citizensPerVehicle).
+   */
+  function residents(state: SimState, xFrom: number, y: number, tiles = 4): void {
+    for (let i = 0; i < tiles; i++) {
+      state.layers.zone[at(xFrom + i, y)] = Zone.Residential;
+      state.layers.density[at(xFrom + i, y)] = 3;
+    }
   }
 
   it('a full tile blocks followers from entering', () => {
@@ -355,16 +367,21 @@ describe('congestion', () => {
     const b = at(4, 5);
     const c = at(5, 5);
     buildRoads(state, [a, b, c]);
-    state.layers.zone[at(3, 4)] = Zone.Residential;
-    state.layers.density[at(3, 4)] = 1;
-    // The follower is processed first; two blockers already fill tile b.
+    residents(state, 3, 4);
+    // The follower is processed first; two blockers already fill tile b's
+    // eastbound lane and are held there.
     makeDriver(state, 100, a, [b, c], c);
     makeDriver(state, 101, b, [b, c], c);
     makeDriver(state, 102, b, [b, c], c);
-    const follower = state.vehicles[0];
-    const xBefore = follower.x;
-    vehiclesStep(state);
-    expect(follower.x).toBe(xBefore); // waited instead of entering b
+    const [follower, ...blockers] = state.vehicles;
+    for (let i = 0; i < 5; i++) {
+      vehiclesStep(state);
+      for (const blocker of blockers) {
+        blocker.x = (b % SIZE) + 0.5;
+        blocker.pathIndex = 0;
+      }
+    }
+    expect(follower.x).toBeLessThan(4); // rolled to the edge of a, never entered b
   });
 
   it('queues form at a bottleneck but everyone still arrives', () => {
@@ -394,6 +411,74 @@ describe('congestion', () => {
     }
     expect(sawWaiting).toBe(true);
     expect(state.vehicles.every((v) => v.phase === VehiclePhase.ParkedWork)).toBe(true);
+  });
+
+  it('oncoming traffic uses the other lane and does not block', () => {
+    const state = createSimState(1, SIZE);
+    const a = at(3, 5);
+    const b = at(4, 5);
+    const c = at(5, 5);
+    buildRoads(state, [a, b, c]);
+    residents(state, 3, 4);
+    // Two westbound cars fill tile b's westbound lane; the eastbound
+    // follower on a must still be able to enter b.
+    makeDriver(state, 100, a, [b, c], c);
+    makeDriver(state, 101, b, [b, a], a);
+    makeDriver(state, 102, b, [b, a], a);
+    const follower = state.vehicles[0];
+    const xBefore = follower.x;
+    vehiclesStep(state);
+    expect(follower.x).toBeGreaterThan(xBefore);
+  });
+
+  it('head-on traffic on a single road never deadlocks', () => {
+    const state = createSimState(1, SIZE);
+    const road = Array.from({ length: 12 }, (_, x) => at(x + 2, 5));
+    buildRoads(state, road);
+    residents(state, 2, 4);
+    const east = road.slice(4); // from x=6 to the east end
+    const west = road.slice(0, 6).reverse(); // from x=7 to the west end
+    makeDriver(state, 100, at(6, 5), east, road[11]);
+    makeDriver(state, 101, at(6, 5), east, road[11]);
+    makeDriver(state, 102, at(7, 5), west, road[0]);
+    makeDriver(state, 103, at(7, 5), west, road[0]);
+    state.tick = TICKS_PER_DAY / 2; // noon: no scheduled departures interfere
+    for (let i = 0; i < 200; i++) {
+      vehiclesStep(state);
+      state.tick++;
+    }
+    // Everyone got past the oncoming pair and finished the trip.
+    expect(state.vehicles.slice(0, 4).every((v) => v.phase === VehiclePhase.ParkedWork)).toBe(true);
+  });
+
+  it('a car blocked for too long squeezes past instead of waiting forever', () => {
+    const state = createSimState(1, SIZE);
+    const a = at(3, 5);
+    const b = at(4, 5);
+    const c = at(5, 5);
+    buildRoads(state, [a, b, c]);
+    residents(state, 3, 4);
+    makeDriver(state, 100, a, [b, c], c);
+    makeDriver(state, 101, b, [b, c], c);
+    makeDriver(state, 102, b, [b, c], c);
+    const [follower, ...blockers] = state.vehicles;
+    const xBefore = follower.x;
+    const freeze = () => {
+      for (const blocker of blockers) {
+        blocker.x = (b % SIZE) + 0.5;
+        blocker.pathIndex = 0;
+        blocker.phase = VehiclePhase.ToWork;
+      }
+    };
+    // One tick to reach the edge of a, then maxWaitTicks ticks of waiting.
+    for (let i = 0; i < BALANCE.vehicles.maxWaitTicks + 1; i++) {
+      vehiclesStep(state);
+      freeze();
+    }
+    expect(follower.x).toBeGreaterThan(xBefore);
+    expect(follower.x).toBeLessThan(4);
+    vehiclesStep(state);
+    expect(follower.x).toBeGreaterThanOrEqual(4); // squeezed into b
   });
 });
 

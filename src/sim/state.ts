@@ -55,6 +55,8 @@ export interface Vehicle {
   tripFreeFlowTicks: number;
   /** True while plugged in this tick (drives the charging load). */
   charging: boolean;
+  /** Consecutive ticks spent waiting behind a full lane (gridlock breaker). */
+  waitTicks: number;
 }
 
 /** A reversible build action for the undo tool. */

@@ -93,6 +93,36 @@ function vehicleTile(state: SimState, vehicle: Vehicle): number {
   return tileIndex(Math.floor(vehicle.x), Math.floor(vehicle.y), state.size);
 }
 
+/** Heading from one tile to a 4-neighbour: 0 = north, 1 = east, 2 = south, 3 = west. */
+function headingOf(from: number, to: number, size: number): number {
+  const dx = tileX(to, size) - tileX(from, size);
+  const dy = tileY(to, size) - tileY(from, size);
+  if (dx > 0) return 1;
+  if (dx < 0) return 3;
+  if (dy > 0) return 2;
+  return 0;
+}
+
+const HEADINGS = 4;
+
+/** Occupancy key for one lane: a road tile plus the direction of travel on it. */
+function laneKey(tile: number, heading: number): number {
+  return tile * HEADINGS + heading;
+}
+
+/**
+ * The lane a driving vehicle currently occupies: its tile plus the
+ * heading toward its next path tile (or the one after, while it is still
+ * approaching the centre of its own tile).
+ */
+function vehicleLane(state: SimState, vehicle: Vehicle): number {
+  const tile = vehicleTile(state, vehicle);
+  let target = vehicle.path[vehicle.pathIndex];
+  if (target === tile) target = vehicle.path[vehicle.pathIndex + 1];
+  const heading = target === undefined ? 0 : headingOf(tile, target, state.size);
+  return laneKey(tile, heading);
+}
+
 /**
  * Commuting electric vehicles with a physical battery model: driving
  * drains the battery, plugging in at home (evenings) or at a nearby
@@ -137,6 +167,7 @@ export function vehiclesStep(state: SimState): void {
       tripTicks: 0,
       tripFreeFlowTicks: 0,
       charging: false,
+      waitTicks: 0,
     });
   }
 
@@ -146,12 +177,14 @@ export function vehiclesStep(state: SimState): void {
   const morningDeparture = departureTicks(BALANCE.vehicles.commute.morningStartHour);
   const eveningDeparture = departureTicks(BALANCE.vehicles.commute.eveningStartHour);
 
-  // Congestion: how many driving vehicles occupy each road tile.
+  // Congestion: how many driving vehicles occupy each lane (road tile
+  // and heading). Oncoming traffic uses the other lane, so it never
+  // blocks; only cars going the same way queue up.
   const occupancy = new Map<number, number>();
   for (const vehicle of state.vehicles) {
     if (vehicle.phase === VehiclePhase.ToWork || vehicle.phase === VehiclePhase.ToHome) {
-      const tile = vehicleTile(state, vehicle);
-      occupancy.set(tile, (occupancy.get(tile) ?? 0) + 1);
+      const lane = vehicleLane(state, vehicle);
+      occupancy.set(lane, (occupancy.get(lane) ?? 0) + 1);
     }
   }
 
@@ -294,18 +327,26 @@ function driveAlongPath(
   const distance = Math.hypot(dx, dy);
   const move = Math.min(step, distance);
 
-  // Congestion: entering an occupied-to-capacity tile means waiting.
+  // Congestion: entering a lane that is full means waiting — unless the
+  // wait has gone on so long that this is a gridlock, in which case the
+  // car squeezes past so traffic never freezes for good.
   const currentTile = vehicleTile(state, vehicle);
   const nextX = distance <= step ? targetX : vehicle.x + (dx / distance) * move;
   const nextY = distance <= step ? targetY : vehicle.y + (dy / distance) * move;
   const nextTile = tileIndex(Math.floor(nextX), Math.floor(nextY), state.size);
   if (nextTile !== currentTile) {
-    if ((occupancy.get(nextTile) ?? 0) >= BALANCE.vehicles.maxPerRoadTile) {
+    const heading = headingOf(currentTile, nextTile, state.size);
+    const nextLane = laneKey(nextTile, heading);
+    const full = (occupancy.get(nextLane) ?? 0) >= BALANCE.vehicles.maxPerRoadTile;
+    if (full && vehicle.waitTicks < BALANCE.vehicles.maxWaitTicks) {
+      vehicle.waitTicks++;
       return; // queue behind the jam, try again next tick
     }
-    occupancy.set(currentTile, Math.max(0, (occupancy.get(currentTile) ?? 1) - 1));
-    occupancy.set(nextTile, (occupancy.get(nextTile) ?? 0) + 1);
+    const currentLane = vehicleLane(state, vehicle);
+    occupancy.set(currentLane, Math.max(0, (occupancy.get(currentLane) ?? 1) - 1));
+    occupancy.set(nextLane, (occupancy.get(nextLane) ?? 0) + 1);
   }
+  vehicle.waitTicks = 0;
 
   vehicle.x = nextX;
   vehicle.y = nextY;
@@ -319,7 +360,8 @@ function driveAlongPath(
     if (vehicle.pathIndex >= vehicle.path.length) {
       const arrivedAtWork = vehicle.phase === VehiclePhase.ToWork;
       vehicle.phase = arrivedAtWork ? VehiclePhase.ParkedWork : VehiclePhase.ParkedHome;
-      occupancy.set(nextTile, Math.max(0, (occupancy.get(nextTile) ?? 1) - 1));
+      const lane = vehicleLane(state, vehicle);
+      occupancy.set(lane, Math.max(0, (occupancy.get(lane) ?? 1) - 1));
       recordCommute(state, vehicle);
       vehicle.path = [];
       vehicle.pathIndex = 0;
