@@ -332,13 +332,13 @@ export const BALANCE = {
     },
     cooling: {
       /** No cooling below this temperature; full cooling coolingRange above it. */
-      comfortTemperature: 22,
+      comfortTemperature: 20,
       coolingRange: 8,
       /** Cooling load at full heat as a multiple of the zone's base consumption. */
       weightByZone: {
-        [Zone.Residential]: 0.35,
-        [Zone.Commercial]: 0.6,
-        [Zone.Retail]: 0.6,
+        [Zone.Residential]: 0.26,
+        [Zone.Commercial]: 0.45,
+        [Zone.Retail]: 0.45,
       } as Record<Zone, number>,
       /** Cooling multiplier once building insulation is bought. */
       insulationFactor: 0.5,
