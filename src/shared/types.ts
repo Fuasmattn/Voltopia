@@ -383,5 +383,7 @@ export interface SaveGame {
     terrain?: ArrayBuffer;
     /** Power line layer; absent in saves from before power lines. */
     powerLine?: ArrayBuffer;
+    /** Elevation layer; absent in older saves (flat map). */
+    elevation?: ArrayBuffer;
   };
 }

@@ -96,6 +96,20 @@ describe('save game JSON export/import', () => {
     expect(() => saveFromJson(saveToJson(save))).toThrow(/powerLine/);
   });
 
+  it('round-trips the optional elevation layer', () => {
+    const save = makeSave();
+    save.layers.elevation = new Uint8Array(save.size * save.size).fill(3).buffer as ArrayBuffer;
+    const restored = saveFromJson(saveToJson(save));
+    expect(new Uint8Array(restored.layers.elevation!)).toEqual(
+      new Uint8Array(save.layers.elevation),
+    );
+  });
+
+  it('accepts exports without the elevation layer', () => {
+    const restored = saveFromJson(saveToJson(makeSave()));
+    expect(restored.layers.elevation).toBeUndefined();
+  });
+
   it('round-trips season origin, snowpack and insulation', () => {
     const save = makeSave();
     save.seasonOriginDay = 9;

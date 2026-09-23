@@ -4,6 +4,8 @@ import { LINE_PRESENT, tileIndex } from '../shared/grid.ts';
 import { Terrain } from '../shared/types.ts';
 import { recomputeGrid } from './powerGrid.ts';
 import { buildRoads } from './roads.ts';
+import { generateTerrain } from './terrain.ts';
+import { generateWater } from './water.ts';
 import {
   BuildIntent,
   buildRejection,
@@ -281,6 +283,24 @@ describe('save round trip', () => {
     const restored = deserializeState(serializeState(state));
     expect(restored.season.season).toBe('summer');
     expect(restored.season.dayOfSeason).toBe(3);
+  });
+
+  it('round-trips elevation and recomputes the lake level', () => {
+    const state = createSimState(11, 48);
+    generateTerrain(state);
+    generateWater(state);
+    const loaded = deserializeState(serializeState(state));
+    expect([...loaded.layers.elevation]).toEqual([...state.layers.elevation]);
+    expect(loaded.lakeLevel).toBe(state.lakeLevel);
+  });
+
+  it('loads saves without an elevation layer as flat maps', () => {
+    const state = createSimState(11, 48);
+    const save = serializeState(state);
+    delete save.layers.elevation;
+    const loaded = deserializeState(save);
+    expect(loaded.layers.elevation.every((v) => v === 0)).toBe(true);
+    expect(loaded.lakeLevel).toBe(0);
   });
 });
 

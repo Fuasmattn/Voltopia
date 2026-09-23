@@ -504,6 +504,7 @@ export function serializeState(state: SimState): SaveGame {
       plantType: copyBuffer(layers.plantType),
       terrain: copyBuffer(layers.terrain),
       powerLine: copyBuffer(layers.powerLine),
+      elevation: copyBuffer(layers.elevation),
     },
   };
 }
@@ -546,6 +547,8 @@ export function deserializeState(save: SaveGame): SimState {
   } else {
     grantLegacyNetwork(state);
   }
+  if (save.layers.elevation) state.layers.elevation.set(new Uint8Array(save.layers.elevation));
+  state.lakeLevel = computeLakeLevel(state);
   // Advance the RNG deterministically past the founding state so a loaded
   // game does not replay the exact random sequence from tick zero.
   state.rng.setState(save.seed ^ save.tick);
