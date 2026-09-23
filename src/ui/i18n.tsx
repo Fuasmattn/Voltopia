@@ -305,7 +305,7 @@ const en = {
   'inspect.blocker.maxDensity': 'Already at maximum density',
   'inspect.blocker.cityUnhappy': 'City too unhappy to grow',
   'inspect.blocker.notLand': 'Cannot build on water',
-  'inspect.blocker.noFireCoverage': 'No powered fire station in reach',
+  'inspect.blocker.noFireCoverage': 'No fire station in reach for the next density',
 } as const;
 
 export type TranslationKey = keyof typeof en;
@@ -615,7 +615,7 @@ const de: Record<TranslationKey, string> = {
   'inspect.blocker.maxDensity': 'Bereits maximale Dichte',
   'inspect.blocker.cityUnhappy': 'Stadt zu unzufrieden zum Wachsen',
   'inspect.blocker.notLand': 'Bauen auf Wasser nicht möglich',
-  'inspect.blocker.noFireCoverage': 'Keine angeschlossene Feuerwache in Reichweite',
+  'inspect.blocker.noFireCoverage': 'Keine Feuerwehr in Reichweite für die nächste Dichte',
 };
 
 const translations: Record<Locale, Record<TranslationKey, string>> = { en, de };
