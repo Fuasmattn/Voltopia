@@ -40,6 +40,15 @@ describe('sunIntensity', () => {
     expect(nightFactor(0.27)).toBeGreaterThan(0);
     expect(nightFactor(0.27)).toBeLessThan(1);
   });
+
+  it('accepts a seasonal sunrise and sunset', () => {
+    expect(sunIntensity(0.22, 0.2, 0.8)).toBeGreaterThan(0);
+    expect(sunIntensity(0.22, 0.25, 0.75)).toBe(0);
+    expect(sunIntensity(0.5, 0.3, 0.7)).toBeCloseTo(1, 5);
+    expect(sunIntensity(0.72, 0.3, 0.7)).toBe(0);
+    expect(nightFactor(0.22, 0.2, 0.8)).toBeLessThan(1);
+    expect(nightFactor(0.22, 0.3, 0.7)).toBe(1);
+  });
 });
 
 describe('solarFactor', () => {

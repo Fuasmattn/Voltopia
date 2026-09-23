@@ -59,6 +59,33 @@ export interface Weather {
   windSpeed: number;
   /** 0 = dry riverbed, 1 = river in full flow. Drives run-of-river output. */
   riverFlow: number;
+  /** 0 = bare ground, 1 = full snow cover. Fed by sub-zero precipitation, melts into the river. */
+  snowpack: number;
+}
+
+/** Seasons in year order; the year starts with the first spring day. */
+export const SEASON_ORDER = ['spring', 'summer', 'autumn', 'winter'] as const;
+export type SeasonId = (typeof SEASON_ORDER)[number];
+
+/** Deterministic seasonal signal for one tick (no random component). */
+export interface SeasonState {
+  /** 0..1 through the year, 0 = first spring day, continuous within a day. */
+  phase: number;
+  season: SeasonId;
+  /** 1..daysPerSeason */
+  dayOfSeason: number;
+  /** 1-based year counter. */
+  year: number;
+  /** Air temperature in °C incl. diurnal cycle and cloud damping. */
+  temperature: number;
+  /** Sunrise/sunset as fractions of the day (season-dependent day length). */
+  sunrise: number;
+  sunset: number;
+  /** 0..1 sun elevation factor: 1 at the longest day. */
+  solarStrength: number;
+  /** Added to the weather-front base means (winter: more cloud and wind). */
+  cloudBias: number;
+  windBias: number;
 }
 
 export interface EnergyHistoryPoint {

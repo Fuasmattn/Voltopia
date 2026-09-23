@@ -181,7 +181,12 @@ export function createSimState(
     pumpedStorageEnergy: 0,
     gridVersion: 0,
     gridComputedVersion: -1,
-    weather: { cloudCover: 0.3, windSpeed: 0.5, riverFlow: BALANCE.water.initialFlow },
+    weather: {
+      cloudCover: 0.3,
+      windSpeed: 0.5,
+      riverFlow: BALANCE.water.initialFlow,
+      snowpack: 0,
+    },
     layers: createTileLayers(size),
     vehicles: [],
     undoStack: [],

@@ -29,6 +29,7 @@ export const BALANCE = {
     powerLinePerTile: 4,
     powerLineWaterPerTile: 12,
     zonePerTile: 5,
+    insulation: 6_000,
     plant: {
       [PlantType.SolarFarm]: 1_200,
       [PlantType.WindTurbine]: 1_800,
@@ -286,6 +287,48 @@ export const BALANCE = {
     fronts: {
       cloud: { periodsDays: [2.6, 4.3] as const, amplitudes: [0.28, 0.12] as const, base: 0.45 },
       wind: { periodsDays: [3.4, 5.7] as const, amplitudes: [0.3, 0.1] as const, base: 0.5 },
+    },
+  },
+
+  seasons: {
+    /** A year has seasonsPerYear × daysPerSeason in-game days. */
+    daysPerSeason: 5,
+    /** Seasonal mean temperature swings between these (°C). */
+    winterLow: -4,
+    summerHigh: 24,
+    /** Year phase of the warmest seasonal mean (late summer lag). */
+    warmestPhase: 0.35,
+    /** Diurnal cycle: ± this many °C, coldest at coldestTime (fraction of day). */
+    diurnalAmplitude: 3,
+    coldestTime: 0.2,
+    /** Overcast daytime is cooler by up to this many °C. */
+    cloudDamping: 2,
+    /** Day length in hours at the shortest and longest day. */
+    dayLengthHours: { shortest: 9.5, longest: 14.5 },
+    /** Year phase of the longest day. */
+    longestDayPhase: 0.3,
+    /** Sun elevation factor at the shortest day (1 at the longest). */
+    winterSolarStrength: 0.45,
+    /** Front base offsets: +amplitude in winter, −amplitude in summer. */
+    cloudBiasAmplitude: 0.12,
+    windBiasAmplitude: 0.12,
+    /** Precipitation below this temperature falls as snow (°C). */
+    snowTemperature: 0,
+    /** Snowpack melts above this temperature, meltRate per tick per °C. */
+    meltTemperature: 2,
+    meltRate: 0.0001,
+    heating: {
+      /** No heating above this temperature; full heating heatingRange below it. */
+      comfortTemperature: 16,
+      heatingRange: 20,
+      /** Heating load at full cold as a multiple of the zone's base consumption. */
+      weightByZone: {
+        [Zone.Residential]: 1.2,
+        [Zone.Commercial]: 0.6,
+        [Zone.Retail]: 0.6,
+      } as Record<Zone, number>,
+      /** Heating multiplier once building insulation is bought. */
+      insulationFactor: 0.5,
     },
   },
 } as const;
