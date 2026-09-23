@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { BALANCE, TICKS_PER_DAY, TICKS_PER_HISTORY_SAMPLE } from '../shared/constants.ts';
-import { tileIndex } from '../shared/grid.ts';
+import { neighbors4, tileIndex } from '../shared/grid.ts';
 import {
   buildingConsumption,
   censusPlants,
@@ -21,6 +21,7 @@ import {
   SupplyStatus,
   Terrain,
   TileType,
+  totalPumpedStorageCapacity,
   Zone,
   type SimState,
 } from './state.ts';
@@ -570,6 +571,75 @@ describe('hydro and pumped storage', () => {
     const combined =
       state.storedEnergy / (BALANCE.energy.batteryCapacity + BALANCE.energy.pumpedStorageCapacity);
     expect(last.stateOfCharge).toBeCloseTo(combined, 6);
+  });
+});
+
+describe('terrain energy bonuses', () => {
+  /**
+   * Drop the plant straight onto the tile, bypassing `placePlant`'s slope
+   * check: the drop/head tests below only set the plant tile's own
+   * elevation (not every neighbour), which the build-slope rule would
+   * otherwise reject.
+   */
+  function placeDirect(state: SimState, index: number, plant: PlantType): void {
+    state.layers.tileType[index] = TileType.Plant;
+    state.layers.plantType[index] = plant;
+  }
+
+  it('flat maps reproduce the unbonused outputs', () => {
+    const state = makeState();
+    placePlant(state, at(3, 3), PlantType.WindTurbine);
+    state.weather.windSpeed = 1;
+    energyStep(state, { chargingDemand: 0 });
+    expect(state.lastEnergy.wind).toBeCloseTo(BALANCE.energy.windPeakOutput);
+  });
+
+  it('wind turbines earn the elevation bonus', () => {
+    const state = makeState();
+    const tile = at(3, 3);
+    state.layers.elevation[tile] = 7;
+    // Keep the tile buildable for the placement helper: raise neighbours too.
+    for (const n of neighbors4(tile, SIZE)) state.layers.elevation[n] = 7;
+    placePlant(state, tile, PlantType.WindTurbine);
+    state.weather.windSpeed = 1;
+    energyStep(state, { chargingDemand: 0 });
+    expect(state.lastEnergy.wind).toBeCloseTo(
+      BALANCE.energy.windPeakOutput * (1 + BALANCE.terrain.windBonusPerLevel * 7),
+    );
+  });
+
+  it('run-of-river earns the drop bonus', () => {
+    const state = makeState();
+    const tile = at(3, 3);
+    const downstream = at(3, 4);
+    state.layers.terrain[tile] = Terrain.River;
+    state.layers.terrain[downstream] = Terrain.River;
+    state.layers.elevation[tile] = 2; // drop of 2 to the downstream tile at 0
+    placeDirect(state, tile, PlantType.RunOfRiver);
+    state.weather.riverFlow = 1;
+    energyStep(state, { chargingDemand: 0 });
+    expect(state.lastEnergy.hydro).toBeCloseTo(
+      BALANCE.energy.hydroPeakOutput * (1 + BALANCE.terrain.hydroDropBonus * 2),
+    );
+  });
+
+  it('pumped storage capacity grows with head above the lake', () => {
+    const state = makeState();
+    const shore = at(3, 3);
+    state.layers.terrain[at(3, 4)] = Terrain.Lake;
+    state.layers.elevation[shore] = 3;
+    state.lakeLevel = 1; // head = 2
+    placeDirect(state, shore, PlantType.PumpedStorage);
+    const factor = 1 + BALANCE.terrain.headBonusPerLevel * 2;
+    expect(totalPumpedStorageCapacity(state)).toBeCloseTo(
+      BALANCE.energy.pumpedStorageCapacity * factor,
+    );
+    // The clamp uses the boosted capacity.
+    state.pumpedStorageEnergy = BALANCE.energy.pumpedStorageCapacity * factor + 500;
+    energyStep(state, { chargingDemand: 0 });
+    expect(state.pumpedStorageEnergy).toBeLessThanOrEqual(
+      BALANCE.energy.pumpedStorageCapacity * factor,
+    );
   });
 });
 

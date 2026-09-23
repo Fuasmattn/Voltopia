@@ -1,7 +1,7 @@
 /** Tests for the tile inspector data. */
 import { describe, expect, it } from 'vitest';
 import { BALANCE, TICKS_PER_DAY } from '../shared/constants.ts';
-import { tileIndex } from '../shared/grid.ts';
+import { neighbors4, tileIndex } from '../shared/grid.ts';
 import { economyStep } from './economy.ts';
 import { buildingConsumption, placePlant } from './energy.ts';
 import { inspectTile } from './inspect.ts';
@@ -173,6 +173,18 @@ describe('inspectTile', () => {
     state.layers.terrain[at(3, 3)] = Terrain.Lake;
     state.layers.zone[at(3, 3)] = Zone.Retail;
     expect(inspectTile(state, at(3, 3))!.growthBlockers).toContain('notLand');
+  });
+
+  it('reports elevation, slope and the plant terrain bonus', () => {
+    const state = createSimState(1, SIZE);
+    const tile = at(3, 3);
+    state.layers.elevation[tile] = 4;
+    for (const n of neighbors4(tile, SIZE)) state.layers.elevation[n] = 4;
+    placePlant(state, tile, PlantType.WindTurbine);
+    const info = inspectTile(state, tile)!;
+    expect(info.elevation).toBe(4);
+    expect(info.slope).toBe(0);
+    expect(info.terrainBonus).toBeCloseTo(1 + BALANCE.terrain.windBonusPerLevel * 4);
   });
 });
 

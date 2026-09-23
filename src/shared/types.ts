@@ -263,6 +263,12 @@ export interface TileInfo {
   /** For fire/police stations: connected to the grid and covering its ring. */
   stationActive: boolean;
   growthBlockers: GrowthBlocker[];
+  /** Elevation level 0..7 of this tile. */
+  elevation: number;
+  /** Largest level difference to a neighbour (>= 2 is unbuildable). */
+  slope: number;
+  /** Terrain bonus factor on this tile's plant output/capacity (1 = none). */
+  terrainBonus: number;
 }
 
 export interface GlobalStats {

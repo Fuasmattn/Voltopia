@@ -389,6 +389,21 @@ export function slopeCostMultiplier(state: SimState, index: number): number {
   return slopeAt(state, index) > 0 ? BALANCE.terrain.slopeCostFactor : 1;
 }
 
+/** Levels of drop from a river tile to its lowest water 4-neighbour. */
+export function riverDropAt(state: SimState, index: number): number {
+  const { terrain, elevation } = state.layers;
+  let lowest = elevation[index];
+  for (const n of neighbors4(index, state.size)) {
+    if (terrain[n] !== Terrain.Land) lowest = Math.min(lowest, elevation[n]);
+  }
+  return elevation[index] - lowest;
+}
+
+/** Head of a pumped-storage site: its height above the lake surface. */
+export function pumpedHeadAt(state: SimState, index: number): number {
+  return Math.max(0, state.layers.elevation[index] - state.lakeLevel);
+}
+
 /**
  * Why a tile cannot be built on with the given intent, or null when it
  * can. Land accepts everything (except run-of-river, which needs the
@@ -580,7 +595,15 @@ export function totalBiogasCapacity(state: SimState): number {
 }
 
 export function totalPumpedStorageCapacity(state: SimState): number {
-  return countPlants(state, PlantType.PumpedStorage) * BALANCE.energy.pumpedStorageCapacity;
+  const { tileType, plantType } = state.layers;
+  let capacity = 0;
+  for (let i = 0; i < tileType.length; i++) {
+    if (tileType[i] !== TileType.Plant || plantType[i] !== PlantType.PumpedStorage) continue;
+    capacity +=
+      (1 + BALANCE.terrain.headBonusPerLevel * pumpedHeadAt(state, i)) *
+      BALANCE.energy.pumpedStorageCapacity;
+  }
+  return capacity;
 }
 
 /** Append an energy history sample, keeping one in-game day of samples. */

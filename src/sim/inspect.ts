@@ -22,19 +22,39 @@ import {
 import { demandFor, energySystemActive, hasRoadAccess } from './growth.ts';
 import { isSupplySource } from './powerGrid.ts';
 import { SERVICE_FIRE, SERVICE_POLICE } from './services.ts';
-import { countPopulationAndJobs, type SimState } from './state.ts';
+import {
+  countPopulationAndJobs,
+  pumpedHeadAt,
+  riverDropAt,
+  slopeAt,
+  type SimState,
+} from './state.ts';
 import { currentSolarFactor, currentWindFactor, riverFlowFactor } from './weather.ts';
 
 /** Generation of one plant tile this tick, and at ideal conditions. */
-function plantGeneration(state: SimState, plant: PlantType): { generation: number; peak: number } {
+function plantGeneration(
+  state: SimState,
+  plant: PlantType,
+  index: number,
+): { generation: number; peak: number } {
   const e = BALANCE.energy;
   switch (plant) {
     case PlantType.SolarFarm:
       return { generation: e.solarPeakOutput * currentSolarFactor(state), peak: e.solarPeakOutput };
-    case PlantType.WindTurbine:
-      return { generation: e.windPeakOutput * currentWindFactor(state), peak: e.windPeakOutput };
-    case PlantType.RunOfRiver:
-      return { generation: e.hydroPeakOutput * riverFlowFactor(state), peak: e.hydroPeakOutput };
+    case PlantType.WindTurbine: {
+      const bonus = 1 + BALANCE.terrain.windBonusPerLevel * state.layers.elevation[index];
+      return {
+        generation: e.windPeakOutput * currentWindFactor(state) * bonus,
+        peak: e.windPeakOutput * bonus,
+      };
+    }
+    case PlantType.RunOfRiver: {
+      const bonus = 1 + BALANCE.terrain.hydroDropBonus * riverDropAt(state, index);
+      return {
+        generation: e.hydroPeakOutput * riverFlowFactor(state) * bonus,
+        peak: e.hydroPeakOutput * bonus,
+      };
+    }
     case PlantType.BiogasPlant: {
       // Biogas is dispatched city-wide; show this plant's equal share.
       const plants = censusPlants(state).biogasPlants;
@@ -49,7 +69,11 @@ function plantGeneration(state: SimState, plant: PlantType): { generation: numbe
 }
 
 /** This plant tile's share of its storage pool. */
-function plantStorage(state: SimState, plant: PlantType): { stored: number; capacity: number } {
+function plantStorage(
+  state: SimState,
+  plant: PlantType,
+  index: number,
+): { stored: number; capacity: number } {
   const census = censusPlants(state);
   if (plant === PlantType.Battery && census.batteries > 0) {
     return {
@@ -60,7 +84,9 @@ function plantStorage(state: SimState, plant: PlantType): { stored: number; capa
   if (plant === PlantType.PumpedStorage && census.pumpedStoragePlants > 0) {
     return {
       stored: state.pumpedStorageEnergy / census.pumpedStoragePlants,
-      capacity: BALANCE.energy.pumpedStorageCapacity,
+      capacity:
+        BALANCE.energy.pumpedStorageCapacity *
+        (1 + BALANCE.terrain.headBonusPerLevel * pumpedHeadAt(state, index)),
     };
   }
   return { stored: 0, capacity: 0 };
@@ -158,9 +184,9 @@ export function inspectTile(state: SimState, index: number): TileInfo | null {
   const rooftopPeak = isBuilding ? (BALANCE.energy.rooftopSolarPeakByDensity[density] ?? 0) : 0;
   const rooftop = connected ? rooftopPeak * currentSolarFactor(state) : 0;
   const plantOutput =
-    tileType === TileType.Plant ? plantGeneration(state, plant) : { generation: 0, peak: 0 };
+    tileType === TileType.Plant ? plantGeneration(state, plant, index) : { generation: 0, peak: 0 };
   const storage =
-    tileType === TileType.Plant ? plantStorage(state, plant) : { stored: 0, capacity: 0 };
+    tileType === TileType.Plant ? plantStorage(state, plant, index) : { stored: 0, capacity: 0 };
 
   const population =
     isBuilding && zone === Zone.Residential ? BALANCE.growth.populationByDensity[density] : 0;
@@ -181,6 +207,19 @@ export function inspectTile(state: SimState, index: number): TileInfo | null {
   const tileTaxFactor =
     isBuilding && (layers.services[index] & SERVICE_POLICE) === 0
       ? policeTaxFactor(0, cityPopulation)
+      : 1;
+
+  const elevation = layers.elevation[index];
+  const slope = slopeAt(state, index);
+  const terrainBonus =
+    tileType === TileType.Plant
+      ? plant === PlantType.WindTurbine
+        ? 1 + BALANCE.terrain.windBonusPerLevel * elevation
+        : plant === PlantType.RunOfRiver
+          ? 1 + BALANCE.terrain.hydroDropBonus * riverDropAt(state, index)
+          : plant === PlantType.PumpedStorage
+            ? 1 + BALANCE.terrain.headBonusPerLevel * pumpedHeadAt(state, index)
+            : 1
       : 1;
 
   return {
@@ -217,5 +256,8 @@ export function inspectTile(state: SimState, index: number): TileInfo | null {
     policeCovered: isBuilding && (layers.services[index] & SERVICE_POLICE) !== 0,
     stationActive: tileType === TileType.Plant && isStation(plant) && connected,
     growthBlockers: growthBlockers(state, index, connected),
+    elevation,
+    slope,
+    terrainBonus,
   };
 }

@@ -8,7 +8,9 @@ import {
   buildRejection,
   bumpGridVersion,
   markDirty,
+  pumpedHeadAt,
   pushEnergyHistory,
+  riverDropAt,
   slopeCostMultiplier,
   snapshotTile,
   SupplyStatus,
@@ -71,6 +73,12 @@ interface PlantCensus {
   pumpedStoragePlants: number;
   fireStations: number;
   policeStations: number;
+  /** Sum of wind turbines' elevation bonus factors (== count on flat maps). */
+  windCapacity: number;
+  /** Sum of run-of-river plants' drop bonus factors (== count on flat maps). */
+  hydroCapacity: number;
+  /** Sum of pumped-storage plants' head bonus factors (== count on flat maps). */
+  pumpedCapacity: number;
 }
 
 export function censusPlants(state: SimState): PlantCensus {
@@ -86,6 +94,9 @@ export function censusPlants(state: SimState): PlantCensus {
     pumpedStoragePlants: 0,
     fireStations: 0,
     policeStations: 0,
+    windCapacity: 0,
+    hydroCapacity: 0,
+    pumpedCapacity: 0,
   };
   for (let i = 0; i < tileType.length; i++) {
     if (tileType[i] !== TileType.Plant) continue;
@@ -96,6 +107,7 @@ export function censusPlants(state: SimState): PlantCensus {
         break;
       case PlantType.WindTurbine:
         census.windTurbines++;
+        census.windCapacity += 1 + BALANCE.terrain.windBonusPerLevel * state.layers.elevation[i];
         break;
       case PlantType.Battery:
         census.batteries++;
@@ -111,9 +123,11 @@ export function censusPlants(state: SimState): PlantCensus {
         break;
       case PlantType.RunOfRiver:
         census.runOfRiverPlants++;
+        census.hydroCapacity += 1 + BALANCE.terrain.hydroDropBonus * riverDropAt(state, i);
         break;
       case PlantType.PumpedStorage:
         census.pumpedStoragePlants++;
+        census.pumpedCapacity += 1 + BALANCE.terrain.headBonusPerLevel * pumpedHeadAt(state, i);
         break;
       case PlantType.FireStation:
         census.fireStations++;
@@ -234,8 +248,8 @@ export function energyStep(state: SimState, input: EnergyTickInput): void {
   const time = timeOfDay(state.tick);
 
   const solar = census.solarFarms * BALANCE.energy.solarPeakOutput * currentSolarFactor(state);
-  const wind = census.windTurbines * BALANCE.energy.windPeakOutput * currentWindFactor(state);
-  const hydro = census.runOfRiverPlants * BALANCE.energy.hydroPeakOutput * riverFlowFactor(state);
+  const wind = census.windCapacity * BALANCE.energy.windPeakOutput * currentWindFactor(state);
+  const hydro = census.hydroCapacity * BALANCE.energy.hydroPeakOutput * riverFlowFactor(state);
 
   // Consumption of all connected buildings, plus their rooftop PV
   // feed-in (rooftop capacity grows automatically with density).
@@ -277,8 +291,8 @@ export function energyStep(state: SimState, input: EnergyTickInput): void {
   const storageCapacity = census.batteries * BALANCE.energy.batteryCapacity;
   const powerLimit = census.batteries * BALANCE.energy.batteryPowerLimit;
   state.storedEnergy = Math.min(state.storedEnergy, storageCapacity);
-  const pumpedCapacity = census.pumpedStoragePlants * BALANCE.energy.pumpedStorageCapacity;
-  const pumpedPowerLimit = census.pumpedStoragePlants * BALANCE.energy.pumpedStoragePowerLimit;
+  const pumpedCapacity = census.pumpedCapacity * BALANCE.energy.pumpedStorageCapacity;
+  const pumpedPowerLimit = census.pumpedCapacity * BALANCE.energy.pumpedStoragePowerLimit;
   state.pumpedStorageEnergy = Math.min(state.pumpedStorageEnergy, pumpedCapacity);
 
   let curtailment = 0;
