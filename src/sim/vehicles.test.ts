@@ -292,6 +292,32 @@ describe('emergent charging', () => {
     expect(chargingDemand(state)).toBeGreaterThan(0);
   });
 
+  it('smart charging gate counts cooling load, not just building consumption', () => {
+    const state = commuterTown(5, 200);
+    state.smartCharging = true;
+    setHour(state, 3); // everyone parked at home
+    vehiclesStep(state);
+    for (const v of state.vehicles) v.charge = 0.8; // above the floor
+
+    // Generation covers buildings alone, but the cooling load eats the
+    // rest: this is not a real surplus, so smart charging must not
+    // dispatch vehicles into the shortfall.
+    state.lastEnergy.solar = 60;
+    state.lastEnergy.wind = 0;
+    state.lastEnergy.rooftop = 0;
+    state.lastEnergy.hydro = 0;
+    state.lastEnergy.buildingConsumption = 50;
+    state.lastEnergy.heatingConsumption = 0;
+    state.lastEnergy.coolingConsumption = 20;
+    vehiclesStep(state);
+    expect(chargingDemand(state)).toBe(0);
+
+    // With cooling load at 0, the same generation is a real surplus.
+    state.lastEnergy.coolingConsumption = 0;
+    vehiclesStep(state);
+    expect(chargingDemand(state)).toBeGreaterThan(0);
+  });
+
   it('full batteries stop charging', () => {
     const state = commuterTown(5, 200);
     setHour(state, 3);

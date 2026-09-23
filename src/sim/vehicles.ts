@@ -160,12 +160,16 @@ export function vehiclesStep(state: SimState): void {
   const hubLoad = new Map<number, number>();
 
   // Smart charging gate: is there renewable surplus right now (last tick)?
+  // Compared against buildings plus heating and cooling load (not charging
+  // itself, or the gate would feed back on its own dispatch decision).
   const surplusAvailable =
     state.lastEnergy.solar +
       state.lastEnergy.wind +
       state.lastEnergy.rooftop +
       state.lastEnergy.hydro >
-    state.lastEnergy.buildingConsumption;
+    state.lastEnergy.buildingConsumption +
+      state.lastEnergy.heatingConsumption +
+      state.lastEnergy.coolingConsumption;
 
   for (const vehicle of state.vehicles) {
     // Reassign endpoints that were bulldozed or lost their buildings.
