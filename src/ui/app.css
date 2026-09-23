@@ -503,12 +503,46 @@ body,
   padding: 4px 10px;
   cursor: pointer;
   font-size: 12px;
+  transition:
+    background-color 0.12s ease,
+    border-color 0.12s ease,
+    color 0.12s ease,
+    transform 0.08s ease;
+}
+
+.speed-controls button:hover {
+  color: var(--hud-text);
+  background: var(--hud-hover-strong);
+  border-color: var(--hud-muted);
+}
+
+.speed-controls button:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 1px;
+}
+
+/* Pressed: a small dip, so the click reads even before the state flips. */
+.speed-controls button:active {
+  transform: translateY(1px) scale(0.96);
 }
 
 .speed-controls button.active {
   color: var(--hud-on-accent);
   background: var(--accent);
   border-color: var(--accent);
+}
+
+.speed-controls button.active:hover {
+  filter: brightness(1.08);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .speed-controls button {
+    transition: none;
+  }
+  .speed-controls button:active {
+    transform: none;
+  }
 }
 
 .rejection-toast {
