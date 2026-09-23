@@ -3,9 +3,10 @@ import type { GlobalStats, TileDiff, VehicleState } from '../shared/types.ts';
 import { Terrain } from '../shared/types.ts';
 import { IsoCamera } from './camera.ts';
 import { pickTile } from './picking.ts';
-import { nightFactor, SUNRISE, SUNSET, sunIntensity } from '../shared/daylight.ts';
+import { nightFactor, sunIntensity } from '../shared/daylight.ts';
 import { createScene, PALETTE, type SceneLights } from './scene.ts';
 import { createTerrain } from './terrain.ts';
+import { BALANCE } from '../shared/constants.ts';
 import { RoadsMesh } from './roadsMesh.ts';
 import { PowerLinesMesh } from './powerLinesMesh.ts';
 import { BuildingsMesh } from './buildingsMesh.ts';
@@ -48,6 +49,16 @@ export interface RenderEnvironment {
   stateOfCharge: number;
   /** Global zone demand, -1..1 each (drives the demand overlay). */
   demand: { residential: number; commercial: number; retail: number };
+  /** Year phase 0..1 (0 = first spring day). */
+  phase: number;
+  /** Air temperature in °C. */
+  temperature: number;
+  /** Snow cover 0..1 (whitens the ground). */
+  snowCover: number;
+  /** Seasonal sunrise/sunset fractions and sun elevation factor. */
+  sunrise: number;
+  sunset: number;
+  solarStrength: number;
 }
 
 /** A renderable layer that reacts to sim tile diffs (roads, buildings, ...). */
@@ -67,8 +78,10 @@ const SKY_NIGHT_COLOR = new THREE.Color(PALETTE.skyNight);
 const SKY_DUSK_COLOR = new THREE.Color(0xf2a05e);
 const SUN_DAY_COLOR = new THREE.Color(0xfff2dd);
 const SUN_DUSK_COLOR = new THREE.Color(0xff9e5e);
+const SUN_WINTER_COLOR = new THREE.Color(0xe8eefc);
 const AMBIENT_DAY_COLOR = new THREE.Color(0xdfeef5);
 const AMBIENT_NIGHT_COLOR = new THREE.Color(0x46557a);
+const WINTER_SOLAR_STRENGTH = BALANCE.seasons.winterSolarStrength;
 
 /** Warm dusk tint peaks when the sun is low but not gone. */
 function duskAmount(sunFactor: number, night: number): number {
@@ -96,6 +109,7 @@ export class GameRenderer {
   minimap!: MinimapLayer;
   private weatherFx!: WeatherFx;
   private readonly setGridVisible: (visible: boolean) => void;
+  private readonly setTerrainEnvironment: (environment: RenderEnvironment) => void;
   private hoveredIndex: number | null = null;
   private buildPointerActive = false;
   private panPointer: { x: number; y: number } | null = null;
@@ -124,6 +138,7 @@ export class GameRenderer {
 
     const terrain = createTerrain(gridSize);
     this.setGridVisible = terrain.setGridVisible;
+    this.setTerrainEnvironment = terrain.setEnvironment;
     scene.add(terrain.group);
 
     this.addDiffLayer(new WaterMesh(scene, gridSize));
@@ -221,8 +236,9 @@ export class GameRenderer {
 
   /** Update day/night lighting and layer environments from sim stats. */
   setStats(stats: GlobalStats): void {
-    const sunFactor = sunIntensity(stats.timeOfDay);
-    const night = nightFactor(stats.timeOfDay);
+    const { sunrise, sunset, solarStrength } = stats.season;
+    const sunFactor = sunIntensity(stats.timeOfDay, sunrise, sunset);
+    const night = nightFactor(stats.timeOfDay, sunrise, sunset);
     const environment: RenderEnvironment = {
       nightFactor: night,
       sunFactor,
@@ -232,12 +248,19 @@ export class GameRenderer {
           ? stats.energy.storedEnergy / stats.energy.storageCapacity
           : 0,
       demand: stats.demand,
+      phase: stats.season.phase,
+      temperature: stats.season.temperature,
+      snowCover: stats.weather.snowpack,
+      sunrise,
+      sunset,
+      solarStrength,
     };
 
-    // Sun travels east -> west across the grid during the day.
-    const dayPhase = THREE.MathUtils.clamp((stats.timeOfDay - SUNRISE) / (SUNSET - SUNRISE), 0, 1);
+    // Sun travels east -> west across the grid during the (seasonal) day;
+    // the arc stays lower in winter.
+    const dayPhase = THREE.MathUtils.clamp((stats.timeOfDay - sunrise) / (sunset - sunrise), 0, 1);
     const azimuth = Math.PI * (1 - dayPhase);
-    const elevation = 0.25 + 0.9 * Math.sin(Math.PI * dayPhase);
+    const elevation = 0.25 + 0.9 * solarStrength * Math.sin(Math.PI * dayPhase);
     const center = this.gridSize / 2;
     const radius = this.gridSize * 1.2;
     this.lights.sun.position.set(
@@ -248,7 +271,11 @@ export class GameRenderer {
     this.lights.sun.target.position.set(center, 0, center);
     const cloudDimming = 1 - 0.45 * stats.weather.cloudCover;
     this.lights.sun.intensity = (0.15 + 1.6 * sunFactor) * cloudDimming;
-    this.lights.sun.color.copy(SUN_DAY_COLOR).lerp(SUN_DUSK_COLOR, duskAmount(sunFactor, night));
+    const warmth = (solarStrength - WINTER_SOLAR_STRENGTH) / (1 - WINTER_SOLAR_STRENGTH);
+    this.lights.sun.color
+      .copy(SUN_WINTER_COLOR)
+      .lerp(SUN_DAY_COLOR, THREE.MathUtils.clamp(warmth, 0, 1))
+      .lerp(SUN_DUSK_COLOR, duskAmount(sunFactor, night));
     this.lights.ambient.intensity = 0.35 + 0.65 * sunFactor;
     this.lights.ambient.color.copy(AMBIENT_DAY_COLOR).lerp(AMBIENT_NIGHT_COLOR, night);
 
@@ -260,6 +287,7 @@ export class GameRenderer {
 
     for (const layer of this.diffLayers) layer.setEnvironment?.(environment);
     this.weatherFx.setCloudCover(stats.weather.cloudCover);
+    this.setTerrainEnvironment(environment);
     this.vehiclesMesh.setEnvironment(environment);
   }
 

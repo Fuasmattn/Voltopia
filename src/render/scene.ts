@@ -9,6 +9,12 @@ export const PALETTE = {
   skyDay: 0xbfe0e8,
   skyNight: 0x101a2a,
   ground: 0x9fc37e,
+  /** Seasonal ground tints, keyed at mid spring/summer/autumn/winter. */
+  groundSpring: 0x9dd27c,
+  groundSummer: 0x9fc37e,
+  groundAutumn: 0xb9a96a,
+  groundWinter: 0x9aa88a,
+  groundSnow: 0xe9eef3,
   grid: 0x7fa863,
   road: 0x5a6068,
   roadMarking: 0xd8d8d0,

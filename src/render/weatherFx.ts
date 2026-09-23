@@ -8,6 +8,10 @@ const CLOUD_ALTITUDE = 9;
 const CLOUD_DRIFT_TILES_PER_S = 0.7;
 const MAX_RAIN = 400;
 const RAIN_FALL_TILES_PER_S = 14;
+const SNOW_FALL_TILES_PER_S = 3;
+const SNOW_DRIFT_TILES = 1.2;
+const RAIN_COLOR = 0x9fb6c9;
+const SNOW_COLOR = 0xffffff;
 
 /** Soft round sprite texture (white center fading out). */
 function createPuffTexture(): THREE.Texture {
@@ -48,6 +52,7 @@ export class WeatherFx implements DiffLayer {
   private cloudCover = 0.3;
   private windFactor = 0.5;
   private nightFactor = 0;
+  private temperature = 15;
   private reducedMotion = false;
   private drift = 0;
   private rainCycle = 0;
@@ -87,7 +92,7 @@ export class WeatherFx implements DiffLayer {
 
     const rainGeometry = new THREE.BoxGeometry(0.015, 0.9, 0.015);
     this.rainMaterial = new THREE.MeshBasicMaterial({
-      color: 0x9fb6c9,
+      color: RAIN_COLOR,
       transparent: true,
       opacity: 0.28,
     });
@@ -106,6 +111,7 @@ export class WeatherFx implements DiffLayer {
   setEnvironment(environment: RenderEnvironment): void {
     this.windFactor = environment.windFactor;
     this.nightFactor = environment.nightFactor;
+    this.temperature = environment.temperature;
   }
 
   /** Cloud cover comes from stats via the renderer. */
@@ -158,15 +164,24 @@ export class WeatherFx implements DiffLayer {
       this.rain.count = 0;
       return;
     }
+    const snowing = this.temperature < BALANCE.seasons.snowTemperature;
+    this.rainMaterial.color.setHex(snowing ? SNOW_COLOR : RAIN_COLOR);
+    this.rainMaterial.opacity = snowing ? 0.8 : 0.28;
+    const fallSpeed = snowing ? SNOW_FALL_TILES_PER_S : RAIN_FALL_TILES_PER_S;
     if (!this.reducedMotion) {
-      this.rainCycle += (deltaSeconds * RAIN_FALL_TILES_PER_S) / CLOUD_ALTITUDE;
+      this.rainCycle += (deltaSeconds * fallSpeed) / CLOUD_ALTITUDE;
     }
     for (let i = 0; i < count; i++) {
       const phase = (this.rainPhase[i] + this.rainCycle) % 1;
       const y = CLOUD_ALTITUDE * (1 - phase);
-      const x = hash01(i, 11) * this.gridSize;
+      const baseX = hash01(i, 11) * this.gridSize;
       const z = hash01(i, 12) * this.gridSize;
-      this.matrix.identity();
+      // Snow: fat, slow flakes drifting sideways; rain: thin fast streaks.
+      const x = snowing
+        ? baseX + Math.sin((phase + hash01(i, 13)) * 2 * Math.PI) * SNOW_DRIFT_TILES
+        : baseX;
+      if (snowing) this.matrix.makeScale(6, 0.12, 6);
+      else this.matrix.identity();
       this.matrix.setPosition(x, y, z);
       this.rain.setMatrixAt(i, this.matrix);
     }
