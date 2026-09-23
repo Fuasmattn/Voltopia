@@ -19,6 +19,12 @@ export interface SimBridge {
   onVehicles: (listener: (vehicles: VehicleState[]) => void) => () => void;
   onSaveData: (listener: (save: SaveGame) => void) => () => void;
   onLifetime: (listener: (samples: LifetimeSample[]) => void) => () => void;
+  /** Subscribe to every stats update (each tick and flush), outside React state. */
+  onTick: (listener: (stats: GlobalStats) => void) => () => void;
+  /** Subscribe to command outcomes for commands sent with a `requestId`. */
+  onCommandResult: (listener: (requestId: number, rejected?: string) => void) => () => void;
+  /** Latest stats without subscribing (null until the first tick). */
+  getStats: () => GlobalStats | null;
   /** Most recent rejection reason (e.g. not enough money), transient. */
   rejection: string | null;
 }
@@ -44,6 +50,9 @@ export function useSimBridge(options: SimBridgeOptions): SimBridge {
   const vehicleListeners = useRef(new Set<(vehicles: VehicleState[]) => void>());
   const saveListeners = useRef(new Set<(save: SaveGame) => void>());
   const lifetimeListeners = useRef(new Set<(samples: LifetimeSample[]) => void>());
+  const tickListeners = useRef(new Set<(stats: GlobalStats) => void>());
+  const resultListeners = useRef(new Set<(requestId: number, rejected?: string) => void>());
+  const statsRef = useRef<GlobalStats | null>(null);
   const [stats, setStats] = useState<GlobalStats | null>(null);
   const [rejection, setRejection] = useState<string | null>(null);
   const rejectionTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -62,7 +71,9 @@ export function useSimBridge(options: SimBridgeOptions): SimBridge {
             for (const listener of diffListeners.current) listener(event.diffs);
           }
           for (const listener of vehicleListeners.current) listener(event.vehicles);
+          statsRef.current = event.stats;
           setStats(event.stats);
+          for (const listener of tickListeners.current) listener(event.stats);
           break;
         case 'saveData':
           for (const listener of saveListeners.current) listener(event.save);
@@ -74,6 +85,11 @@ export function useSimBridge(options: SimBridgeOptions): SimBridge {
           setRejection(event.reason);
           if (rejectionTimer.current) clearTimeout(rejectionTimer.current);
           rejectionTimer.current = setTimeout(() => setRejection(null), REJECTION_DISPLAY_MS);
+          break;
+        case 'commandResult':
+          for (const listener of resultListeners.current) {
+            listener(event.requestId, event.rejected);
+          }
           break;
         case 'ready':
           break;
@@ -121,5 +137,31 @@ export function useSimBridge(options: SimBridgeOptions): SimBridge {
     return () => lifetimeListeners.current.delete(listener);
   }, []);
 
-  return { stats, send, onDiffs, onVehicles, onSaveData, onLifetime, rejection };
+  const onTick = useCallback((listener: (stats: GlobalStats) => void) => {
+    tickListeners.current.add(listener);
+    return () => tickListeners.current.delete(listener);
+  }, []);
+
+  const onCommandResult = useCallback(
+    (listener: (requestId: number, rejected?: string) => void) => {
+      resultListeners.current.add(listener);
+      return () => resultListeners.current.delete(listener);
+    },
+    [],
+  );
+
+  const getStats = useCallback(() => statsRef.current, []);
+
+  return {
+    stats,
+    send,
+    onDiffs,
+    onVehicles,
+    onSaveData,
+    onLifetime,
+    onTick,
+    onCommandResult,
+    getStats,
+    rejection,
+  };
 }
