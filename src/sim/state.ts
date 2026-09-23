@@ -432,11 +432,13 @@ export function deserializeState(save: SaveGame): SimState {
   state.layers.plantType.set(new Uint8Array(save.layers.plantType));
   state.pumpedStorageEnergy = save.pumpedStorageEnergy ?? 0;
   state.weather.riverFlow = save.riverFlow ?? BALANCE.water.dryBaselineFlow;
-  state.weather.snowpack = save.snowpack ?? 0;
+  // Hand-edited JSON exports may hold out-of-range values; keep the
+  // season readable (whole days, snow cover 0..1).
+  state.weather.snowpack = Math.min(1, Math.max(0, save.snowpack ?? 0));
   state.insulation = save.insulation ?? false;
   state.goalProgress.winterTicks = save.winterTicks ?? 0;
   // Saves from before seasons start their year on the day they are loaded.
-  state.seasonOriginDay = save.seasonOriginDay ?? Math.floor(save.tick / TICKS_PER_DAY);
+  state.seasonOriginDay = Math.floor(save.seasonOriginDay ?? save.tick / TICKS_PER_DAY);
   state.season = seasonState({
     day: Math.floor(save.tick / TICKS_PER_DAY),
     timeOfDay: (save.tick % TICKS_PER_DAY) / TICKS_PER_DAY,

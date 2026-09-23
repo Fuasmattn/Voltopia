@@ -234,6 +234,18 @@ describe('save round trip', () => {
     expect(restored.insulation).toBe(false);
   });
 
+  it('sanitizes hand-edited season fields', () => {
+    const state = makeState();
+    const save = serializeState(state);
+    save.seasonOriginDay = 3.5;
+    save.snowpack = 2.5;
+    const restored = deserializeState(save);
+    expect(restored.seasonOriginDay).toBe(3);
+    expect(restored.weather.snowpack).toBe(1);
+    save.snowpack = -0.5;
+    expect(deserializeState(save).weather.snowpack).toBe(0);
+  });
+
   it('recomputes the season for the loaded tick', () => {
     const state = makeState();
     state.tick = TICKS_PER_DAY * 7;

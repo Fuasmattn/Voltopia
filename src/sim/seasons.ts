@@ -48,6 +48,8 @@ export function seasonState(input: SeasonInput): SeasonState {
   const phase = yearPhase(input.day, input.timeOfDay, input.seasonOriginDay);
   const elapsedDays = Math.max(0, input.day - input.seasonOriginDay);
   const dayOfYear = elapsedDays % total;
+  // Deliberately derived from the whole day, not from floor(phase * 4):
+  // that keeps dayOfSeason integral and the season boundary exact.
   const seasonIndex = Math.floor(dayOfYear / cfg.daysPerSeason);
 
   // Day length swings around 12 h, symmetric around noon.
