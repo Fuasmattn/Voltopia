@@ -71,6 +71,13 @@ slots and JSON save export/import. UI in **English and German**.
 
 The game saves automatically (IndexedDB) and is playable offline as a PWA.
 
+## Playing with an AI agent
+
+The game exposes its actions as [WebMCP](https://webmachinelearning.github.io/webmcp/)
+tools (`document.modelContext`) and, in every browser, on
+`window.voltopia` — build, zone, inspect, read the map, fast-forward. See
+[docs/agent-tools.md](docs/agent-tools.md).
+
 ## Controls
 
 | Input                   | Action                                           |
@@ -106,6 +113,8 @@ pnpm build      # production build
   balancing configuration (`constants.ts` — no magic numbers in sim code).
 - `src/storage/` — save-game persistence behind a small interface
   (IndexedDB by default).
+- `src/agent/` — machine-facing tools (WebMCP + `window.voltopia`) over
+  the bridge; DOM-free except for the registration module.
 
 The worker sends only tile diffs and global stats to the main thread,
 never the full state. See `docs/idea.md` for the design document and
