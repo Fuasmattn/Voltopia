@@ -7,16 +7,23 @@ import type { SimBridge } from './useSimBridge.ts';
 const WIDTH = 460;
 const HEIGHT = 110;
 
-function polyline(values: number[], max: number, min = 0): string {
+/** SVG path for one metric; NaN values break the line (missing samples). */
+function linePath(values: number[], max: number, min = 0): string {
   if (values.length < 2) return '';
   const stepX = WIDTH / (values.length - 1);
   const range = Math.max(1e-9, max - min);
-  return values
-    .map((value, i) => {
-      const y = HEIGHT - ((value - min) / range) * (HEIGHT - 6) - 3;
-      return `${(i * stepX).toFixed(1)},${y.toFixed(1)}`;
-    })
-    .join(' ');
+  let d = '';
+  let pen = false;
+  values.forEach((value, i) => {
+    if (Number.isNaN(value)) {
+      pen = false;
+      return;
+    }
+    const y = HEIGHT - ((value - min) / range) * (HEIGHT - 6) - 3;
+    d += `${pen ? 'L' : 'M'}${(i * stepX).toFixed(1)},${y.toFixed(1)} `;
+    pen = true;
+  });
+  return d.trim();
 }
 
 function Chart({
@@ -26,17 +33,18 @@ function Chart({
   title: string;
   series: Array<{ values: number[]; color: string; label: string }>;
 }) {
-  const max = Math.max(1, ...series.flatMap((s) => s.values));
-  const min = Math.min(0, ...series.flatMap((s) => s.values));
+  const finiteValues = series.flatMap((s) => s.values.filter((v) => !Number.isNaN(v)));
+  const max = Math.max(1, ...finiteValues);
+  const min = Math.min(0, ...finiteValues);
   return (
     <section className="stats-chart">
       <h3>{title}</h3>
       <svg viewBox={`0 0 ${WIDTH} ${HEIGHT}`} role="img" aria-label={title}>
         <line x1="0" y1={HEIGHT - 3} x2={WIDTH} y2={HEIGHT - 3} stroke="#3a4048" />
         {series.map((s) => (
-          <polyline
+          <path
             key={s.label}
-            points={polyline(s.values, max, min)}
+            d={linePath(s.values, max, min)}
             fill="none"
             stroke={s.color}
             strokeWidth="1.5"
@@ -109,6 +117,16 @@ export function StatsPage({ bridge, onClose }: { bridge: SimBridge; onClose: () 
                 values: samples.map((s) => s.happiness * 100),
                 color: '#d6a2e8',
                 label: '%',
+              },
+            ]}
+          />
+          <Chart
+            title={t('stats.temperature')}
+            series={[
+              {
+                values: samples.map((s) => s.temperature ?? NaN),
+                color: '#f4a261',
+                label: '°C',
               },
             ]}
           />

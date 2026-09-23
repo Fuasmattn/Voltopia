@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
-import { OverlayMode, type SaveGame } from '../shared/types.ts';
+import { OverlayMode, type SaveGame, type SeasonId } from '../shared/types.ts';
+import { BALANCE } from '../shared/constants.ts';
 import { IndexedDbStorage } from '../storage/indexeddb.ts';
 import { OverlayToggle } from './OverlayToggle.tsx';
 import type { GameRenderer, RendererCallbacks } from '../render/renderer.ts';
@@ -9,7 +10,7 @@ import { DemandBars } from './DemandBars.tsx';
 import { EnergyPanel } from './EnergyPanel.tsx';
 import { HelpPage } from './HelpPage.tsx';
 import { ImprintPage } from './ImprintPage.tsx';
-import { rejectionKey, useI18n, type Locale } from './i18n.tsx';
+import { rejectionKey, useI18n, type Locale, type TranslationKey } from './i18n.tsx';
 import { TaxSlider } from './TaxSlider.tsx';
 import { GameView } from './GameView.tsx';
 import { GoalsPanel } from './GoalsPanel.tsx';
@@ -82,6 +83,13 @@ function LanguageSwitch() {
     </span>
   );
 }
+
+const SEASON_GLYPH: Record<SeasonId, string> = {
+  spring: '🌸',
+  summer: '☀️',
+  autumn: '🍂',
+  winter: '❄️',
+};
 
 function Game({ save, options }: { save: SaveGame | null; options: NewGameOptions }) {
   const { t } = useI18n();
@@ -216,6 +224,15 @@ function Game({ save, options }: { save: SaveGame | null; options: NewGameOption
             <DemandBars demand={stats.demand} />
             <Clock timeOfDay={stats.timeOfDay} day={stats.day} />
             <div className="hud-weather" data-testid="weather" title={t('hud.weather.title')}>
+              <span data-testid="season">
+                {SEASON_GLYPH[stats.season.season]}{' '}
+                {t('hud.season', {
+                  season: t(`season.${stats.season.season}` as TranslationKey),
+                  day: stats.season.dayOfSeason,
+                  days: BALANCE.seasons.daysPerSeason,
+                  temperature: Math.round(stats.season.temperature),
+                })}
+              </span>
               <span>☁️ {Math.round(stats.weather.cloudCover * 100)}%</span>
               <span>💨 {Math.round(stats.weather.windSpeed * 100)}%</span>
             </div>
@@ -256,6 +273,26 @@ function Game({ save, options }: { save: SaveGame | null; options: NewGameOption
             />
             <span>{t('smartCharging.label')}</span>
           </label>
+          <div
+            className="smart-charging-toggle"
+            data-testid="insulation"
+            title={t('insulation.title')}
+          >
+            <span>{t('insulation.label')}</span>
+            {stats.insulation ? (
+              <span className="insulation-state">✓ {t('insulation.bought')}</span>
+            ) : (
+              <button
+                type="button"
+                className="insulation-buy"
+                data-testid="insulation-buy"
+                disabled={stats.money < BALANCE.costs.insulation}
+                onClick={() => bridge.send({ type: 'buyInsulation' })}
+              >
+                {t('insulation.buy', { cost: BALANCE.costs.insulation.toLocaleString('en-US') })}
+              </button>
+            )}
+          </div>
           <button
             type="button"
             className="new-game-button"

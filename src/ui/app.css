@@ -407,6 +407,27 @@ body,
   accent-color: var(--accent);
 }
 
+.insulation-buy {
+  margin-left: auto;
+  padding: 4px 8px;
+  border-radius: 8px;
+  border: 1px solid var(--accent);
+  background: transparent;
+  color: var(--hud-text);
+  font: inherit;
+  cursor: pointer;
+}
+
+.insulation-buy:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+.insulation-state {
+  margin-left: auto;
+  color: var(--accent);
+}
+
 .boot-screen {
   height: 100%;
   display: grid;
