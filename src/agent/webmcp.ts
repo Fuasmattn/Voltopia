@@ -86,7 +86,10 @@ export function registerAgentTools(tools: AgentTool[]): () => void {
           { signal: controller.signal },
         );
         // The current draft returns a promise; older builds return nothing.
+        // An AbortError only means we unregistered before the browser
+        // settled (React StrictMode mounts twice in dev) — not a failure.
         void Promise.resolve(registration).catch((error: unknown) => {
+          if (error instanceof DOMException && error.name === 'AbortError') return;
           console.warn(`WebMCP: could not register ${tool.name}`, error);
         });
       } catch (error) {
