@@ -117,6 +117,16 @@ describe('save game JSON export/import', () => {
     expect(saveFromJson(saveToJson(makeSave())).winterTicks).toBeUndefined();
   });
 
+  it('round-trips summer resilience progress', () => {
+    const save = makeSave();
+    save.summerTicks = 1234;
+    expect(saveFromJson(saveToJson(save)).summerTicks).toBe(1234);
+  });
+
+  it('accepts exports without summer progress', () => {
+    expect(saveFromJson(saveToJson(makeSave())).summerTicks).toBeUndefined();
+  });
+
   it('accepts exports without season fields', () => {
     const restored = saveFromJson(saveToJson(makeSave()));
     expect(restored.seasonOriginDay).toBeUndefined();

@@ -131,4 +131,40 @@ describe('goals', () => {
     goalsStep(state);
     expect(state.goalProgress.winterTicks).toBe(0);
   });
+
+  function summerCity() {
+    const state = createSimState(1, SIZE);
+    for (let i = 0; i < 5; i++) {
+      state.layers.zone[at(i, 1)] = Zone.Residential;
+      state.layers.density[at(i, 1)] = 3;
+    }
+    state.season = { ...state.season, season: 'summer' };
+    return state;
+  }
+
+  it('summerResilience needs a full summer without a deficit tick', () => {
+    const state = summerCity();
+    const summerTicks = BALANCE.seasons.daysPerSeason * TICKS_PER_DAY;
+    for (let t = 0; t < summerTicks - 1; t++) goalsStep(state);
+    expect(state.goalsAchieved.has('summerResilience')).toBe(false);
+    goalsStep(state);
+    expect(state.goalsAchieved.has('summerResilience')).toBe(true);
+  });
+
+  it('a deficit tick resets the summer streak', () => {
+    const state = summerCity();
+    for (let t = 0; t < 100; t++) goalsStep(state);
+    expect(state.goalProgress.summerTicks).toBe(100);
+    state.lastEnergy.deficit = 1;
+    goalsStep(state);
+    expect(state.goalProgress.summerTicks).toBe(0);
+  });
+
+  it('ticks outside summer do not count and reset the streak', () => {
+    const state = summerCity();
+    for (let t = 0; t < 100; t++) goalsStep(state);
+    state.season = { ...state.season, season: 'autumn' };
+    goalsStep(state);
+    expect(state.goalProgress.summerTicks).toBe(0);
+  });
 });

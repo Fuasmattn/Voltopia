@@ -19,6 +19,7 @@ interface SaveGameJson {
   snowpack?: number;
   insulation?: boolean;
   winterTicks?: number;
+  summerTicks?: number;
   layers: Record<string, string>;
 }
 
@@ -66,6 +67,7 @@ export function saveToJson(save: SaveGame): string {
     ...(save.snowpack !== undefined ? { snowpack: save.snowpack } : {}),
     ...(save.insulation !== undefined ? { insulation: save.insulation } : {}),
     ...(save.winterTicks !== undefined ? { winterTicks: save.winterTicks } : {}),
+    ...(save.summerTicks !== undefined ? { summerTicks: save.summerTicks } : {}),
     layers,
   };
   return JSON.stringify(json, null, 2);
@@ -150,6 +152,7 @@ export function saveFromJson(text: string): SaveGame {
     ...(typeof parsed.snowpack === 'number' ? { snowpack: parsed.snowpack } : {}),
     ...(typeof parsed.insulation === 'boolean' ? { insulation: parsed.insulation } : {}),
     ...(typeof parsed.winterTicks === 'number' ? { winterTicks: parsed.winterTicks } : {}),
+    ...(typeof parsed.summerTicks === 'number' ? { summerTicks: parsed.summerTicks } : {}),
     layers,
   };
 }

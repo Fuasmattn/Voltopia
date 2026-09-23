@@ -14,6 +14,7 @@ export const GOAL_IDS = [
   'exporter',
   'hydroPower',
   'winterResilience',
+  'summerResilience',
 ] as const;
 export type GoalId = (typeof GOAL_IDS)[number];
 
@@ -57,6 +58,14 @@ export function goalsStep(state: SimState): void {
     progress.winterTicks = 0;
   }
 
+  // A whole summer (every tick) without undersupply, for a real city.
+  const inSummer = state.season.season === 'summer';
+  if (inSummer && population >= CLEAN_DAY_MIN_POPULATION && state.lastEnergy.deficit === 0) {
+    progress.summerTicks++;
+  } else {
+    progress.summerTicks = 0;
+  }
+
   const achieved = state.goalsAchieved;
   if (!achieved.has('firstPower') && hasPowerInfrastructure(state)) {
     achieved.add('firstPower');
@@ -87,6 +96,12 @@ export function goalsStep(state: SimState): void {
     progress.winterTicks >= BALANCE.seasons.daysPerSeason * TICKS_PER_DAY
   ) {
     achieved.add('winterResilience');
+  }
+  if (
+    !achieved.has('summerResilience') &&
+    progress.summerTicks >= BALANCE.seasons.daysPerSeason * TICKS_PER_DAY
+  ) {
+    achieved.add('summerResilience');
   }
 }
 

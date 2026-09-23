@@ -245,6 +245,8 @@ export interface SaveGame {
   insulation?: boolean;
   /** Consecutive deficit-free winter ticks so far (absent in older saves → 0). */
   winterTicks?: number;
+  /** Consecutive deficit-free summer ticks so far (absent in older saves → 0). */
+  summerTicks?: number;
   /** Raw copies of the tile layers. */
   layers: {
     tileType: ArrayBuffer;
