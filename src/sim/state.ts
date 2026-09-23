@@ -163,6 +163,7 @@ export interface SimState {
     buildingConsumption: number;
     chargingConsumption: number;
     heatingConsumption: number;
+    coolingConsumption: number;
     curtailment: number;
     deficit: number;
     gridImport: number;
@@ -240,6 +241,7 @@ export function createSimState(
       buildingConsumption: 0,
       chargingConsumption: 0,
       heatingConsumption: 0,
+      coolingConsumption: 0,
       curtailment: 0,
       deficit: 0,
       gridImport: 0,

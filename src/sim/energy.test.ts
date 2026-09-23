@@ -4,6 +4,7 @@ import { tileIndex } from '../shared/grid.ts';
 import {
   buildingConsumption,
   censusPlants,
+  coolingConsumption,
   energyStep,
   heatingConsumption,
   loadProfileFactor,
@@ -570,5 +571,58 @@ describe('heating load', () => {
     placePlant(winter, at(5, 5), PlantType.SolarFarm);
     energyStep(winter, { chargingDemand: 0 });
     expect(winter.lastEnergy.solar).toBeLessThan(summer.lastEnergy.solar * 0.5);
+  });
+});
+
+describe('cooling load', () => {
+  const { comfortTemperature, coolingRange, weightByZone, insulationFactor } =
+    BALANCE.seasons.cooling;
+  const base = BALANCE.energy.consumptionByZoneAndDensity[Zone.Residential][2];
+
+  it('is zero below the cooling comfort temperature', () => {
+    expect(coolingConsumption(Zone.Residential, 2, comfortTemperature - 1, false)).toBe(0);
+  });
+
+  it('reaches the full zone weight at the top of the range', () => {
+    const hot = comfortTemperature + coolingRange;
+    expect(coolingConsumption(Zone.Residential, 2, hot, false)).toBeCloseTo(
+      base * weightByZone[Zone.Residential],
+      9,
+    );
+    expect(coolingConsumption(Zone.Commercial, 2, hot, false)).toBeCloseTo(
+      BALANCE.energy.consumptionByZoneAndDensity[Zone.Commercial][2] *
+        weightByZone[Zone.Commercial],
+      9,
+    );
+  });
+
+  it('is halved by insulation', () => {
+    const hot = comfortTemperature + coolingRange;
+    const plain = coolingConsumption(Zone.Residential, 3, hot, false);
+    expect(coolingConsumption(Zone.Residential, 3, hot, true)).toBeCloseTo(
+      plain * insulationFactor,
+      9,
+    );
+  });
+
+  it('is reported separately and counts toward the balance', () => {
+    const state = makeState();
+    setNoonClearSky(state);
+    state.season = { ...state.season, temperature: comfortTemperature + coolingRange };
+    placePlant(state, at(5, 5), PlantType.WindTurbine);
+    addBuilding(state, at(6, 5), Zone.Residential, 2);
+    buildPowerLines(state, [at(6, 6)]);
+    energyStep(state, { chargingDemand: 0 });
+    const cooling = state.lastEnergy.coolingConsumption;
+    expect(cooling).toBeCloseTo(base * weightByZone[Zone.Residential], 6);
+    expect(state.lastEnergy.heatingConsumption).toBe(0);
+    // Wind is 0 at noon clear sky; rooftop PV covers part of the load and
+    // the small shortfall is imported, so the import equals the unmet
+    // (buildings + cooling - rooftop). That proves cooling is in the balance.
+    expect(state.lastEnergy.gridImport).toBeCloseTo(
+      state.lastEnergy.buildingConsumption + cooling - state.lastEnergy.rooftop,
+      6,
+    );
+    expect(state.lastEnergy.deficit).toBe(0);
   });
 });
