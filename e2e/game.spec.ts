@@ -373,3 +373,57 @@ test('the HUD shows the season and a fresh city starts in spring', async ({ page
   await expect(page.getByTestId('insulation')).toBeVisible();
   await expect(page.getByTestId('traffic')).toBeVisible();
 });
+
+test('agent tools drive the game through window.voltopia', async ({ page }) => {
+  // The tools do not need WebGL: they talk to the worker directly.
+  const moneyText = async (): Promise<number> => {
+    const text = await page.getByTestId('money').textContent();
+    return Number(text?.replace(/[^\d]/g, '') ?? '0');
+  };
+  type Api = {
+    tools: Array<{ name: string }>;
+    call: (name: string, input?: unknown) => Promise<Record<string, unknown>>;
+  };
+  const call = (name: string, input: unknown = {}): Promise<Record<string, unknown>> =>
+    page.evaluate(
+      ([name, input]) => (window as unknown as { voltopia: Api }).voltopia.call(name, input),
+      [name, input] as [string, unknown],
+    );
+
+  await expect
+    .poll(() => page.evaluate(() => Boolean((window as unknown as { voltopia?: Api }).voltopia)))
+    .toBe(true);
+  const names = await page.evaluate(() =>
+    (window as unknown as { voltopia: Api }).voltopia.tools.map((t) => t.name),
+  );
+  expect(names).toContain('build_road');
+  expect(names).toContain('get_map');
+
+  const overview = await call('get_game_overview');
+  expect(overview.gridSize).toBe(64);
+  const before = await moneyText();
+
+  // Find a stretch of empty land and pave it.
+  const land = await call('find_tiles', { kind: 'empty_land', near: { x: 32, y: 32 }, limit: 1 });
+  const [{ x, y }] = land.tiles as Array<{ x: number; y: number }>;
+  const road = await call('build_road', { from: { x, y }, to: { x, y: y + 3 } });
+  expect(road.ok).toBe(true);
+  expect(road.spent).toBeGreaterThan(0);
+  await expect.poll(moneyText, { timeout: 5_000 }).toBeLessThan(before);
+
+  // The map mirror on the main thread reflects the new road.
+  const map = await call('get_map', { origin: { x, y }, width: 1, height: 4 });
+  expect(map.rows).toEqual(['+', '+', '+', '+']);
+
+  // Rejections come back as data, not exceptions.
+  const bad = await call('place_plant', { plant: 'run_of_river', x: 0, y: 0 });
+  expect(bad.ok).toBe(false);
+  expect(typeof bad.message).toBe('string');
+
+  // Time can be advanced while paused; the speed is restored afterwards.
+  await call('set_speed', { speed: 0 });
+  const advanced = await call('advance_time', { ticks: 8 });
+  expect(advanced.ticksAdvanced).toBe(8);
+  const after = await call('get_game_overview');
+  expect(after.speed).toBe(0);
+});

@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { OverlayMode, type SaveGame } from '../shared/types.ts';
 import { IndexedDbStorage } from '../storage/indexeddb.ts';
 import type { GameRenderer, RendererCallbacks } from '../render/renderer.ts';
@@ -14,7 +14,7 @@ import { GoalsPanel } from './GoalsPanel.tsx';
 import { Minimap } from './Minimap.tsx';
 import { OverlayToggle } from './OverlayToggle.tsx';
 import { BuildBar } from './BuildBar.tsx';
-import { consumePendingNewGame, type NewGameOptions } from './newGame.ts';
+import { consumePendingNewGame, storePendingNewGame, type NewGameOptions } from './newGame.ts';
 import { NewGamePage } from './NewGamePage.tsx';
 import { SettingsPage } from './SettingsPage.tsx';
 import { StatsPage } from './StatsPage.tsx';
@@ -22,6 +22,7 @@ import { loadSettings, persistSettings, type AppSettings } from './settings.ts';
 import { sound } from './sound.ts';
 import { isTutorialDone, Tutorial } from './Tutorial.tsx';
 import { WinScreen } from './WinScreen.tsx';
+import { useAgentTools } from './useAgentTools.ts';
 import { useSimBridge } from './useSimBridge.ts';
 import { useTools } from './useTools.ts';
 
@@ -165,6 +166,14 @@ function Game({ save, options }: { save: SaveGame | null; options: NewGameOption
     await storage.clear();
     window.location.reload();
   };
+
+  // Agent tools (WebMCP + window.voltopia); a new city from a tool goes
+  // through the same pending-options reload as the new-game dialog.
+  const startNewCityFromTool = useCallback((options: NewGameOptions) => {
+    storePendingNewGame(options);
+    void storage.clear().then(() => window.location.reload());
+  }, []);
+  useAgentTools(bridge, gridSize, startNewCityFromTool);
 
   useEffect(() => {
     if (stats) rendererRef.current?.setStats(stats);

@@ -726,6 +726,11 @@ const de: Record<TranslationKey, string> = {
 
 const translations: Record<Locale, Record<TranslationKey, string>> = { en, de };
 
+/** English text of a key, for machine-facing output (agent tools, logs). */
+export function englishText(key: TranslationKey): string {
+  return en[key];
+}
+
 const LOCALE_STORAGE_KEY = 'voltopia.locale';
 
 function detectLocale(): Locale {

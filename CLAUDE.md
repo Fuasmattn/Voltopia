@@ -37,6 +37,10 @@ formatting is enforced (oxfmt, single quotes, config in `.oxfmtrc.json`).
   with the central `BALANCE` config. **No magic numbers in sim code**;
   every tuning value lives in `BALANCE`.
 - `src/storage/` — save games behind the `SaveStorage` interface.
+- `src/agent/` — WebMCP / `window.voltopia` tools for agents
+  (`docs/agent-tools.md`). `tools.ts` is DOM-free and tested against a
+  headless `SimEngine`; only `webmcp.ts` touches `document`/`window`.
+  New sim command? Add a tool if an agent would need it.
 
 Worker ↔ main: commands in, tile diffs + `GlobalStats` out — never the
 full state (except save snapshots).
