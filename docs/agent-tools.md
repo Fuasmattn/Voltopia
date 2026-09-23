@@ -6,13 +6,29 @@ in every browser on `window.voltopia`.
 
 ## Connecting
 
-**WebMCP (Chrome ≥ 146 with the WebMCP early preview / origin trial).**
+**WebMCP (Chrome ≥ 146).** WebMCP is an origin trial, so stable Chrome
+has it switched off by default and `document.modelContext` does not
+exist. Enable it locally:
+
+1. Open `chrome://flags/#enable-webmcp-testing`, set it to _Enabled_ and
+   relaunch Chrome (a full relaunch, not just a new tab).
+2. Load the game from `http://localhost:5173` or the HTTPS deployment
+   (secure context required; `127.0.0.1` over plain HTTP does not count).
+3. DevTools → _Application_ → _WebMCP_: _Available Tools_ lists the 20
+   tools and lets you invoke them.
+
+Sanity check in the console: `document.modelContext` must be an object
+(undefined means the flag is off), and
+`(await document.modelContext.getTools()).length` is 20.
+
 The app registers its tools with `document.modelContext` on boot
 (falling back to the deprecated `navigator.modelContext`). Any WebMCP
-client — Gemini in Chrome, the DevTools _WebMCP_ panel, or
+client — Gemini in Chrome, the DevTools panel, or
 [chrome-devtools-mcp](https://github.com/ChromeDevTools/chrome-devtools-mcp)
 — lists them via `getTools()` and runs them via `executeTool()`. Results
-are MCP-style `{ content: [{ type: 'text', text: '<JSON>' }] }`.
+are MCP-style `{ content: [{ type: 'text', text: '<JSON>' }] }`. Chrome
+154's `executeTool(tool, input)` expects `input` as a JSON **string**
+(`'{"from":{"x":1,"y":1}}'`), not an object.
 
 **Without WebMCP.** Every tool is on `window.voltopia`:
 
