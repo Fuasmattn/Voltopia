@@ -29,9 +29,10 @@ const at = (x: number, y: number) => tileIndex(x, y, SIZE);
 
 function makeState(): SimState {
   const state = createSimState(1, SIZE);
-  // Warm baseline so pre-season literal expectations don't pick up
-  // heating; heating tests set their own temperature afterwards.
-  state.season = { ...state.season, temperature: 20 };
+  // Neutral baseline so pre-season literal expectations pick up neither
+  // heating nor cooling; the heating and cooling tests set their own
+  // temperature.
+  state.season = { ...state.season, temperature: 18 };
   return state;
 }
 

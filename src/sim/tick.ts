@@ -31,7 +31,7 @@ export function dayNumber(tick: number): number {
 /** Advance the simulation by exactly one tick. */
 export function stepTick(state: SimState): void {
   state.tick++;
-  // Season first: weather biases, snow and heating all read it this tick.
+  // Season first: weather biases, snow, heating and cooling all read it this tick.
   state.season = seasonState({
     day: dayNumber(state.tick),
     timeOfDay: timeOfDay(state.tick),

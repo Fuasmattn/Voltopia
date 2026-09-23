@@ -133,7 +133,7 @@ export interface SimState {
   lastDemand: DemandStats;
   /** Achieved goal ids (persisted with the save game). */
   goalsAchieved: Set<string>;
-  /** Transient goal progress counters. */
+  /** Goal progress counters; the season streaks are persisted, the rest is transient. */
   goalProgress: {
     cleanDayTicks: number;
     exportedTotal: number;

@@ -331,7 +331,7 @@ export const BALANCE = {
       insulationFactor: 0.5,
     },
     cooling: {
-      /** No cooling below this temperature; full cooling coolingRange above it. */
+      /** No cooling at or below this temperature; full cooling coolingRange above it. */
       comfortTemperature: 20,
       coolingRange: 8,
       /** Cooling load at full heat as a multiple of the zone's base consumption. */
