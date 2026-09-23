@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { TICKS_PER_DAY } from '../shared/constants.ts';
+import { BALANCE, TICKS_PER_DAY } from '../shared/constants.ts';
 import { tileIndex } from '../shared/grid.ts';
 import { PlantType, Terrain, Zone } from '../shared/types.ts';
 import { placePlant } from './energy.ts';
@@ -94,5 +94,41 @@ describe('goals', () => {
     buildPowerLines(state, [at(3, 3)]);
     goalsStep(state);
     expect(state.goalsAchieved.has('gridBuilder')).toBe(true);
+  });
+
+  function winterCity() {
+    const state = createSimState(1, SIZE);
+    for (let i = 0; i < 5; i++) {
+      state.layers.zone[at(i, 1)] = Zone.Residential;
+      state.layers.density[at(i, 1)] = 3;
+    }
+    state.season = { ...state.season, season: 'winter' };
+    return state;
+  }
+
+  it('winterResilience needs a full winter without a deficit tick', () => {
+    const state = winterCity();
+    const winterTicks = BALANCE.seasons.daysPerSeason * TICKS_PER_DAY;
+    for (let t = 0; t < winterTicks - 1; t++) goalsStep(state);
+    expect(state.goalsAchieved.has('winterResilience')).toBe(false);
+    goalsStep(state);
+    expect(state.goalsAchieved.has('winterResilience')).toBe(true);
+  });
+
+  it('a deficit tick resets the winter streak', () => {
+    const state = winterCity();
+    for (let t = 0; t < 100; t++) goalsStep(state);
+    expect(state.goalProgress.winterTicks).toBe(100);
+    state.lastEnergy.deficit = 1;
+    goalsStep(state);
+    expect(state.goalProgress.winterTicks).toBe(0);
+  });
+
+  it('ticks outside winter do not count and reset the streak', () => {
+    const state = winterCity();
+    for (let t = 0; t < 100; t++) goalsStep(state);
+    state.season = { ...state.season, season: 'spring' };
+    goalsStep(state);
+    expect(state.goalProgress.winterTicks).toBe(0);
   });
 });

@@ -1,4 +1,4 @@
-import { TICKS_PER_DAY } from '../shared/constants.ts';
+import { BALANCE, TICKS_PER_DAY } from '../shared/constants.ts';
 import { PlantType } from '../shared/types.ts';
 import { hasPowerInfrastructure } from './energy.ts';
 import { hasPowerLines } from './powerLines.ts';
@@ -13,6 +13,7 @@ export const GOAL_IDS = [
   'evFleet',
   'exporter',
   'hydroPower',
+  'winterResilience',
 ] as const;
 export type GoalId = (typeof GOAL_IDS)[number];
 
@@ -48,6 +49,14 @@ export function goalsStep(state: SimState): void {
     progress.cleanDayTicks = 0;
   }
 
+  // A whole winter (every tick) without undersupply, for a real city.
+  const inWinter = state.season.season === 'winter';
+  if (inWinter && population >= CLEAN_DAY_MIN_POPULATION && state.lastEnergy.deficit === 0) {
+    progress.winterTicks++;
+  } else {
+    progress.winterTicks = 0;
+  }
+
   const achieved = state.goalsAchieved;
   if (!achieved.has('firstPower') && hasPowerInfrastructure(state)) {
     achieved.add('firstPower');
@@ -72,6 +81,12 @@ export function goalsStep(state: SimState): void {
   }
   if (!achieved.has('gridBuilder') && hasPowerLines(state)) {
     achieved.add('gridBuilder');
+  }
+  if (
+    !achieved.has('winterResilience') &&
+    progress.winterTicks >= BALANCE.seasons.daysPerSeason * TICKS_PER_DAY
+  ) {
+    achieved.add('winterResilience');
   }
 }
 
