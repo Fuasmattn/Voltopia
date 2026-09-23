@@ -286,6 +286,7 @@ function Game({ save, options }: { save: SaveGame | null; options: NewGameOption
                 type="button"
                 className="insulation-buy"
                 data-testid="insulation-buy"
+                aria-label={t('insulation.title')}
                 disabled={stats.money < BALANCE.costs.insulation}
                 onClick={() => bridge.send({ type: 'buyInsulation' })}
               >
