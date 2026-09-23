@@ -40,7 +40,9 @@ formatting is enforced (oxfmt, single quotes, config in `.oxfmtrc.json`).
 - `src/agent/` — WebMCP / `window.voltopia` tools for agents
   (`docs/agent-tools.md`). `tools.ts` is DOM-free and tested against a
   headless `SimEngine`; only `webmcp.ts` touches `document`/`window`.
-  New sim command? Add a tool if an agent would need it.
+  New sim command? Add a tool if an agent would need it. New plant,
+  zone, or sim feature? Update `tools.ts`, the tool descriptions, and
+  `docs/agent-tools.md` table to keep feature parity.
 
 Worker ↔ main: commands in, tile diffs + `GlobalStats` out — never the
 full state (except save snapshots).
