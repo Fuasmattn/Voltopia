@@ -200,7 +200,8 @@ export type GrowthBlocker =
   | 'tooYoung'
   | 'maxDensity'
   | 'cityUnhappy'
-  | 'notLand';
+  | 'notLand'
+  | 'noFireCoverage';
 
 /**
  * Everything the tile inspector shows for the selected tile.
@@ -254,6 +255,12 @@ export interface TileInfo {
   buildingAge: number;
   /** Consecutive ticks without full supply (decay counter). */
   troubledTicks: number;
+  /** Building inside a powered fire station's ring. */
+  fireCovered: boolean;
+  /** Building inside a powered police station's ring. */
+  policeCovered: boolean;
+  /** For fire/police stations: connected to the grid and covering its ring. */
+  stationActive: boolean;
   growthBlockers: GrowthBlocker[];
 }
 

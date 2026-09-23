@@ -11,9 +11,16 @@ import { BALANCE, TICKS_PER_DAY } from '../shared/constants.ts';
 import { neighbors4, tileX, tileY } from '../shared/grid.ts';
 import type { GrowthBlocker, TileInfo } from '../shared/types.ts';
 import { PlantType, SupplyStatus, Terrain, TileType, Zone } from '../shared/types.ts';
-import { buildingConsumption, censusPlants, isTileConnected, loadProfileFactor } from './energy.ts';
+import {
+  buildingConsumption,
+  censusPlants,
+  isStation,
+  isTileConnected,
+  loadProfileFactor,
+} from './energy.ts';
 import { demandFor, energySystemActive, hasRoadAccess } from './growth.ts';
 import { isSupplySource } from './powerGrid.ts';
+import { SERVICE_FIRE, SERVICE_POLICE } from './services.ts';
 import type { SimState } from './state.ts';
 import { currentSolarFactor, currentWindFactor, riverFlowFactor } from './weather.ts';
 
@@ -78,6 +85,9 @@ function growthBlockers(state: SimState, index: number, connected: boolean): Gro
     blockers.push('maxDensity');
   } else {
     if (layers.buildingAge[index] < BALANCE.growth.densifyMinAge) blockers.push('tooYoung');
+    if (density === 2 && (layers.services[index] & SERVICE_FIRE) === 0) {
+      blockers.push('noFireCoverage');
+    }
     if (energySystemActive(state) && layers.supplied[index] !== SupplyStatus.Supplied) {
       blockers.push(connected ? 'undersupplied' : 'notConnected');
     }
@@ -101,6 +111,8 @@ function ringRadius(state: SimState, index: number, connected: boolean): number 
     const plant = plantType[index] as PlantType;
     if (plant === PlantType.Park) return BALANCE.happiness.parkRadius;
     if (plant === PlantType.ChargingHub) return BALANCE.vehicles.hubRadius;
+    if (plant === PlantType.FireStation) return BALANCE.services.fire.radius;
+    if (plant === PlantType.PoliceStation) return BALANCE.services.police.radius;
     if (isSupplySource(plant)) return BALANCE.energy.lineSupplyRadius;
     return 0;
   }
@@ -186,6 +198,9 @@ export function inspectTile(state: SimState, index: number): TileInfo | null {
     demand: demandFor(state.lastDemand, zone),
     buildingAge: layers.buildingAge[index],
     troubledTicks: layers.troubledTicks[index],
+    fireCovered: isBuilding && (layers.services[index] & SERVICE_FIRE) !== 0,
+    policeCovered: isBuilding && (layers.services[index] & SERVICE_POLICE) !== 0,
+    stationActive: tileType === TileType.Plant && isStation(plant) && connected,
     growthBlockers: growthBlockers(state, index, connected),
   };
 }

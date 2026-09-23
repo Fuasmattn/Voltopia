@@ -7,6 +7,7 @@ import { buildingConsumption, placePlant } from './energy.ts';
 import { inspectTile } from './inspect.ts';
 import { buildPowerLines } from './powerLines.ts';
 import { buildRoads, bulldozeTiles } from './roads.ts';
+import { SERVICE_FIRE, SERVICE_POLICE } from './services.ts';
 import { createSimState, PlantType, SupplyStatus, Terrain, Zone } from './state.ts';
 import { paintZones } from './zones.ts';
 
@@ -195,5 +196,39 @@ describe('economyStep breakdown by plant type', () => {
     const summed = Object.values(breakdown.plantUpkeepByType).reduce((a, b) => a + b, 0);
     expect(summed).toBeCloseTo(breakdown.plantUpkeep, 9);
     expect(state.lastEconomy).toBe(breakdown);
+  });
+});
+
+describe('services in the inspector', () => {
+  it('reports coverage per building and the noFireCoverage blocker at density 2', () => {
+    const state = cityWithBuilding(2);
+    state.layers.buildingAge[at(5, 6)] = BALANCE.growth.densifyMinAge;
+    let info = inspectTile(state, at(5, 6))!;
+    expect(info.fireCovered).toBe(false);
+    expect(info.policeCovered).toBe(false);
+    expect(info.growthBlockers).toContain('noFireCoverage');
+
+    state.layers.services[at(5, 6)] = SERVICE_FIRE | SERVICE_POLICE;
+    info = inspectTile(state, at(5, 6))!;
+    expect(info.fireCovered).toBe(true);
+    expect(info.policeCovered).toBe(true);
+    expect(info.growthBlockers).not.toContain('noFireCoverage');
+  });
+
+  it('does not raise the fire blocker below density 2', () => {
+    const state = cityWithBuilding(1);
+    expect(inspectTile(state, at(5, 6))!.growthBlockers).not.toContain('noFireCoverage');
+  });
+
+  it('reports a station ring and whether it is active', () => {
+    const state = createSimState(1, SIZE);
+    buildRoads(state, [at(10, 11)]);
+    placePlant(state, at(10, 10), PlantType.PoliceStation);
+    let info = inspectTile(state, at(10, 10))!;
+    expect(info.ringRadius).toBe(BALANCE.services.police.radius);
+    expect(info.stationActive).toBe(false);
+    placePlant(state, at(11, 10), PlantType.WindTurbine);
+    info = inspectTile(state, at(10, 10))!;
+    expect(info.stationActive).toBe(true);
   });
 });

@@ -6,6 +6,7 @@ import { placePlant } from './energy.ts';
 import { PlantType } from '../shared/types.ts';
 import { buildPowerLines } from './powerLines.ts';
 import { buildRoads } from './roads.ts';
+import { SERVICE_FIRE } from './services.ts';
 import { createSimState, SupplyStatus, TileType, Zone, type SimState } from './state.ts';
 import { paintZones } from './zones.ts';
 
@@ -125,6 +126,8 @@ describe('growthStep', () => {
   it('densifies up to level 3 over time (no energy system yet)', () => {
     const state = cityWithRoad();
     paintZones(state, [at(4, 4)], Zone.Residential);
+    // fire cover is required for the top density since the services feature
+    state.layers.services.fill(SERVICE_FIRE);
     runGrowth(state, BALANCE.growth.densifyMinAge * 30);
     expect(state.layers.density[at(4, 4)]).toBe(3);
   });
@@ -237,5 +240,35 @@ describe('growthStep', () => {
     buildPowerLines(state, zoned);
     runGrowth(state, 500);
     expect(totalDensity(state, Zone.Residential)).toBe(0);
+  });
+});
+
+describe('fire coverage gate', () => {
+  function readyToDensify(density: number): SimState {
+    const state = cityWithRoad();
+    paintZones(state, [at(4, 4)], Zone.Residential);
+    state.layers.density[at(4, 4)] = density;
+    state.layers.buildingAge[at(4, 4)] = BALANCE.growth.densifyMinAge;
+    state.layers.supplied[at(4, 4)] = SupplyStatus.Supplied;
+    return state;
+  }
+
+  it('blocks density 2 -> 3 without fire cover', () => {
+    const state = readyToDensify(2);
+    runGrowth(state, BALANCE.growth.densifyMinAge * 30);
+    expect(state.layers.density[at(4, 4)]).toBe(2);
+  });
+
+  it('allows density 2 -> 3 with fire cover', () => {
+    const state = readyToDensify(2);
+    state.layers.services[at(4, 4)] = SERVICE_FIRE;
+    runGrowth(state, BALANCE.growth.densifyMinAge * 30);
+    expect(state.layers.density[at(4, 4)]).toBe(3);
+  });
+
+  it('does not gate density 1 -> 2', () => {
+    const state = readyToDensify(1);
+    runGrowth(state, BALANCE.growth.densifyMinAge * 30);
+    expect(state.layers.density[at(4, 4)]).toBe(2);
   });
 });

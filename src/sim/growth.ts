@@ -1,6 +1,7 @@
 import { BALANCE } from '../shared/constants.ts';
 import { neighbors4 } from '../shared/grid.ts';
 import { hasPowerInfrastructure } from './energy.ts';
+import { SERVICE_FIRE } from './services.ts';
 import type { DemandStats } from '../shared/types.ts';
 import {
   countPopulationAndJobs,
@@ -121,13 +122,17 @@ export function growthStep(state: SimState, demand: DemandStats): void {
 }
 
 /**
- * Densification requires a minimum building age and — once the energy
- * system is active (any plant placed) — full supply.
+ * Densification requires a minimum building age, a powered fire station in
+ * reach for the top density, and — once the energy system is active (any
+ * plant placed) — full supply.
  */
 function canDensify(state: SimState, index: number): boolean {
-  if (state.layers.buildingAge[index] < BALANCE.growth.densifyMinAge) return false;
+  const { layers } = state;
+  if (layers.buildingAge[index] < BALANCE.growth.densifyMinAge) return false;
+  // The top density needs a fire station in reach.
+  if (layers.density[index] === 2 && (layers.services[index] & SERVICE_FIRE) === 0) return false;
   if (!energySystemActive(state)) return true;
-  return state.layers.supplied[index] === SupplyStatus.Supplied;
+  return layers.supplied[index] === SupplyStatus.Supplied;
 }
 
 /** True once the player has placed any power-related plant (not parks). */
