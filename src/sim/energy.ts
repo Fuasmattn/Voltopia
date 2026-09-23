@@ -2,6 +2,7 @@ import { BALANCE, TICKS_PER_HISTORY_SAMPLE } from '../shared/constants.ts';
 import { PlantType, Zone } from '../shared/types.ts';
 import { isSupplySource, recomputeGrid } from './powerGrid.ts';
 import type { BuildResult } from './roads.ts';
+import { heatingDegree } from './seasons.ts';
 import {
   BuildIntent,
   buildRejection,
@@ -128,6 +129,23 @@ export function buildingConsumption(zone: Zone, density: number, time: number): 
   return base * loadProfileFactor(zone, time);
 }
 
+/**
+ * Electric heating (heat pumps) of one building tile: grows linearly
+ * with the cold below the comfort temperature, scaled by the zone's
+ * heating weight; building insulation halves it.
+ */
+export function heatingConsumption(
+  zone: Zone,
+  density: number,
+  temperature: number,
+  insulation: boolean,
+): number {
+  const { weightByZone, insulationFactor } = BALANCE.seasons.heating;
+  const base = BALANCE.energy.consumptionByZoneAndDensity[zone]?.[density] ?? 0;
+  const weight = weightByZone[zone] ?? 0;
+  return base * heatingDegree(temperature) * weight * (insulation ? insulationFactor : 1);
+}
+
 export interface EnergyTickInput {
   /** Additional charging consumption (EVs), served after buildings. */
   chargingDemand: number;
@@ -159,7 +177,7 @@ function dischargePool(
 /**
  * One tick of the energy balance:
  * 1. renewable generation (solar + wind + rooftop + hydro) covers
- *    consumption,
+ *    consumption (buildings, heating, charging),
  * 2. surplus charges batteries, then pumped storage, anything beyond is
  *    exported over the transmission link or curtailed,
  * 3. deficit discharges batteries, then pumped storage, then dispatches
@@ -180,7 +198,9 @@ export function energyStep(state: SimState, input: EnergyTickInput): void {
   // Consumption of all connected buildings, plus their rooftop PV
   // feed-in (rooftop capacity grows automatically with density).
   const solarFactorNow = currentSolarFactor(state);
+  const temperature = state.season.temperature;
   let buildingDemand = 0;
+  let heatingDemand = 0;
   let rooftop = 0;
   const connectedBuildings: number[] = [];
   for (let i = 0; i < layers.tileType.length; i++) {
@@ -191,12 +211,15 @@ export function energyStep(state: SimState, input: EnergyTickInput): void {
       continue;
     }
     connectedBuildings.push(i);
-    buildingDemand += buildingConsumption(layers.zone[i] as Zone, layers.density[i], time);
-    rooftop += (BALANCE.energy.rooftopSolarPeakByDensity[layers.density[i]] ?? 0) * solarFactorNow;
+    const zone = layers.zone[i] as Zone;
+    const density = layers.density[i];
+    buildingDemand += buildingConsumption(zone, density, time);
+    heatingDemand += heatingConsumption(zone, density, temperature, state.insulation);
+    rooftop += (BALANCE.energy.rooftopSolarPeakByDensity[density] ?? 0) * solarFactorNow;
   }
 
   const chargingDemand = Math.max(0, input.chargingDemand);
-  const totalDemand = buildingDemand + chargingDemand;
+  const totalDemand = buildingDemand + heatingDemand + chargingDemand;
   const generation = solar + wind + rooftop + hydro;
 
   const storageCapacity = census.batteries * BALANCE.energy.batteryCapacity;
@@ -266,8 +289,7 @@ export function energyStep(state: SimState, input: EnergyTickInput): void {
     rooftop,
     buildingConsumption: buildingDemand,
     chargingConsumption: chargingDemand,
-    // Heating load is computed from the season signal in a later step (Task 3).
-    heatingConsumption: 0,
+    heatingConsumption: heatingDemand,
     curtailment,
     deficit,
     gridImport,

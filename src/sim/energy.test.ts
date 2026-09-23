@@ -5,6 +5,7 @@ import {
   buildingConsumption,
   censusPlants,
   energyStep,
+  heatingConsumption,
   loadProfileFactor,
   placePlant,
 } from './energy.ts';
@@ -19,13 +20,18 @@ import {
   Zone,
   type SimState,
 } from './state.ts';
+import { timeOfDay } from './tick.ts';
 import { SUNRISE, SUNSET } from './weather.ts';
 
 const SIZE = 32;
 const at = (x: number, y: number) => tileIndex(x, y, SIZE);
 
 function makeState(): SimState {
-  return createSimState(1, SIZE);
+  const state = createSimState(1, SIZE);
+  // Warm baseline so pre-season literal expectations don't pick up
+  // heating; heating tests set their own temperature afterwards.
+  state.season = { ...state.season, temperature: 20 };
+  return state;
 }
 
 /** Put a building on a tile directly (bypassing growth). */
@@ -492,5 +498,77 @@ describe('hydro and pumped storage', () => {
     const combined =
       state.storedEnergy / (BALANCE.energy.batteryCapacity + BALANCE.energy.pumpedStorageCapacity);
     expect(last.stateOfCharge).toBeCloseTo(combined, 6);
+  });
+});
+
+describe('heating load', () => {
+  const { comfortTemperature, heatingRange, weightByZone, insulationFactor } =
+    BALANCE.seasons.heating;
+  const base = BALANCE.energy.consumptionByZoneAndDensity[Zone.Residential][2];
+
+  it('is zero above the comfort temperature', () => {
+    expect(heatingConsumption(Zone.Residential, 2, comfortTemperature + 1, false)).toBe(0);
+  });
+
+  it('reaches the full zone weight at the bottom of the range', () => {
+    const cold = comfortTemperature - heatingRange;
+    expect(heatingConsumption(Zone.Residential, 2, cold, false)).toBeCloseTo(
+      base * weightByZone[Zone.Residential],
+      9,
+    );
+    expect(heatingConsumption(Zone.Commercial, 2, cold, false)).toBeCloseTo(
+      BALANCE.energy.consumptionByZoneAndDensity[Zone.Commercial][2] *
+        weightByZone[Zone.Commercial],
+      9,
+    );
+  });
+
+  it('is halved by insulation', () => {
+    const cold = comfortTemperature - heatingRange;
+    const plain = heatingConsumption(Zone.Residential, 3, cold, false);
+    expect(heatingConsumption(Zone.Residential, 3, cold, true)).toBeCloseTo(
+      plain * insulationFactor,
+      9,
+    );
+  });
+
+  it('is reported separately and counts toward the balance', () => {
+    const state = makeState();
+    setNoonClearSky(state);
+    state.season = { ...state.season, temperature: comfortTemperature - heatingRange };
+    placePlant(state, at(5, 5), PlantType.WindTurbine);
+    addBuilding(state, at(6, 5), Zone.Residential, 2);
+    buildPowerLines(state, [at(6, 6)]);
+    energyStep(state, { chargingDemand: 0 });
+    const heating = state.lastEnergy.heatingConsumption;
+    expect(heating).toBeCloseTo(base * weightByZone[Zone.Residential], 6);
+    expect(state.lastEnergy.buildingConsumption).toBeCloseTo(
+      buildingConsumption(Zone.Residential, 2, timeOfDay(state.tick)),
+      6,
+    );
+    // The wind turbine produces nothing (windSpeed 0); only rooftop PV
+    // generates. The shortfall (buildings + heating - rooftop) is small,
+    // so it is fully covered by the (expensive) import link rather than
+    // showing up as a deficit — see "small deficits are fully covered by
+    // imports" above. This still proves heating counts toward the balance.
+    expect(state.lastEnergy.gridImport).toBeCloseTo(
+      state.lastEnergy.buildingConsumption + heating - state.lastEnergy.rooftop,
+      6,
+    );
+    expect(state.lastEnergy.deficit).toBe(0);
+  });
+
+  it('winter noon PV is weaker than summer noon PV under a clear sky', () => {
+    const summer = makeState();
+    setNoonClearSky(summer);
+    summer.season = { ...summer.season, sunrise: 0.2, sunset: 0.8, solarStrength: 1 };
+    placePlant(summer, at(5, 5), PlantType.SolarFarm);
+    energyStep(summer, { chargingDemand: 0 });
+    const winter = makeState();
+    setNoonClearSky(winter);
+    winter.season = { ...winter.season, sunrise: 0.3, sunset: 0.7, solarStrength: 0.45 };
+    placePlant(winter, at(5, 5), PlantType.SolarFarm);
+    energyStep(winter, { chargingDemand: 0 });
+    expect(winter.lastEnergy.solar).toBeLessThan(summer.lastEnergy.solar * 0.5);
   });
 });
