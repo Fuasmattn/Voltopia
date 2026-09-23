@@ -33,6 +33,12 @@ export function heatingDegree(temperature: number): number {
   return Math.min(1, Math.max(0, (comfortTemperature - temperature) / heatingRange));
 }
 
+/** 0..1 cooling demand share: 0 at comfort temperature, 1 coolingRange above it. */
+export function coolingDegree(temperature: number): number {
+  const { comfortTemperature, coolingRange } = BALANCE.seasons.cooling;
+  return Math.min(1, Math.max(0, (temperature - comfortTemperature) / coolingRange));
+}
+
 /** Seasonal cosine: 1 at `peakPhase`, -1 half a year later. */
 function yearWave(phase: number, peakPhase: number): number {
   return Math.cos(TWO_PI * (phase - peakPhase));
