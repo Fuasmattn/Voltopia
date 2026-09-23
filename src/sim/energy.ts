@@ -31,6 +31,11 @@ export function hasPowerInfrastructure(state: SimState): boolean {
   return false;
 }
 
+/** Fire and police stations: consumers with a coverage ring, not supply. */
+export function isStation(plant: PlantType): boolean {
+  return plant === PlantType.FireStation || plant === PlantType.PoliceStation;
+}
+
 /** Place a plant on an empty tile, charging its construction cost. */
 export function placePlant(state: SimState, tile: number, plant: PlantType): BuildResult {
   const { layers } = state;
@@ -63,6 +68,8 @@ interface PlantCensus {
   parks: number;
   runOfRiverPlants: number;
   pumpedStoragePlants: number;
+  fireStations: number;
+  policeStations: number;
 }
 
 export function censusPlants(state: SimState): PlantCensus {
@@ -76,6 +83,8 @@ export function censusPlants(state: SimState): PlantCensus {
     parks: 0,
     runOfRiverPlants: 0,
     pumpedStoragePlants: 0,
+    fireStations: 0,
+    policeStations: 0,
   };
   for (let i = 0; i < tileType.length; i++) {
     if (tileType[i] !== TileType.Plant) continue;
@@ -104,6 +113,12 @@ export function censusPlants(state: SimState): PlantCensus {
         break;
       case PlantType.PumpedStorage:
         census.pumpedStoragePlants++;
+        break;
+      case PlantType.FireStation:
+        census.fireStations++;
+        break;
+      case PlantType.PoliceStation:
+        census.policeStations++;
         break;
       case PlantType.None:
         break;
@@ -229,6 +244,14 @@ export function energyStep(state: SimState, input: EnergyTickInput): void {
   let heatingDemand = 0;
   let coolingDemand = 0;
   let rooftop = 0;
+
+  // Service stations draw a fixed load while connected to the grid.
+  for (let i = 0; i < layers.tileType.length; i++) {
+    if (layers.tileType[i] !== TileType.Plant) continue;
+    if (!isStation(layers.plantType[i] as PlantType)) continue;
+    if (layers.energized[i] === 1) buildingDemand += BALANCE.services.stationConsumption;
+  }
+
   const connectedBuildings: number[] = [];
   for (let i = 0; i < layers.tileType.length; i++) {
     if (layers.tileType[i] !== TileType.Empty || layers.density[i] === 0) continue;

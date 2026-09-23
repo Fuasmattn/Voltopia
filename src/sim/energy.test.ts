@@ -6,12 +6,14 @@ import {
   censusPlants,
   coolingConsumption,
   energyStep,
+  hasPowerInfrastructure,
   heatingConsumption,
+  isStation,
   loadProfileFactor,
   placePlant,
 } from './energy.ts';
 import { buildPowerLines } from './powerLines.ts';
-import { bulldozeTiles, undoLastAction } from './roads.ts';
+import { buildRoads, bulldozeTiles, undoLastAction } from './roads.ts';
 import { pendingHistoryPoint } from './tick.ts';
 import {
   createSimState,
@@ -683,5 +685,58 @@ describe('cooling load', () => {
       6,
     );
     expect(state.lastEnergy.deficit).toBe(0);
+  });
+});
+
+describe('service stations', () => {
+  it('can only be placed next to a road', () => {
+    const state = makeState();
+    expect(placePlant(state, at(5, 5), PlantType.FireStation)).toEqual({ rejected: 'needsRoad' });
+    buildRoads(state, [at(5, 6)]);
+    expect(placePlant(state, at(5, 5), PlantType.FireStation)).toEqual({});
+    expect(state.layers.plantType[at(5, 5)]).toBe(PlantType.FireStation);
+    expect(placePlant(state, at(6, 6), PlantType.PoliceStation)).toEqual({});
+  });
+
+  it('charges the configured cost', () => {
+    const state = makeState();
+    buildRoads(state, [at(5, 6)]);
+    const before = state.money;
+    placePlant(state, at(5, 5), PlantType.PoliceStation);
+    expect(state.money).toBe(before - BALANCE.costs.plant[PlantType.PoliceStation]);
+  });
+
+  it('is counted by the census and is not power infrastructure', () => {
+    const state = makeState();
+    buildRoads(state, [at(5, 6), at(7, 6)]);
+    placePlant(state, at(5, 5), PlantType.FireStation);
+    placePlant(state, at(7, 5), PlantType.PoliceStation);
+    const census = censusPlants(state);
+    expect(census.fireStations).toBe(1);
+    expect(census.policeStations).toBe(1);
+    expect(hasPowerInfrastructure(state)).toBe(false);
+    expect(isStation(PlantType.FireStation)).toBe(true);
+    expect(isStation(PlantType.Park)).toBe(false);
+  });
+
+  it('draws stationConsumption per tick while energised, nothing when unconnected', () => {
+    const state = makeState();
+    setNoonClearSky(state);
+    buildRoads(state, [at(6, 7)]);
+    placePlant(state, at(5, 5), PlantType.WindTurbine);
+    placePlant(state, at(6, 6), PlantType.FireStation); // inside the turbine's own ring
+    energyStep(state, { chargingDemand: 0 });
+    expect(state.lastEnergy.buildingConsumption).toBeCloseTo(
+      BALANCE.services.stationConsumption,
+      6,
+    );
+
+    const far = makeState();
+    setNoonClearSky(far);
+    buildRoads(far, [at(25, 26)]);
+    placePlant(far, at(5, 5), PlantType.WindTurbine);
+    placePlant(far, at(25, 25), PlantType.PoliceStation); // far outside any ring
+    energyStep(far, { chargingDemand: 0 });
+    expect(far.lastEnergy.buildingConsumption).toBe(0);
   });
 });

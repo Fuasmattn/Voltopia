@@ -393,6 +393,13 @@ export function buildRejection(
   ) {
     return 'needsLakeShore';
   }
+  if (
+    intent === BuildIntent.Plant &&
+    (plant === PlantType.FireStation || plant === PlantType.PoliceStation) &&
+    !neighbors4(index, state.size).some((n) => layers.tileType[n] === TileType.Road)
+  ) {
+    return 'needsRoad';
+  }
   return null;
 }
 

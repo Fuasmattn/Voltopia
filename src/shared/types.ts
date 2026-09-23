@@ -33,6 +33,8 @@ export const PlantType = {
   Park: 6,
   RunOfRiver: 7,
   PumpedStorage: 8,
+  FireStation: 9,
+  PoliceStation: 10,
 } as const;
 export type PlantType = (typeof PlantType)[keyof typeof PlantType];
 

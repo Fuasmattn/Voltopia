@@ -28,6 +28,8 @@ const PLANT_LABEL: Record<PlantType, TranslationKey | null> = {
   [PlantType.Park]: 'tool.plant-park',
   [PlantType.RunOfRiver]: 'tool.plant-hydro',
   [PlantType.PumpedStorage]: 'tool.plant-pumped',
+  [PlantType.FireStation]: null,
+  [PlantType.PoliceStation]: null,
 };
 
 const ZONE_LABEL: Record<Zone, TranslationKey | null> = {
