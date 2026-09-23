@@ -29,7 +29,7 @@ export const BALANCE = {
     powerLinePerTile: 4,
     powerLineWaterPerTile: 12,
     zonePerTile: 5,
-    insulation: 6_000,
+    insulation: 4_000,
     plant: {
       [PlantType.SolarFarm]: 1_200,
       [PlantType.WindTurbine]: 1_800,
@@ -323,9 +323,9 @@ export const BALANCE = {
       heatingRange: 20,
       /** Heating load at full cold as a multiple of the zone's base consumption. */
       weightByZone: {
-        [Zone.Residential]: 1.2,
-        [Zone.Commercial]: 0.6,
-        [Zone.Retail]: 0.6,
+        [Zone.Residential]: 0.8,
+        [Zone.Commercial]: 0.45,
+        [Zone.Retail]: 0.45,
       } as Record<Zone, number>,
       /** Heating multiplier once building insulation is bought. */
       insulationFactor: 0.5,
