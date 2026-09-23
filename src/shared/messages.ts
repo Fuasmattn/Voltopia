@@ -9,8 +9,14 @@ import type {
   Zone,
 } from './types.ts';
 
-/** Commands sent from the main thread to the simulation worker. */
-export type SimCommand =
+/**
+ * Commands sent from the main thread to the simulation worker. A command
+ * may carry a `requestId`; the worker then answers with a `commandResult`
+ * event once the command has been applied (agent tools await it).
+ */
+export type SimCommand = SimCommandBody & { requestId?: number };
+
+type SimCommandBody =
   | {
       type: 'init';
       seed: number;
@@ -45,4 +51,10 @@ export type SimEvent =
     }
   | { type: 'saveData'; save: SaveGame }
   | { type: 'lifetimeData'; samples: LifetimeSample[] }
-  | { type: 'rejected'; reason: string };
+  | { type: 'rejected'; reason: string }
+  | {
+      type: 'commandResult';
+      requestId: number;
+      /** Rejection code when the command was refused (see i18n `rejection.*`). */
+      rejected?: string;
+    };

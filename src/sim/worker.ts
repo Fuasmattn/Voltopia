@@ -52,4 +52,12 @@ self.onmessage = (message: MessageEvent<SimCommand>) => {
       : engine.flush();
   if (flushed) post(flushed);
   if (command.type === 'setSpeed') reschedule();
+  if (command.requestId !== undefined) {
+    const rejection = events.find((event) => event.type === 'rejected');
+    post({
+      type: 'commandResult',
+      requestId: command.requestId,
+      ...(rejection && rejection.type === 'rejected' ? { rejected: rejection.reason } : {}),
+    });
+  }
 };
