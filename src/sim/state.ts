@@ -392,6 +392,7 @@ export function serializeState(state: SimState): SaveGame {
     seasonOriginDay: state.seasonOriginDay,
     snowpack: state.weather.snowpack,
     insulation: state.insulation,
+    winterTicks: state.goalProgress.winterTicks,
     layers: {
       tileType: copyBuffer(layers.tileType),
       roadMask: copyBuffer(layers.roadMask),
@@ -426,6 +427,7 @@ export function deserializeState(save: SaveGame): SimState {
   state.weather.riverFlow = save.riverFlow ?? BALANCE.water.dryBaselineFlow;
   state.weather.snowpack = save.snowpack ?? 0;
   state.insulation = save.insulation ?? false;
+  state.goalProgress.winterTicks = save.winterTicks ?? 0;
   // Saves from before seasons start their year on the day they are loaded.
   state.seasonOriginDay = save.seasonOriginDay ?? Math.floor(save.tick / TICKS_PER_DAY);
   state.season = seasonState({

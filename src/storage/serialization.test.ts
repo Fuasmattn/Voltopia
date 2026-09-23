@@ -107,6 +107,16 @@ describe('save game JSON export/import', () => {
     expect(restored.insulation).toBe(true);
   });
 
+  it('round-trips winter resilience progress', () => {
+    const save = makeSave();
+    save.winterTicks = 4321;
+    expect(saveFromJson(saveToJson(save)).winterTicks).toBe(4321);
+  });
+
+  it('accepts exports without winter progress', () => {
+    expect(saveFromJson(saveToJson(makeSave())).winterTicks).toBeUndefined();
+  });
+
   it('accepts exports without season fields', () => {
     const restored = saveFromJson(saveToJson(makeSave()));
     expect(restored.seasonOriginDay).toBeUndefined();

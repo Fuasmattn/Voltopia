@@ -241,6 +241,8 @@ export interface SaveGame {
   snowpack?: number;
   /** Building insulation bought (absent in older saves → false). */
   insulation?: boolean;
+  /** Consecutive deficit-free winter ticks so far (absent in older saves → 0). */
+  winterTicks?: number;
   /** Raw copies of the tile layers. */
   layers: {
     tileType: ArrayBuffer;

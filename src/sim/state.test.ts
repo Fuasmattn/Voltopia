@@ -204,6 +204,21 @@ describe('save round trip', () => {
     expect(restored.insulation).toBe(true);
   });
 
+  it('persists winter resilience progress', () => {
+    const state = makeState();
+    state.goalProgress.winterTicks = 1234;
+    const restored = deserializeState(serializeState(state));
+    expect(restored.goalProgress.winterTicks).toBe(1234);
+  });
+
+  it('starts a save without winter progress at zero', () => {
+    const state = makeState();
+    state.goalProgress.winterTicks = 500;
+    const save = serializeState(state);
+    delete save.winterTicks;
+    expect(deserializeState(save).goalProgress.winterTicks).toBe(0);
+  });
+
   it('starts a save without season data on the first spring day', () => {
     const state = makeState();
     state.tick = TICKS_PER_DAY * 37 + 100;
