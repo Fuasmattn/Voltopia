@@ -2,7 +2,7 @@ import * as THREE from 'three';
 import type { GlobalStats, TileDiff, VehicleState } from '../shared/types.ts';
 import { PlantType, Terrain, TileType } from '../shared/types.ts';
 import { IsoCamera } from './camera.ts';
-import { pickTile } from './picking.ts';
+import { groundPointAtNdc, pickTile } from './picking.ts';
 import { nightFactor, sunIntensity } from '../shared/daylight.ts';
 import { createScene, PALETTE, type SceneLights } from './scene.ts';
 import { createTerrain } from './terrain.ts';
@@ -713,9 +713,33 @@ export class GameRenderer {
     this.isoCamera.setTarget(x, z);
   }
 
-  /** Camera target in tile space (for the minimap viewfinder). */
+  /** Camera target in tile space. */
   getCameraTarget(): { x: number; z: number } {
     return this.isoCamera.getTarget();
+  }
+
+  /**
+   * The patch of ground the viewport shows, as its four corners in tile
+   * space (top-left, top-right, bottom-right, bottom-left on screen). An
+   * orthographic isometric camera always hits the ground, so this follows
+   * zoom, rotation and window aspect — the minimap draws it as the
+   * viewfinder.
+   */
+  getViewFootprint(): Array<{ x: number; z: number }> {
+    const camera = this.isoCamera.camera;
+    const corners: Array<[number, number]> = [
+      [-1, 1],
+      [1, 1],
+      [1, -1],
+      [-1, -1],
+    ];
+    const points: Array<{ x: number; z: number }> = [];
+    for (const [nx, ny] of corners) {
+      const point = groundPointAtNdc(nx, ny, camera);
+      if (!point) return [];
+      points.push(point);
+    }
+    return points;
   }
 
   dispose(): void {
