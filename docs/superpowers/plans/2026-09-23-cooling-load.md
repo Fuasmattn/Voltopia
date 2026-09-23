@@ -52,7 +52,7 @@
 
 - Produces: `coolingDegree(temperature: number): number` (0..1) and `BALANCE.seasons.cooling = { comfortTemperature, coolingRange, weightByZone, insulationFactor }`. Task 2 uses both.
 
-- [ ] **Step 1: Write the failing tests**
+- [x] **Step 1: Write the failing tests**
 
 In `src/sim/seasons.test.ts`, extend the import line to `import { coolingDegree, daysPerYear, heatingDegree, seasonState, yearPhase } from './seasons.ts';` and append at the end of the file:
 
@@ -78,12 +78,12 @@ describe('coolingDegree', () => {
 });
 ```
 
-- [ ] **Step 2: Run the tests to verify they fail**
+- [x] **Step 2: Run the tests to verify they fail**
 
 Run: `pnpm vitest run src/sim/seasons.test.ts`
 Expected: FAIL, `coolingDegree` is not exported / `seasons.cooling` is undefined.
 
-- [ ] **Step 3: Add the balance block**
+- [x] **Step 3: Add the balance block**
 
 In `src/shared/constants.ts`, directly after the `heating: { ... },` block inside `seasons` (the block ending with `insulationFactor: 0.5, },`), add:
 
@@ -103,7 +103,7 @@ In `src/shared/constants.ts`, directly after the `heating: { ... },` block insid
     },
 ```
 
-- [ ] **Step 4: Add `coolingDegree`**
+- [x] **Step 4: Add `coolingDegree`**
 
 In `src/sim/seasons.ts`, directly after `heatingDegree`:
 
@@ -115,12 +115,12 @@ export function coolingDegree(temperature: number): number {
 }
 ```
 
-- [ ] **Step 5: Run the tests to verify they pass**
+- [x] **Step 5: Run the tests to verify they pass**
 
 Run: `pnpm vitest run src/sim/seasons.test.ts`
 Expected: PASS (all season tests, including the three new ones).
 
-- [ ] **Step 6: Commit**
+- [x] **Step 6: Commit**
 
 ```bash
 pnpm format
@@ -149,7 +149,7 @@ Co-Authored-By: Claude Fable 5.1 <noreply@anthropic.com>"
 - Consumes: `coolingDegree` and `BALANCE.seasons.cooling` from Task 1.
 - Produces: `coolingConsumption(zone: Zone, density: number, temperature: number, insulation: boolean): number`; `state.lastEnergy.coolingConsumption: number`. Task 3 reads the latter.
 
-- [ ] **Step 1: Write the failing tests**
+- [x] **Step 1: Write the failing tests**
 
 In `src/sim/energy.test.ts`, add `coolingConsumption,` to the import from `./energy.ts` (alphabetically after `censusPlants,`). Append at the end of the file:
 
@@ -208,12 +208,12 @@ describe('cooling load', () => {
 });
 ```
 
-- [ ] **Step 2: Run the tests to verify they fail**
+- [x] **Step 2: Run the tests to verify they fail**
 
 Run: `pnpm vitest run src/sim/energy.test.ts`
 Expected: FAIL, `coolingConsumption` is not exported.
 
-- [ ] **Step 3: Add `coolingConsumption`**
+- [x] **Step 3: Add `coolingConsumption`**
 
 In `src/sim/energy.ts`, change the seasons import to `import { coolingDegree, heatingDegree } from './seasons.ts';` and add directly after `heatingConsumption`:
 
@@ -236,7 +236,7 @@ export function coolingConsumption(
 }
 ```
 
-- [ ] **Step 4: Sum it in `energyStep`**
+- [x] **Step 4: Sum it in `energyStep`**
 
 In `energyStep`:
 
@@ -247,21 +247,21 @@ In `energyStep`:
 
 Update the doc comment above `energyStep` that lists the consumption parts (`consumption (buildings, heating, charging)`) to `consumption (buildings, heating, cooling, charging)`.
 
-- [ ] **Step 5: Extend the `lastEnergy` type and default**
+- [x] **Step 5: Extend the `lastEnergy` type and default**
 
 In `src/sim/state.ts`, in the `lastEnergy` type after `heatingConsumption: number;` add `coolingConsumption: number;`. In `createSimState` after `heatingConsumption: 0,` add `coolingConsumption: 0,`.
 
-- [ ] **Step 6: Run the tests and the typecheck**
+- [x] **Step 6: Run the tests and the typecheck**
 
 Run: `pnpm vitest run src/sim/energy.test.ts && pnpm typecheck`
 Expected: PASS. Existing energy tests use `makeState()` at 20 °C, below the cooling comfort of 22 °C, so their literal expectations hold. If any other test file with a fixed `lastEnergy` object literal fails the typecheck, add `coolingConsumption: 0` to that literal.
 
-- [ ] **Step 7: Run the full suite**
+- [x] **Step 7: Run the full suite**
 
 Run: `pnpm test`
 Expected: PASS. Spring day 1 in `integration.test.ts` and friends is around 1 °C, so cooling is 0 there and nothing shifts.
 
-- [ ] **Step 8: Commit**
+- [x] **Step 8: Commit**
 
 ```bash
 pnpm format
@@ -291,7 +291,7 @@ Co-Authored-By: Claude Fable 5.1 <noreply@anthropic.com>"
 - Consumes: `state.lastEnergy.coolingConsumption` from Task 2.
 - Produces: `EnergyStats.consumption.cooling: number`, `LifetimeSample.cooling?: number`. Task 5 renders the former.
 
-- [ ] **Step 1: Write the failing tests**
+- [x] **Step 1: Write the failing tests**
 
 In `src/sim/engine.test.ts`, in the test `'reports the season in stats and advances it with the days'`, directly after `expect(first.stats.energy.consumption.heating).toBe(0);` add:
 
@@ -332,12 +332,12 @@ In `src/sim/integration.test.ts`, directly after `expect(samples[2].heating).toB
 expect(samples[2].cooling).toBeGreaterThanOrEqual(0);
 ```
 
-- [ ] **Step 2: Run the tests to verify they fail**
+- [x] **Step 2: Run the tests to verify they fail**
 
 Run: `pnpm vitest run src/sim/engine.test.ts src/sim/integration.test.ts`
 Expected: FAIL, `consumption.cooling` / `samples[2].cooling` is undefined (typecheck errors count as failures too).
 
-- [ ] **Step 3: Extend the types**
+- [x] **Step 3: Extend the types**
 
 In `src/shared/types.ts`:
 
@@ -349,11 +349,11 @@ In `src/shared/types.ts`:
   cooling?: number;
 ```
 
-- [ ] **Step 4: Extend the day sums**
+- [x] **Step 4: Extend the day sums**
 
 In `src/sim/state.ts`, in the `lifetime.daySums` type add `cooling: number;` after `heating: number;`, and in `createSimState` change the default to `daySums: { generation: 0, consumption: 0, heating: 0, cooling: 0, temperature: 0, ticks: 0 },`.
 
-- [ ] **Step 5: Wire `tick.ts`**
+- [x] **Step 5: Wire `tick.ts`**
 
 In `recordLifetime`:
 
@@ -364,12 +364,12 @@ In `recordLifetime`:
 
 In `buildStats`, in `consumption: { ... }` after `heating: e.heatingConsumption,` add `cooling: e.coolingConsumption,`.
 
-- [ ] **Step 6: Run the tests and the typecheck**
+- [x] **Step 6: Run the tests and the typecheck**
 
 Run: `pnpm vitest run src/sim/engine.test.ts src/sim/integration.test.ts && pnpm typecheck`
 Expected: PASS. If the typecheck reports other places that build an `EnergyStats.consumption` literal (for example a UI test fixture or `scripts/`), add `cooling: 0` there.
 
-- [ ] **Step 7: Commit**
+- [x] **Step 7: Commit**
 
 ```bash
 pnpm format
@@ -395,7 +395,7 @@ Co-Authored-By: Claude Fable 5.1 <noreply@anthropic.com>"
 
 - Produces: goal id `'summerResilience'` (Task 5 adds its strings), `state.goalProgress.summerTicks: number`, `SaveGame.summerTicks?: number`.
 
-- [ ] **Step 1: Write the failing tests**
+- [x] **Step 1: Write the failing tests**
 
 In `src/sim/goals.test.ts`, directly after the `'ticks outside winter do not count and reset the streak'` test (still inside the `describe('goals', ...)` block), add:
 
@@ -470,12 +470,12 @@ it('accepts exports without summer progress', () => {
 });
 ```
 
-- [ ] **Step 2: Run the tests to verify they fail**
+- [x] **Step 2: Run the tests to verify they fail**
 
 Run: `pnpm vitest run src/sim/goals.test.ts src/sim/state.test.ts src/storage/serialization.test.ts`
 Expected: FAIL (`summerTicks` unknown, goal never achieved).
 
-- [ ] **Step 3: Add the goal**
+- [x] **Step 3: Add the goal**
 
 In `src/sim/goals.ts`:
 
@@ -503,7 +503,7 @@ if (
 }
 ```
 
-- [ ] **Step 4: Add the state field and persistence**
+- [x] **Step 4: Add the state field and persistence**
 
 In `src/sim/state.ts`:
 
@@ -525,12 +525,12 @@ In `src/storage/serialization.ts`:
 - In `saveToJson` after the `winterTicks` spread add `...(save.summerTicks !== undefined ? { summerTicks: save.summerTicks } : {}),`
 - In `saveFromJson` after the `winterTicks` spread add `...(typeof parsed.summerTicks === 'number' ? { summerTicks: parsed.summerTicks } : {}),`
 
-- [ ] **Step 5: Run the tests**
+- [x] **Step 5: Run the tests**
 
 Run: `pnpm vitest run src/sim/goals.test.ts src/sim/state.test.ts src/storage/serialization.test.ts && pnpm typecheck`
 Expected: PASS. If a goal-count assertion elsewhere (for example a test that expects a fixed number of goals, or the win-screen test) breaks because there is one more goal, update that count; do not remove the goal.
 
-- [ ] **Step 6: Commit**
+- [x] **Step 6: Commit**
 
 ```bash
 pnpm format
@@ -558,7 +558,7 @@ Co-Authored-By: Claude Fable 5.1 <noreply@anthropic.com>"
 
 - Consumes: `EnergyStats.consumption.cooling` (Task 3), goal id `summerResilience` (Task 4).
 
-- [ ] **Step 1: Extend the e2e assertion**
+- [x] **Step 1: Extend the e2e assertion**
 
 In `e2e/game.spec.ts`, in the test `'the HUD shows the season and a fresh city starts in spring'`, directly after `await expect(page.getByTestId('energy-heating')).toBeVisible();` add:
 
@@ -568,7 +568,7 @@ await expect(page.getByTestId('energy-cooling')).toBeVisible();
 
 (This test runs on the Mac or in CI; the sandbox has no WebGL. Do not wait on it here.)
 
-- [ ] **Step 2: Add the strings**
+- [x] **Step 2: Add the strings**
 
 In `src/ui/i18n.tsx`, English block:
 
@@ -608,7 +608,7 @@ German block:
 
 Also update `'help.seasons.title'` in both blocks: EN (line 126) from `'Seasons and heating'` to `'Seasons, heating and cooling'`, DE (line 350) from `'Jahreszeiten und Heizung'` to `'Jahreszeiten, Heizung und Kühlung'`.
 
-- [ ] **Step 3: Add the panel row**
+- [x] **Step 3: Add the panel row**
 
 In `src/ui/EnergyPanel.tsx`:
 
@@ -631,7 +631,7 @@ const totalConsumption =
 </div>
 ```
 
-- [ ] **Step 4: Update the docs**
+- [x] **Step 4: Update the docs**
 
 In `docs/idea.md`, replace the bullet
 
@@ -659,12 +659,12 @@ In `README.md`, replace the Seasons bullet (lines 42–46) with:
   halves both the heating and the cooling load.
 ```
 
-- [ ] **Step 5: Typecheck, lint, tests, smoke**
+- [x] **Step 5: Typecheck, lint, tests, smoke**
 
 Run: `pnpm typecheck && pnpm lint && pnpm test && node scripts/smoke.mjs`
 Expected: all PASS; the smoke boots the app headlessly.
 
-- [ ] **Step 6: Commit**
+- [x] **Step 6: Commit**
 
 ```bash
 pnpm format
@@ -683,7 +683,7 @@ Co-Authored-By: Claude Fable 5.1 <noreply@anthropic.com>"
 - Create (temporary, delete before the final commit): `src/sim/cooling.probe.test.ts`
 - Modify: `src/shared/constants.ts` (`BALANCE.seasons.cooling` values only)
 
-- [ ] **Step 1: Write the probe**
+- [x] **Step 1: Write the probe**
 
 ```ts
 import { it } from 'vitest';
@@ -800,7 +800,7 @@ it('probe', () => {
 }, 600_000);
 ```
 
-- [ ] **Step 2: Run it**
+- [x] **Step 2: Run it**
 
 Run: `pnpm vitest run src/sim/cooling.probe.test.ts --reporter=basic`
 
@@ -812,11 +812,11 @@ Read the table. Targets from the spec:
 - Summer deficit share rises versus the pre-feature level but stays well below the winter deficit share. Compare against the numbers in the commit "balance: size the heating load from a two-year probe" (summer 4.1 %, winter 20.9 % averaged over seeds; seed 4242 alone is what this probe prints).
 - Insulation halves the summer cooling peak.
 
-- [ ] **Step 3: Tune**
+- [x] **Step 3: Tune**
 
 Adjust only `BALANCE.seasons.cooling` (`weightByZone`, `coolingRange`, `comfortTemperature`) until the targets hold. Re-run the probe after each change. Re-run `pnpm test` afterwards; the cooling tests read the constants and adapt.
 
-- [ ] **Step 4: Delete the probe, commit the tuning**
+- [x] **Step 4: Delete the probe, commit the tuning**
 
 ```bash
 rm src/sim/cooling.probe.test.ts
@@ -841,12 +841,12 @@ If no value needed to change, still delete the probe and skip the commit; record
 
 - Modify: `docs/superpowers/plans/2026-09-23-cooling-load.md` (tick the boxes)
 
-- [ ] **Step 1: Coverage gate**
+- [x] **Step 1: Coverage gate**
 
 Run: `pnpm coverage`
 Expected: PASS with ≥ 90 % on `src/sim` and `src/shared`. If a new branch is uncovered (for example `weightByZone[zone] ?? 0` for an unknown zone), add a one-line unit test in `energy.test.ts` rather than lowering the gate.
 
-- [ ] **Step 2: Tick the plan and commit**
+- [x] **Step 2: Tick the plan and commit**
 
 ```bash
 pnpm format
@@ -856,6 +856,6 @@ git commit -m "docs: mark the cooling load plan done
 Co-Authored-By: Claude Fable 5.1 <noreply@anthropic.com>"
 ```
 
-- [ ] **Step 3: Summary for the user**
+- [x] **Step 3: Summary for the user**
 
 Report: what was built, the probe numbers (summer cooling peak vs. winter heating peak, peak hour, deficit shares), which balance values changed, and that the e2e assertion needs a run on the Mac or CI.
