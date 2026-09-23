@@ -78,6 +78,17 @@ in balance.
 - Simple weather system: cloud cover (affects PV) and wind speed (affects wind
   power), varying smoothly, shown in the HUD
 
+### Seasons
+
+- A year of 20 in-game days, four seasons of five days; the season is a
+  deterministic function of the day (added after the MVP; see the
+  seasons spec)
+- Temperature, day length, sun strength and weather-front biases follow
+  the year; sub-zero precipitation builds a snowpack that melts into the
+  river in spring
+- Every building heats electrically: a heating load that grows with the
+  cold, halved by a one-off building insulation upgrade
+
 ### Generation & Storage
 
 - Solar farm (ground-mounted PV): output depends on sun position and cloud cover
@@ -133,7 +144,7 @@ in balance.
 ## Out of Scope for the MVP
 
 Real pathfinding/traffic simulation, water, police/fire services, disasters,
-seasons, terrain elevation, sound, multiplayer, electricity market/import/
+terrain elevation, sound, multiplayer, electricity market/import/
 export. Design the architecture so that additional layers, building types,
 and energy sources can easily be added later.
 

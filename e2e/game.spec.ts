@@ -196,3 +196,12 @@ test('drawing a power line costs money (needs WebGL)', async ({ page }) => {
 
   await expect.poll(moneyText, { timeout: 5_000 }).toBeLessThan(before);
 });
+
+test('the HUD shows the season and a fresh city starts in spring', async ({ page }) => {
+  const season = page.getByTestId('season');
+  await expect(season).toBeVisible();
+  await expect(season).toContainText(/Spring|Frühling/);
+  await expect(season).toContainText('°C');
+  await expect(page.getByTestId('energy-heating')).toBeVisible();
+  await expect(page.getByTestId('insulation')).toBeVisible();
+});
