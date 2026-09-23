@@ -124,6 +124,11 @@ describe('SimEngine basics', () => {
     const { elevation, terrain } = engine.state.layers;
     expect(elevation.some((v) => v > 0)).toBe(true);
     expect(terrain.some((v) => v !== Terrain.Land)).toBe(true);
+    // Only true when terrain generation ran before water: a lake sunk into
+    // real relief shares one uniform elevation with the engine's state.
+    for (let i = 0; i < terrain.length; i++) {
+      if (terrain[i] === Terrain.Lake) expect(elevation[i]).toBe(engine.state.lakeLevel);
+    }
   });
 
   it('reports dispatchable biogas capacity in the energy stats', () => {

@@ -50,6 +50,7 @@ describe('generateWater', () => {
       it('river connects two opposite edges', () => {
         for (const seed of SEEDS) {
           const state = createSimState(seed, size);
+          generateTerrain(state);
           generateWater(state);
           const { a, b } = edgeWaterTiles(state);
           expect(a.length, `seed ${seed} entry`).toBeGreaterThan(0);
@@ -65,6 +66,7 @@ describe('generateWater', () => {
       it('has one lake that touches the river and stays away from the centre', () => {
         for (const seed of SEEDS) {
           const state = createSimState(seed, size);
+          generateTerrain(state);
           generateWater(state);
           const lake: number[] = [];
           for (let i = 0; i < size * size; i++) {
@@ -200,21 +202,44 @@ describe('water on terrain', () => {
       // Row levels along both axes: the min water level per row must be
       // monotonic in one direction (entry high, exit low).
       for (const vertical of [true, false]) {
-        const rows: number[] = [];
+        const rowMin: number[] = [];
+        const rowMax: number[] = [];
         for (let along = 0; along < size; along++) {
-          let level = Infinity;
+          let min = Infinity;
+          let max = -Infinity;
           for (let lateral = 0; lateral < size; lateral++) {
             const x = vertical ? lateral : along;
             const y = vertical ? along : lateral;
             const i = y * size + x;
-            if (terrain[i] !== Terrain.Land) level = Math.min(level, elevation[i]);
+            if (terrain[i] !== Terrain.Land) {
+              min = Math.min(min, elevation[i]);
+              max = Math.max(max, elevation[i]);
+            }
           }
-          if (level !== Infinity) rows.push(level);
+          if (min !== Infinity) {
+            rowMin.push(min);
+            rowMax.push(max);
+          }
         }
-        if (rows.length < size) continue; // river runs along the other axis
-        const increasing = rows.every((v, i) => i === 0 || v >= rows[i - 1]);
-        const decreasing = rows.every((v, i) => i === 0 || v <= rows[i - 1]);
+        if (rowMin.length < size) continue; // river runs along the other axis
+        const increasing = rowMin.every((v, i) => i === 0 || v >= rowMin[i - 1]);
+        const decreasing = rowMin.every((v, i) => i === 0 || v <= rowMin[i - 1]);
         expect(increasing || decreasing).toBe(true);
+
+        // Stronger, per-tile check: the row-level minimum above is blind to
+        // a lake-span row whose river tiles sit above the lake (every such
+        // row still has a lake tile at the (low) lake level). Require every
+        // water tile of a downstream row to sit at or below every water
+        // tile of the row upstream of it.
+        for (let i = 1; i < rowMin.length; i++) {
+          if (decreasing) {
+            // along increasing = downstream (entry at along 0).
+            expect(rowMax[i]).toBeLessThanOrEqual(rowMin[i - 1]);
+          } else {
+            // along decreasing = downstream (entry at the last along).
+            expect(rowMax[i - 1]).toBeLessThanOrEqual(rowMin[i]);
+          }
+        }
       }
     }
   });

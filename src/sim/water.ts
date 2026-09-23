@@ -178,13 +178,17 @@ export function generateWater(state: SimState): void {
   if (lakeTiles.length > 0) {
     lakeLevel = Math.min(...lakeTiles.map((i) => elevation[i]));
     for (const i of lakeTiles) elevation[i] = lakeLevel;
-    // Water leaving the lake keeps flowing downhill.
+    // Water leaving the lake keeps flowing downhill. Clamp from the lake's
+    // UPSTREAM-most row onward: river tiles inside the lake's along-span
+    // but outside its ellipse would otherwise keep their carved (higher)
+    // level once the lake sinks. Clamping the inflow row too is harmless
+    // — it just merges it with the lake surface.
     const alongOf = (i: number): number => (axis.vertical ? Math.floor(i / size) : i % size);
     const lakeAlongs = lakeTiles.map(alongOf);
-    const lastAlong = reversed ? Math.min(...lakeAlongs) : Math.max(...lakeAlongs);
+    const firstAlong = reversed ? Math.max(...lakeAlongs) : Math.min(...lakeAlongs);
     for (let step = 0; step < size; step++) {
       const along = reversed ? size - 1 - step : step;
-      const pastLake = reversed ? along < lastAlong : along > lastAlong;
+      const pastLake = reversed ? along <= firstAlong : along >= firstAlong;
       if (!pastLake) continue;
       for (const i of riverRows[along]) elevation[i] = Math.min(elevation[i], lakeLevel);
     }
