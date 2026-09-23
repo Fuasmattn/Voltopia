@@ -200,7 +200,7 @@ export const BALANCE = {
     /** Cost multiplier for building on a sloped (slope >= 1) tile. */
     slopeCostFactor: 1.25,
     /** Wind turbine output bonus per elevation level of its tile. */
-    windBonusPerLevel: 0.06,
+    windBonusPerLevel: 0.045,
     /** Run-of-river output bonus per level of drop at the plant tile. */
     hydroDropBonus: 0.2,
     /** Pumped-storage capacity/power bonus per level of head above the lake. */

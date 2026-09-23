@@ -1,6 +1,6 @@
 # Terrain Elevation Implementation Plan
 
-> **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
+> **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [x]`) syntax for tracking.
 
 **Goal:** Give every map elevation levels 0–7 rendered as smooth 3D slopes, with build constraints, slope surcharges, a wind elevation bonus and hydro head bonuses; the river follows the terrain downhill.
 
@@ -37,7 +37,7 @@
 - Consumes: existing `neighbors4(index, size)` from `src/shared/grid.ts`.
 - Produces: `state.layers.elevation: Uint8Array` (levels 0–7, immutable after map gen, NOT part of undo snapshots); `slopeAt(state, index): number` (max abs level difference to 4-neighbours); `slopeCostMultiplier(state, index): number` (`BALANCE.terrain.slopeCostFactor` when slope > 0, else 1); `TileDiff.elevation: number`; the `BALANCE.terrain` block below.
 
-- [ ] **Step 1: Write the failing tests** (append to `src/sim/state.test.ts`; mirror the file's existing import style)
+- [x] **Step 1: Write the failing tests** (append to `src/sim/state.test.ts`; mirror the file's existing import style)
 
 ```ts
 describe('elevation', () => {
@@ -77,12 +77,12 @@ describe('elevation', () => {
 
 Add `slopeAt`, `slopeCostMultiplier`, `tileIndex`, `BALANCE` to the test file's imports as needed.
 
-- [ ] **Step 2: Run tests to verify they fail**
+- [x] **Step 2: Run tests to verify they fail**
 
 Run: `pnpm exec vitest run src/sim/state.test.ts`
 Expected: FAIL — `slopeAt` not exported / `elevation` undefined.
 
-- [ ] **Step 3: Implement**
+- [x] **Step 3: Implement**
 
 `src/shared/constants.ts` — insert after the `water` block:
 
@@ -150,11 +150,11 @@ export function slopeCostMultiplier(state: SimState, index: number): number {
 
 Do NOT add elevation to `snapshotTile`/`UndoEntry` (immutable) or to `serializeState` yet (Task 6).
 
-- [ ] **Step 4: Run tests to verify they pass**
+- [x] **Step 4: Run tests to verify they pass**
 
 Run: `pnpm exec vitest run src/sim/state.test.ts` — PASS. Then `pnpm typecheck` — the new required `TileDiff.elevation` must not break other files (only `collectDiffs` constructs `TileDiff`s; test factories in render/UI tests may need the field added — fix any that fail).
 
-- [ ] **Step 5: Format and commit**
+- [x] **Step 5: Format and commit**
 
 ```bash
 pnpm format
@@ -175,7 +175,7 @@ git add -A && git commit -m "feat(sim): elevation layer, slope helpers and BALAN
 - Consumes: `Rng`, `BALANCE.terrain`, `markDirty`, `SimState`.
 - Produces: `generateTerrain(state: SimState): void` — fills `state.layers.elevation` deterministically from `state.seed` (own salt `0x7e44a1`), guarantees the buildable-land fraction, marks non-zero tiles dirty. Runs BEFORE `generateWater`.
 
-- [ ] **Step 1: Write the failing tests** (`src/sim/terrain.test.ts`)
+- [x] **Step 1: Write the failing tests** (`src/sim/terrain.test.ts`)
 
 ```ts
 import { describe, expect, it } from 'vitest';
@@ -252,9 +252,9 @@ describe('generateTerrain', () => {
 });
 ```
 
-- [ ] **Step 2: Run to verify it fails** — `pnpm exec vitest run src/sim/terrain.test.ts` (module not found).
+- [x] **Step 2: Run to verify it fails** — `pnpm exec vitest run src/sim/terrain.test.ts` (module not found).
 
-- [ ] **Step 3: Implement `src/sim/terrain.ts`**
+- [x] **Step 3: Implement `src/sim/terrain.ts`**
 
 ```ts
 import { BALANCE } from '../shared/constants.ts';
@@ -398,9 +398,9 @@ function buildableFraction(elevation: Uint8Array, size: number, maxSlope: number
 
 If a generation-shape test fails (e.g. only 2 levels used), tune `noiseExponent`/`tiltLevels` in `BALANCE.terrain`, not the test, unless the test's expectation is wrong.
 
-- [ ] **Step 4: Run to verify pass** — `pnpm exec vitest run src/sim/terrain.test.ts`.
+- [x] **Step 4: Run to verify pass** — `pnpm exec vitest run src/sim/terrain.test.ts`.
 
-- [ ] **Step 5: Format and commit**
+- [x] **Step 5: Format and commit**
 
 ```bash
 pnpm format
@@ -423,7 +423,7 @@ git add -A && git commit -m "feat(sim): seeded terrain elevation generation"
 - Consumes: `state.layers.elevation` (Task 1/2), `BALANCE.terrain.maxBuildSlope`.
 - Produces: after `generateWater`, river elevation is monotonically non-increasing in flow direction; all Lake tiles share one level stored in `state.lakeLevel: number`; land neighbours of water sit at most `maxBuildSlope + 1` above it. `computeLakeLevel(state): number` (elevation of the first Lake tile, 0 without a lake).
 
-- [ ] **Step 1: Write the failing tests** (append to `src/sim/water.test.ts`; reuse its existing helpers for creating states — read the file first and follow its patterns)
+- [x] **Step 1: Write the failing tests** (append to `src/sim/water.test.ts`; reuse its existing helpers for creating states — read the file first and follow its patterns)
 
 ```ts
 describe('water on terrain', () => {
@@ -506,9 +506,9 @@ it('init generates terrain before water', () => {
 
 (Match the actual `init` command shape used by existing engine tests.)
 
-- [ ] **Step 2: Run to verify failure** — `pnpm exec vitest run src/sim/water.test.ts src/sim/engine.test.ts`.
+- [x] **Step 2: Run to verify failure** — `pnpm exec vitest run src/sim/water.test.ts src/sim/engine.test.ts`.
 
-- [ ] **Step 3: Implement**
+- [x] **Step 3: Implement**
 
 `src/sim/state.ts`:
 
@@ -643,9 +643,9 @@ for (let i = 0; i < size * size; i++) {
 
 (import `neighbors4` from `../shared/grid.ts`). Carving/sinking changes elevation on already-dirty water tiles; also `markDirty` any river/lake tile whose elevation changed if it isn't marked already (the final `terrain !== Land → markDirty` loop already covers water tiles; the bank tiles need the explicit call above).
 
-- [ ] **Step 4: Run the sim suite** — `pnpm exec vitest run src/sim` (the whole sim folder: water changes can ripple into growth/vehicle tests that build cities on water maps). All PASS.
+- [x] **Step 4: Run the sim suite** — `pnpm exec vitest run src/sim` (the whole sim folder: water changes can ripple into growth/vehicle tests that build cities on water maps). All PASS.
 
-- [ ] **Step 5: Format and commit**
+- [x] **Step 5: Format and commit**
 
 ```bash
 pnpm format
@@ -670,7 +670,7 @@ git add -A && git commit -m "feat(sim): river follows the terrain downhill, lake
 - Consumes: `slopeAt`, `slopeCostMultiplier` (Task 1).
 - Produces: `buildRejection` returns `'tooSteep'` for every intent on tiles with `slopeAt > BALANCE.terrain.maxBuildSlope` (water rejections keep precedence); all four build paths charge `Math.round(base * slopeCostMultiplier(state, index))` per tile.
 
-- [ ] **Step 1: Write the failing tests**
+- [x] **Step 1: Write the failing tests**
 
 `src/sim/state.test.ts`:
 
@@ -724,9 +724,9 @@ it('charges the slope surcharge on sloped road tiles', () => {
 
 Analogous single tests in `zones.test.ts` (`paintZones` on a slope-1 tile costs `Math.round(zonePerTile * slopeCostFactor)`), `powerLines.test.ts` (`powerLineTileCost` on a slope-1 land tile), and `energy.test.ts` (`placePlant` of a `SolarFarm` on a slope-1 tile charges `Math.round(cost * factor)`).
 
-- [ ] **Step 2: Run to verify failure** — `pnpm exec vitest run src/sim/state.test.ts src/sim/roads.test.ts src/sim/zones.test.ts src/sim/powerLines.test.ts src/sim/energy.test.ts`.
+- [x] **Step 2: Run to verify failure** — `pnpm exec vitest run src/sim/state.test.ts src/sim/roads.test.ts src/sim/zones.test.ts src/sim/powerLines.test.ts src/sim/energy.test.ts`.
 
-- [ ] **Step 3: Implement**
+- [x] **Step 3: Implement**
 
 `src/sim/state.ts` — restructure `buildRejection` so water checks come first, then the slope gate, then the rest (full replacement of the function body after the occupancy checks):
 
@@ -801,9 +801,9 @@ export function powerLineTileCost(state: SimState, index: number): number {
 
 Import `slopeCostMultiplier` from `./state.ts` in each file.
 
-- [ ] **Step 4: Run the full sim suite** — `pnpm exec vitest run src/sim`. Water-map tests may now reject builds near carved banks; if a pre-existing test builds on a tile that is legitimately steep under the new rules, flatten that test's elevation explicitly (`state.layers.elevation.fill(0)` is the default — only generated maps have relief), do NOT weaken the rule.
+- [x] **Step 4: Run the full sim suite** — `pnpm exec vitest run src/sim`. Water-map tests may now reject builds near carved banks; if a pre-existing test builds on a tile that is legitimately steep under the new rules, flatten that test's elevation explicitly (`state.layers.elevation.fill(0)` is the default — only generated maps have relief), do NOT weaken the rule.
 
-- [ ] **Step 5: Format and commit**
+- [x] **Step 5: Format and commit**
 
 ```bash
 pnpm format
@@ -832,7 +832,7 @@ git add -A && git commit -m "feat(sim): steep tiles reject builds, slopes carry 
   - `energyStep` uses `census.windCapacity * windPeakOutput * windFactor`, `census.hydroCapacity * hydroPeakOutput * riverFlowFactor`, `census.pumpedCapacity * pumpedStorageCapacity` (and `...PowerLimit`).
   - `TileInfo` gains `elevation: number; slope: number; terrainBonus: number` (bonus factor of the tile's plant, 1 when none).
 
-- [ ] **Step 1: Write the failing tests**
+- [x] **Step 1: Write the failing tests**
 
 `src/sim/energy.test.ts` (follow the file's existing state-setup helpers):
 
@@ -914,9 +914,9 @@ it('reports elevation, slope and the plant terrain bonus', () => {
 });
 ```
 
-- [ ] **Step 2: Run to verify failure** — `pnpm exec vitest run src/sim/energy.test.ts src/sim/inspect.test.ts`.
+- [x] **Step 2: Run to verify failure** — `pnpm exec vitest run src/sim/energy.test.ts src/sim/inspect.test.ts`.
 
-- [ ] **Step 3: Implement**
+- [x] **Step 3: Implement**
 
 `src/sim/state.ts` (near `slopeAt`):
 
@@ -1016,9 +1016,9 @@ const terrainBonus =
     : 1;
 ```
 
-- [ ] **Step 4: Run the sim suite** — `pnpm exec vitest run src/sim`. Existing energy tests must pass unchanged (flat maps ⇒ factors are exactly the counts).
+- [x] **Step 4: Run the sim suite** — `pnpm exec vitest run src/sim`. Existing energy tests must pass unchanged (flat maps ⇒ factors are exactly the counts).
 
-- [ ] **Step 5: Format and commit**
+- [x] **Step 5: Format and commit**
 
 ```bash
 pnpm format
@@ -1041,7 +1041,7 @@ git add -A && git commit -m "feat(sim): wind, run-of-river and pumped storage ea
 - Consumes: `computeLakeLevel` (Task 3).
 - Produces: saves carry the elevation layer; old saves load flat with `lakeLevel` recomputed (0 without a lake, since flat lakes sit at 0).
 
-- [ ] **Step 1: Write the failing tests**
+- [x] **Step 1: Write the failing tests**
 
 In `src/sim/state.test.ts`:
 
@@ -1067,9 +1067,9 @@ it('loads saves without an elevation layer as flat maps', () => {
 
 In `src/storage/serialization.test.ts`: extend the existing roundtrip test's expectations to include the `elevation` layer, plus one test that a JSON save without `layers.elevation` still parses.
 
-- [ ] **Step 2: Run to verify failure** — `pnpm exec vitest run src/sim/state.test.ts src/storage/serialization.test.ts`.
+- [x] **Step 2: Run to verify failure** — `pnpm exec vitest run src/sim/state.test.ts src/storage/serialization.test.ts`.
 
-- [ ] **Step 3: Implement**
+- [x] **Step 3: Implement**
 
 - `SaveGame.layers`: add `/** Elevation layer; absent in older saves (flat map). */ elevation?: ArrayBuffer;`
 - `serializeState`: add `elevation: copyBuffer(layers.elevation),` to `layers`.
@@ -1082,9 +1082,9 @@ state.lakeLevel = computeLakeLevel(state);
 
 - `serialization.ts`: `const optionalLayers = ['terrain', 'powerLine', 'elevation'] as const;`
 
-- [ ] **Step 4: Run to verify pass** — `pnpm exec vitest run src/sim/state.test.ts src/storage/serialization.test.ts`.
+- [x] **Step 4: Run to verify pass** — `pnpm exec vitest run src/sim/state.test.ts src/storage/serialization.test.ts`.
 
-- [ ] **Step 5: Format and commit**
+- [x] **Step 5: Format and commit**
 
 ```bash
 pnpm format
@@ -1114,7 +1114,7 @@ git add -A && git commit -m "feat(storage): persist the elevation layer, flat fa
 
 There are no WebGL unit tests (sandbox has no WebGL; visual check happens on the Mac). Correctness here is `pnpm typecheck` + `node scripts/smoke.mjs` + the later visual pass.
 
-- [ ] **Step 1: Implement `src/render/elevationField.ts`**
+- [x] **Step 1: Implement `src/render/elevationField.ts`**
 
 ```ts
 import type { TileDiff } from '../shared/types.ts';
@@ -1218,7 +1218,7 @@ export class ElevationField implements DiffLayer {
 }
 ```
 
-- [ ] **Step 2: Rework `src/render/terrain.ts`**
+- [x] **Step 2: Rework `src/render/terrain.ts`**
 
 Keep `groundColor` as is. Replace `createTerrain` with a class (the shape mirrors other diff layers):
 
@@ -1328,7 +1328,7 @@ export class GroundMesh implements DiffLayer {
 
 Add imports (`ElevationField`, `LEVEL_HEIGHT`, `DiffLayer`). Note the grid geometry allocates `4 * size * (size+1)` vertices once — fine for size ≤ 96.
 
-- [ ] **Step 3: Rework `src/render/picking.ts`**
+- [x] **Step 3: Rework `src/render/picking.ts`**
 
 ```ts
 export function pickTile(
@@ -1363,7 +1363,7 @@ export function pickTile(
 
 `groundPointAtNdc` stays plane-based (it feeds the minimap view footprint, where the flat approximation is fine).
 
-- [ ] **Step 4: Wire it in `src/render/renderer.ts`**
+- [x] **Step 4: Wire it in `src/render/renderer.ts`**
 
 - Add fields `private readonly elevation: ElevationField;` and `private readonly groundMesh: GroundMesh;`.
 - In the constructor, replace the `createTerrain` block with:
@@ -1399,7 +1399,7 @@ slopeAt(index: number): number {
 }
 ```
 
-- [ ] **Step 5: Verify and commit**
+- [x] **Step 5: Verify and commit**
 
 Run: `pnpm typecheck && pnpm exec vitest run && node scripts/smoke.mjs`
 Expected: all pass (smoke boots headless without WebGL).
@@ -1425,7 +1425,7 @@ git add -A && git commit -m "feat(render): height-field ground mesh, elevation f
 
 Pattern for every layer: the constructor gains a trailing `elevation: ElevationField` parameter stored as `private readonly elevation`, and each place that writes a world-space y adds the tile's centre height. Elevation only changes at map generation / load, when every tile is dirty, so existing rebuild triggers already fire — no extra version tracking needed in the layers.
 
-- [ ] **Step 1: Update the constructors in `renderer.ts`**
+- [x] **Step 1: Update the constructors in `renderer.ts`**
 
 ```ts
 this.addDiffLayer(new WaterMesh(scene, gridSize, this.elevation));
@@ -1442,7 +1442,7 @@ this.addDiffLayer(new IconsMesh(scene, gridSize, this.isoCamera.camera, this.ele
 
 (`MinimapLayer` and `WeatherFx` stay as they are; the minimap is Task 9.)
 
-- [ ] **Step 2: Add the offsets** — in each file compute `const lift = this.elevation.centerY(index);` in the rebuild loop and add it to every y:
+- [x] **Step 2: Add the offsets** — in each file compute `const lift = this.elevation.centerY(index);` in the rebuild loop and add it to every y:
 
 - `waterMesh.ts:76` → `this.matrix.setPosition(x, WATER_HEIGHT + lift, z);`
 - `zoneTilesMesh.ts:59-63` → y `0.04 + lift`.
@@ -1454,7 +1454,7 @@ this.addDiffLayer(new IconsMesh(scene, gridSize, this.isoCamera.camera, this.ele
 - `plantsMesh.ts`: in `rebuild` add `lift` to `part.oy`, push rotor hubs at `HUB_HEIGHT + lift`, dome at `DOME_BASE + lift`; `writeSocFills` stores the battery's lift with its position (`batteryPositions.push(new THREE.Vector3(cx, lift, cz))` and y `0.03 + p.y`).
 - `vehiclesMesh.ts`: constructor takes the field; in `update`: `this.position.set(x, 0.03 + this.elevation.surfaceY(x, y), y);`
 
-- [ ] **Step 3: Verify and commit**
+- [x] **Step 3: Verify and commit**
 
 Run: `pnpm typecheck && pnpm exec vitest run && node scripts/smoke.mjs` — PASS.
 
@@ -1477,7 +1477,7 @@ git add -A && git commit -m "feat(render): meshes, markers and vehicles follow t
 - Consumes: `TileDiff.elevation`.
 - Produces: ground and zoned minimap pixels are darker in valleys, lighter on hills; roads, buildings, plants and water keep their identity colours.
 
-- [ ] **Step 1: Implement**
+- [x] **Step 1: Implement**
 
 Track elevation and shade:
 
@@ -1506,7 +1506,7 @@ private shade(hex: string, level: number): string {
 
 In `tileColor`, shade only the terrain-coloured branches: the final `return COLORS.ground` and the zoned branch become `return this.shade(COLORS.ground, this.elevations[diff.index]);` / `return this.shade(COLORS.zoned[diff.zone] ?? COLORS.ground, this.elevations[diff.index]);` — the constructor's initial fill keeps plain `COLORS.ground`.
 
-- [ ] **Step 2: Verify and commit**
+- [x] **Step 2: Verify and commit**
 
 Run: `pnpm typecheck && pnpm exec vitest run` — PASS.
 
@@ -1531,7 +1531,7 @@ git add -A && git commit -m "feat(render): minimap shades terrain by elevation"
 
 - Consumes: `TileInfo.elevation/slope/terrainBonus` (Task 5), `renderer.slopeAt(index)` (Task 7), `'rejection.tooSteep'` reaching the existing toast path automatically (rejections surface by key).
 
-- [ ] **Step 1: i18n keys** — add to BOTH language maps in `src/ui/i18n.tsx` (next to the existing `rejection.*` / `inspector.*` / `help.*` keys, following the file's naming):
+- [x] **Step 1: i18n keys** — add to BOTH language maps in `src/ui/i18n.tsx` (next to the existing `rejection.*` / `inspector.*` / `help.*` keys, following the file's naming):
 
 English:
 
@@ -1557,9 +1557,9 @@ German:
   'Jede Karte hat Hügel. Steilhänge sind nicht bebaubar, Bauen am Hang kostet einen Aufschlag. Windräder erzeugen auf Anhöhen mehr, Laufwasserkraft profitiert vom Gefälle des Flusses, und Pumpspeicher speichern umso mehr, je höher sie über dem See liegen.',
 ```
 
-- [ ] **Step 2: TileInspector** — in `src/ui/TileInspector.tsx`, following the component's existing row idiom, add for land tiles a row `t('inspector.elevation')` showing `info.elevation`; when `info.slope > 1` show `t('inspector.steepSlope')`; when `info.terrainBonus > 1` show `t('inspector.terrainBonus')` with `+${Math.round((info.terrainBonus - 1) * 100)} %`.
+- [x] **Step 2: TileInspector** — in `src/ui/TileInspector.tsx`, following the component's existing row idiom, add for land tiles a row `t('inspector.elevation')` showing `info.elevation`; when `info.slope > 1` show `t('inspector.steepSlope')`; when `info.terrainBonus > 1` show `t('inspector.terrainBonus')` with `+${Math.round((info.terrainBonus - 1) * 100)} %`.
 
-- [ ] **Step 3: Cost preview** — in `src/ui/useTools.ts`, add a helper and use it in both cost paths:
+- [x] **Step 3: Cost preview** — in `src/ui/useTools.ts`, add a helper and use it in both cost paths:
 
 ```ts
 const slopeFactorAt = (index: number): number =>
@@ -1571,9 +1571,9 @@ const slopeFactorAt = (index: number): number =>
 
 (Adapt to how `renderer` is available in that scope — `terrainAt` is already called there, use the same reference for `slopeAt`.)
 
-- [ ] **Step 4: Help page** — add a section to `src/ui/HelpPage.tsx` using `help.terrain.title` / `help.terrain.body`, matching the existing section markup.
+- [x] **Step 4: Help page** — add a section to `src/ui/HelpPage.tsx` using `help.terrain.title` / `help.terrain.body`, matching the existing section markup.
 
-- [ ] **Step 5: Verify and commit**
+- [x] **Step 5: Verify and commit**
 
 Run: `pnpm typecheck && pnpm lint && pnpm exec vitest run` — PASS. (The i18n test, if present, checks key parity between languages.)
 
@@ -1592,18 +1592,18 @@ git add -A && git commit -m "feat(ui): elevation in inspector, slope surcharge p
 - Possibly modify: `src/shared/constants.ts` (tuning only)
 - Modify: `docs/plan.md` or the spec status line (mark done, following the repo's "docs: mark the … plan done" convention)
 
-- [ ] **Step 1: Write the probe** (pattern: commit "balance: resize energy system") — a headless script that, for a fixed seed, builds the same scripted city twice via `SimEngine`: once with elevation zeroed after generation (flat control) and once on the generated relief, placing wind turbines on the highest buildable tiles and hydro on the river; run ~20 in-game days (`20 * TICKS_PER_DAY` ticks) and print daily generation, deficit and money for both runs.
+- [x] **Step 1: Write the probe** (pattern: commit "balance: resize energy system") — a headless script that, for a fixed seed, builds the same scripted city twice via `SimEngine`: once with elevation zeroed after generation (flat control) and once on the generated relief, placing wind turbines on the highest buildable tiles and hydro on the river; run ~20 in-game days (`20 * TICKS_PER_DAY` ticks) and print daily generation, deficit and money for both runs.
 
-- [ ] **Step 2: Judge and tune** — hills should be clearly attractive but not mandatory: the hilly run's wind/hydro output should land roughly 10–30 % above the flat run's with the same build; the slope surcharge should be noticeable in the money curve but never game-deciding. Adjust `windBonusPerLevel`, `hydroDropBonus`, `headBonusPerLevel`, `slopeCostFactor` in `BALANCE.terrain` if outside that corridor; re-run the probe and the energy tests after each change.
+- [x] **Step 2: Judge and tune** — hills should be clearly attractive but not mandatory: the hilly run's wind/hydro output should land roughly 10–30 % above the flat run's with the same build; the slope surcharge should be noticeable in the money curve but never game-deciding. Adjust `windBonusPerLevel`, `hydroDropBonus`, `headBonusPerLevel`, `slopeCostFactor` in `BALANCE.terrain` if outside that corridor; re-run the probe and the energy tests after each change.
 
-- [ ] **Step 3: Delete the probe** — `git rm`/delete the temporary script; it must not be committed.
+- [x] **Step 3: Delete the probe** — `git rm`/delete the temporary script; it must not be committed.
 
-- [ ] **Step 4: Full verification**
+- [x] **Step 4: Full verification**
 
 Run: `pnpm typecheck && pnpm lint && pnpm format:check && pnpm coverage && node scripts/smoke.mjs`
 Expected: all green, coverage ≥ 90 % on `src/sim` + `src/shared`. If coverage dropped, add sim tests (not render) for uncovered branches (`terrain.ts` fallback path, `riverDropAt` without water neighbours, etc.).
 
-- [ ] **Step 5: Close out and commit**
+- [x] **Step 5: Close out and commit**
 
 Mark the terrain plan done in the docs (repo convention), then:
 
@@ -1612,7 +1612,7 @@ pnpm format
 git add -A && git commit -m "balance: size the terrain bonuses; docs: mark the terrain plan done"
 ```
 
-- [ ] **Step 6: Hand back for the visual pass** — the sandbox has no WebGL. Tell the user the branch is ready for the Mac check: hills render with smooth slopes and terrain-following grid, picking is accurate on hills, bridges/vehicles/pylons sit on the terrain, minimap shows relief. Merge/push per the finishing-a-development-branch skill after their go.
+- [x] **Step 6: Hand back for the visual pass** — the sandbox has no WebGL. Tell the user the branch is ready for the Mac check: hills render with smooth slopes and terrain-following grid, picking is accurate on hills, bridges/vehicles/pylons sit on the terrain, minimap shows relief. Merge/push per the finishing-a-development-branch skill after their go.
 
 ---
 
