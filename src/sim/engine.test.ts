@@ -6,6 +6,7 @@ import { SimEngine } from './engine.ts';
 import { timeOfDay, dayNumber } from './tick.ts';
 import { placePlant } from './energy.ts';
 import { buildPowerLines } from './powerLines.ts';
+import { buildRoads } from './roads.ts';
 
 function makeEngine(seed = 42, size = 16): SimEngine {
   return new SimEngine(seed, size);
@@ -162,6 +163,10 @@ describe('SimEngine basics', () => {
 
   it('reports the season in stats and advances it with the days', () => {
     const engine = makeEngine();
+    // A road tile guarantees at least one diff on the first tick (an
+    // untouched city produces none) so the services wiring below has a
+    // TileDiff to check.
+    buildRoads(engine.state, [tileIndex(0, 0, 16)]);
     const first = engine.tick();
     if (first.type !== 'tick') throw new Error('expected tick');
     expect(first.stats.season.season).toBe('spring');
@@ -170,6 +175,8 @@ describe('SimEngine basics', () => {
     expect(first.stats.insulation).toBe(false);
     expect(first.stats.energy.consumption.heating).toBe(0);
     expect(first.stats.energy.consumption.cooling).toBe(0);
+    expect(first.stats.services).toEqual({ fire: 1, police: 1 });
+    expect(first.diffs[0].services).toBe(0);
     engine.state.tick = TICKS_PER_DAY * BALANCE.seasons.daysPerSeason - 1;
     const next = engine.tick();
     if (next.type !== 'tick') throw new Error('expected tick');

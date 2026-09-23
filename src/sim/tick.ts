@@ -8,6 +8,7 @@ import { computeDemand, decayStep, growthStep } from './growth.ts';
 import { happinessStep } from './happiness.ts';
 import { countPowerLineTiles } from './powerLines.ts';
 import { seasonState } from './seasons.ts';
+import { recomputeServices, serviceCoverage } from './services.ts';
 import { chargingDemand, vehiclesStep } from './vehicles.ts';
 import { updateWeather } from './weather.ts';
 import {
@@ -42,6 +43,8 @@ export function stepTick(state: SimState): void {
   updateWeather(state);
   vehiclesStep(state);
   energyStep(state, { chargingDemand: chargingDemand(state) });
+  recomputeServices(state);
+  state.lastServices = serviceCoverage(state);
   state.lastDemand = computeDemand(state);
   growthStep(state, state.lastDemand);
   decayStep(state);
@@ -163,6 +166,7 @@ export function buildStats(state: SimState): GlobalStats {
     speed: state.speed,
     smartCharging: state.smartCharging,
     insulation: state.insulation,
+    services: { ...state.lastServices },
     goals: goalStates(state),
     counts: countTiles(state),
     budget: buildBudget(state),

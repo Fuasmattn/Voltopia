@@ -88,6 +88,8 @@ export interface TileLayers {
   powerLine: Uint8Array;
   /** 1 when the tile is within lineSupplyRadius of an energised line or supply plant. Derived, not persisted. */
   energized: Uint8Array;
+  /** Service coverage bitmask (SERVICE_FIRE | SERVICE_POLICE). Derived, not persisted. */
+  services: Uint8Array;
   /** Ticks since the building on this tile last changed (not persisted). */
   buildingAge: Uint32Array;
   /** Consecutive ticks without full supply (not persisted). */
@@ -134,6 +136,8 @@ export interface SimState {
   statsDirty: boolean;
   /** Demand computed during the last tick, shown in the HUD. */
   lastDemand: DemandStats;
+  /** Coverage shares (0..1) from the last recomputeServices; transient. */
+  lastServices: { fire: number; police: number };
   /** Achieved goal ids (persisted with the save game). */
   goalsAchieved: Set<string>;
   /** Goal progress counters; the season streaks are persisted, the rest is transient. */
@@ -197,6 +201,7 @@ export function createTileLayers(size: number): TileLayers {
     terrain: new Uint8Array(tiles),
     powerLine: new Uint8Array(tiles),
     energized: new Uint8Array(tiles),
+    services: new Uint8Array(tiles),
     buildingAge: new Uint32Array(tiles),
     troubledTicks: new Uint32Array(tiles),
   };
@@ -238,6 +243,7 @@ export function createSimState(
     dirty: new Set(),
     statsDirty: false,
     lastDemand: { residential: 0, commercial: 0, retail: 0 },
+    lastServices: { fire: 0, police: 0 },
     goalsAchieved: new Set(),
     goalProgress: { cleanDayTicks: 0, exportedTotal: 0, winterTicks: 0, summerTicks: 0 },
     nextVehicleId: 1,
@@ -324,6 +330,7 @@ export function collectDiffs(state: SimState): TileDiff[] {
       density: layers.density[index],
       variant: layers.variant[index],
       supplied: layers.supplied[index] as TileDiff['supplied'],
+      services: layers.services[index],
       plantType: layers.plantType[index] as TileDiff['plantType'],
       terrain: layers.terrain[index] as TileDiff['terrain'],
     });

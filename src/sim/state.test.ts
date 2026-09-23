@@ -173,6 +173,16 @@ describe('save round trip', () => {
     expect(restored.layers.energized[at(3, 7)]).toBe(1);
   });
 
+  it('does not persist the services layer but recomputes it after loading', () => {
+    const state = makeState();
+    expect(state.layers.services.length).toBe(state.layers.tileType.length);
+    const save = serializeState(state);
+    expect('services' in save.layers).toBe(false);
+    const restored = deserializeState(save);
+    expect(restored.layers.services.every((v) => v === 0)).toBe(true);
+    expect(restored.lastServices).toEqual({ fire: 0, police: 0 });
+  });
+
   it('grants nothing for a plant with no road in reach', () => {
     const state = makeState();
     state.layers.tileType[at(8, 2)] = TileType.Plant;

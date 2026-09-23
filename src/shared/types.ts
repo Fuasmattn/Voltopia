@@ -282,6 +282,8 @@ export interface GlobalStats {
   smartCharging: boolean;
   /** Whether the building insulation upgrade has been bought. */
   insulation: boolean;
+  /** Share of buildings with fire / police coverage, 0..1. */
+  services: { fire: number; police: number };
   goals: GoalState[];
   counts: TileCounts;
   /** Per-tick budget breakdown for the budget panel. */
@@ -304,6 +306,8 @@ export interface TileDiff {
   /** Seeded per-tile variation for procedural building shapes. */
   variant: number;
   supplied: SupplyStatus;
+  /** Service coverage bitmask: 1 = fire, 2 = police. */
+  services: number;
   plantType: PlantType;
   terrain: Terrain;
 }
