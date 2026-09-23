@@ -124,6 +124,8 @@ export interface SimState {
   /** gridVersion the energized layer was last computed for (-1 = never). */
   gridComputedVersion: number;
   weather: Weather;
+  /** Elevation of the lake surface (derived; recomputed on load). */
+  lakeLevel: number;
   layers: TileLayers;
   vehicles: Vehicle[];
   undoStack: UndoEntry[];
@@ -240,6 +242,7 @@ export function createSimState(
       riverFlow: BALANCE.water.initialFlow,
       snowpack: 0,
     },
+    lakeLevel: 0,
     layers: createTileLayers(size),
     vehicles: [],
     undoStack: [],
@@ -355,6 +358,15 @@ export function markAllDirty(state: SimState): void {
 /** What a placement is trying to do; decides which terrain accepts it. */
 export const BuildIntent = { Road: 0, Zone: 1, Plant: 2, PowerLine: 3 } as const;
 export type BuildIntent = (typeof BuildIntent)[keyof typeof BuildIntent];
+
+/** Lake surface level: the (uniform) elevation of the lake tiles. */
+export function computeLakeLevel(state: SimState): number {
+  const { terrain, elevation } = state.layers;
+  for (let i = 0; i < terrain.length; i++) {
+    if (terrain[i] === Terrain.Lake) return elevation[i];
+  }
+  return 0;
+}
 
 /** True when any 4-neighbour is a lake tile. */
 export function isLakeShore(state: SimState, index: number): boolean {

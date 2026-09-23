@@ -14,6 +14,7 @@ import {
   serializeState,
   type SimState,
 } from './state.ts';
+import { generateTerrain } from './terrain.ts';
 import { buildStats, stepTick } from './tick.ts';
 import { generateWater } from './water.ts';
 
@@ -40,6 +41,7 @@ export class SimEngine {
           this.state = deserializeState(command.save);
         } else {
           this.state = createSimState(command.seed, command.size, command.startingMoney);
+          generateTerrain(this.state);
           generateWater(this.state);
         }
         return [];

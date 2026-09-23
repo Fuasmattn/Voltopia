@@ -1,8 +1,10 @@
 import { describe, expect, it } from 'vitest';
+import { BALANCE } from '../shared/constants.ts';
 import { neighbors4, tileIndex, tileX, tileY } from '../shared/grid.ts';
 import { Terrain } from '../shared/types.ts';
 import { MAP_SIZES } from '../ui/newGame.ts';
-import { createSimState, type SimState } from './state.ts';
+import { computeLakeLevel, createSimState, type SimState } from './state.ts';
+import { generateTerrain } from './terrain.ts';
 import { generateWater } from './water.ts';
 
 function isWater(state: SimState, index: number): boolean {
@@ -89,10 +91,14 @@ describe('generateWater', () => {
         const a = createSimState(11, size);
         const b = createSimState(11, size);
         const c = createSimState(12, size);
+        generateTerrain(a);
+        generateTerrain(b);
+        generateTerrain(c);
         generateWater(a);
         generateWater(b);
         generateWater(c);
         expect(a.layers.terrain).toEqual(b.layers.terrain);
+        expect(a.layers.elevation).toEqual(b.layers.elevation);
         expect(a.layers.terrain).not.toEqual(c.layers.terrain);
       });
 
@@ -176,4 +182,69 @@ describe('generateWater', () => {
       });
     });
   }
+});
+
+describe('water on terrain', () => {
+  function generated(seed: number, size = 64) {
+    const state = createSimState(seed, size);
+    generateTerrain(state);
+    generateWater(state);
+    return state;
+  }
+
+  it('the river never flows uphill', () => {
+    for (const seed of [1, 7, 42]) {
+      const state = generated(seed);
+      const { size } = state;
+      const { terrain, elevation } = state.layers;
+      // Row levels along both axes: the min water level per row must be
+      // monotonic in one direction (entry high, exit low).
+      for (const vertical of [true, false]) {
+        const rows: number[] = [];
+        for (let along = 0; along < size; along++) {
+          let level = Infinity;
+          for (let lateral = 0; lateral < size; lateral++) {
+            const x = vertical ? lateral : along;
+            const y = vertical ? along : lateral;
+            const i = y * size + x;
+            if (terrain[i] !== Terrain.Land) level = Math.min(level, elevation[i]);
+          }
+          if (level !== Infinity) rows.push(level);
+        }
+        if (rows.length < size) continue; // river runs along the other axis
+        const increasing = rows.every((v, i) => i === 0 || v >= rows[i - 1]);
+        const decreasing = rows.every((v, i) => i === 0 || v <= rows[i - 1]);
+        expect(increasing || decreasing).toBe(true);
+      }
+    }
+  });
+
+  it('all lake tiles share the lake level', () => {
+    const state = generated(3);
+    const { terrain, elevation } = state.layers;
+    let lakeTiles = 0;
+    for (let i = 0; i < terrain.length; i++) {
+      if (terrain[i] === Terrain.Lake) {
+        lakeTiles++;
+        expect(elevation[i]).toBe(state.lakeLevel);
+      }
+    }
+    expect(lakeTiles).toBeGreaterThan(0);
+    expect(computeLakeLevel(state)).toBe(state.lakeLevel);
+  });
+
+  it('banks stay within the relaxed slope limit', () => {
+    const state = generated(5);
+    const { size } = state;
+    const { terrain, elevation } = state.layers;
+    const limit = BALANCE.terrain.maxBuildSlope + 1;
+    for (let i = 0; i < terrain.length; i++) {
+      if (terrain[i] === Terrain.Land) continue;
+      for (const n of neighbors4(i, size)) {
+        if (terrain[n] === Terrain.Land) {
+          expect(elevation[n] - elevation[i]).toBeLessThanOrEqual(limit);
+        }
+      }
+    }
+  });
 });

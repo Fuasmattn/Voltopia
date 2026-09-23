@@ -118,6 +118,14 @@ describe('SimEngine basics', () => {
     expect(engine.state.layers.terrain[0]).toBe(Terrain.River);
   });
 
+  it('init generates terrain before water', () => {
+    const engine = new SimEngine(1, 48);
+    engine.applyCommand({ type: 'init', seed: 9, size: 48 });
+    const { elevation, terrain } = engine.state.layers;
+    expect(elevation.some((v) => v > 0)).toBe(true);
+    expect(terrain.some((v) => v !== Terrain.Land)).toBe(true);
+  });
+
   it('reports dispatchable biogas capacity in the energy stats', () => {
     const engine = new SimEngine(1, 16);
     engine.applyCommand({ type: 'init', seed: 1, size: 16 });
