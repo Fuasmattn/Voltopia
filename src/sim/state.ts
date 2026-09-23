@@ -1,4 +1,9 @@
-import { BALANCE, ENERGY_HISTORY_SAMPLES, SAVE_VERSION } from '../shared/constants.ts';
+import {
+  BALANCE,
+  ENERGY_HISTORY_SAMPLES,
+  SAVE_VERSION,
+  TICKS_PER_DAY,
+} from '../shared/constants.ts';
 import { neighbors4 } from '../shared/grid.ts';
 import { Rng } from '../shared/rng.ts';
 import type {
@@ -6,12 +11,14 @@ import type {
   LifetimeSample,
   EnergyHistoryPoint,
   SaveGame,
+  SeasonState,
   Speed,
   TileDiff,
   Weather,
 } from '../shared/types.ts';
 import { PlantType, SupplyStatus, Terrain, TileType, Zone } from '../shared/types.ts';
 import { grantLegacyNetwork } from './powerGrid.ts';
+import { seasonState } from './seasons.ts';
 
 /** Commute phases of a vehicle. */
 export const VehiclePhase = {
@@ -95,6 +102,12 @@ export interface SimState {
   money: number;
   taxRate: number;
   smartCharging: boolean;
+  /** Building insulation upgrade bought (halves the heating load). */
+  insulation: boolean;
+  /** Day number on which year 1 started; 0 for new games. */
+  seasonOriginDay: number;
+  /** Seasonal signal for the current tick, recomputed in stepTick. */
+  season: SeasonState;
   happiness: number;
   storedEnergy: number;
   /** Energy stored in pumped storage plants (separate pool from batteries). */
@@ -115,7 +128,7 @@ export interface SimState {
   /** Achieved goal ids (persisted with the save game). */
   goalsAchieved: Set<string>;
   /** Transient goal progress counters. */
-  goalProgress: { cleanDayTicks: number; exportedTotal: number };
+  goalProgress: { cleanDayTicks: number; exportedTotal: number; winterTicks: number };
   /** Monotonic id source for vehicles (not persisted). */
   nextVehicleId: number;
   /**
@@ -126,7 +139,13 @@ export interface SimState {
   /** Daily lifetime statistics (persisted) plus running day sums. */
   lifetime: {
     samples: LifetimeSample[];
-    daySums: { generation: number; consumption: number; ticks: number };
+    daySums: {
+      generation: number;
+      consumption: number;
+      heating: number;
+      temperature: number;
+      ticks: number;
+    };
   };
   /** Set by the energy step; consumed by growth/happiness. */
   lastEnergy: {
@@ -137,6 +156,7 @@ export interface SimState {
     rooftop: number;
     buildingConsumption: number;
     chargingConsumption: number;
+    heatingConsumption: number;
     curtailment: number;
     deficit: number;
     gridImport: number;
@@ -176,6 +196,9 @@ export function createSimState(
     money: startingMoney,
     taxRate: BALANCE.tax.defaultRate,
     smartCharging: false,
+    insulation: false,
+    seasonOriginDay: 0,
+    season: seasonState({ day: 0, timeOfDay: 0, seasonOriginDay: 0, cloudCover: 0.3 }),
     happiness: BALANCE.happiness.base,
     storedEnergy: 0,
     pumpedStorageEnergy: 0,
@@ -194,10 +217,13 @@ export function createSimState(
     dirty: new Set(),
     lastDemand: { residential: 0, commercial: 0, retail: 0 },
     goalsAchieved: new Set(),
-    goalProgress: { cleanDayTicks: 0, exportedTotal: 0 },
+    goalProgress: { cleanDayTicks: 0, exportedTotal: 0, winterTicks: 0 },
     nextVehicleId: 1,
     commuteCongestion: 1,
-    lifetime: { samples: [], daySums: { generation: 0, consumption: 0, ticks: 0 } },
+    lifetime: {
+      samples: [],
+      daySums: { generation: 0, consumption: 0, heating: 0, temperature: 0, ticks: 0 },
+    },
     lastEnergy: {
       solar: 0,
       wind: 0,
@@ -206,6 +232,7 @@ export function createSimState(
       rooftop: 0,
       buildingConsumption: 0,
       chargingConsumption: 0,
+      heatingConsumption: 0,
       curtailment: 0,
       deficit: 0,
       gridImport: 0,
@@ -362,6 +389,9 @@ export function serializeState(state: SimState): SaveGame {
     lifetime: state.lifetime.samples.map((sample) => ({ ...sample })),
     riverFlow: state.weather.riverFlow,
     pumpedStorageEnergy: state.pumpedStorageEnergy,
+    seasonOriginDay: state.seasonOriginDay,
+    snowpack: state.weather.snowpack,
+    insulation: state.insulation,
     layers: {
       tileType: copyBuffer(layers.tileType),
       roadMask: copyBuffer(layers.roadMask),
@@ -394,6 +424,16 @@ export function deserializeState(save: SaveGame): SimState {
   state.layers.plantType.set(new Uint8Array(save.layers.plantType));
   state.pumpedStorageEnergy = save.pumpedStorageEnergy ?? 0;
   state.weather.riverFlow = save.riverFlow ?? BALANCE.water.dryBaselineFlow;
+  state.weather.snowpack = save.snowpack ?? 0;
+  state.insulation = save.insulation ?? false;
+  // Saves from before seasons start their year on the day they are loaded.
+  state.seasonOriginDay = save.seasonOriginDay ?? Math.floor(save.tick / TICKS_PER_DAY);
+  state.season = seasonState({
+    day: Math.floor(save.tick / TICKS_PER_DAY),
+    timeOfDay: (save.tick % TICKS_PER_DAY) / TICKS_PER_DAY,
+    seasonOriginDay: state.seasonOriginDay,
+    cloudCover: state.weather.cloudCover,
+  });
   if (save.layers.terrain) state.layers.terrain.set(new Uint8Array(save.layers.terrain));
   if (save.layers.powerLine) {
     state.layers.powerLine.set(new Uint8Array(save.layers.powerLine));

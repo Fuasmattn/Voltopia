@@ -95,4 +95,22 @@ describe('save game JSON export/import', () => {
     save.layers.powerLine = new Uint8Array(3).buffer as ArrayBuffer;
     expect(() => saveFromJson(saveToJson(save))).toThrow(/powerLine/);
   });
+
+  it('round-trips season origin, snowpack and insulation', () => {
+    const save = makeSave();
+    save.seasonOriginDay = 9;
+    save.snowpack = 0.25;
+    save.insulation = true;
+    const restored = saveFromJson(saveToJson(save));
+    expect(restored.seasonOriginDay).toBe(9);
+    expect(restored.snowpack).toBe(0.25);
+    expect(restored.insulation).toBe(true);
+  });
+
+  it('accepts exports without season fields', () => {
+    const restored = saveFromJson(saveToJson(makeSave()));
+    expect(restored.seasonOriginDay).toBeUndefined();
+    expect(restored.snowpack).toBeUndefined();
+    expect(restored.insulation).toBeUndefined();
+  });
 });

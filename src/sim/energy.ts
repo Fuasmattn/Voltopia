@@ -266,6 +266,8 @@ export function energyStep(state: SimState, input: EnergyTickInput): void {
     rooftop,
     buildingConsumption: buildingDemand,
     chargingConsumption: chargingDemand,
+    // Heating load is computed from the season signal in a later step (Task 3).
+    heatingConsumption: 0,
     curtailment,
     deficit,
     gridImport,

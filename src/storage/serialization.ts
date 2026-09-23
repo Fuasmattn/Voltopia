@@ -15,6 +15,9 @@ interface SaveGameJson {
   lifetime?: LifetimeSample[];
   riverFlow?: number;
   pumpedStorageEnergy?: number;
+  seasonOriginDay?: number;
+  snowpack?: number;
+  insulation?: boolean;
   layers: Record<string, string>;
 }
 
@@ -58,6 +61,9 @@ export function saveToJson(save: SaveGame): string {
     ...(save.pumpedStorageEnergy !== undefined
       ? { pumpedStorageEnergy: save.pumpedStorageEnergy }
       : {}),
+    ...(save.seasonOriginDay !== undefined ? { seasonOriginDay: save.seasonOriginDay } : {}),
+    ...(save.snowpack !== undefined ? { snowpack: save.snowpack } : {}),
+    ...(save.insulation !== undefined ? { insulation: save.insulation } : {}),
     layers,
   };
   return JSON.stringify(json, null, 2);
@@ -136,6 +142,11 @@ export function saveFromJson(text: string): SaveGame {
     ...(typeof parsed.pumpedStorageEnergy === 'number'
       ? { pumpedStorageEnergy: parsed.pumpedStorageEnergy }
       : {}),
+    ...(typeof parsed.seasonOriginDay === 'number'
+      ? { seasonOriginDay: parsed.seasonOriginDay }
+      : {}),
+    ...(typeof parsed.snowpack === 'number' ? { snowpack: parsed.snowpack } : {}),
+    ...(typeof parsed.insulation === 'boolean' ? { insulation: parsed.insulation } : {}),
     layers,
   };
 }

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { BALANCE } from '../shared/constants.ts';
+import { BALANCE, TICKS_PER_DAY } from '../shared/constants.ts';
 import { LINE_PRESENT, tileIndex } from '../shared/grid.ts';
 import { Terrain } from '../shared/types.ts';
 import { recomputeGrid } from './powerGrid.ts';
@@ -191,5 +191,39 @@ describe('save round trip', () => {
     state.layers.plantType[at(1, 1)] = PlantType.WindTurbine;
     const restored = deserializeState(serializeState(state));
     expect(restored.layers.powerLine[at(1, 2)]).toBe(0);
+  });
+
+  it('persists season origin, snowpack and insulation', () => {
+    const state = makeState();
+    state.seasonOriginDay = 12;
+    state.weather.snowpack = 0.4;
+    state.insulation = true;
+    const restored = deserializeState(serializeState(state));
+    expect(restored.seasonOriginDay).toBe(12);
+    expect(restored.weather.snowpack).toBe(0.4);
+    expect(restored.insulation).toBe(true);
+  });
+
+  it('starts a save without season data on the first spring day', () => {
+    const state = makeState();
+    state.tick = TICKS_PER_DAY * 37 + 100;
+    const save = serializeState(state);
+    delete save.seasonOriginDay;
+    delete save.snowpack;
+    delete save.insulation;
+    const restored = deserializeState(save);
+    expect(restored.seasonOriginDay).toBe(37);
+    expect(restored.season.season).toBe('spring');
+    expect(restored.season.dayOfSeason).toBe(1);
+    expect(restored.weather.snowpack).toBe(0);
+    expect(restored.insulation).toBe(false);
+  });
+
+  it('recomputes the season for the loaded tick', () => {
+    const state = makeState();
+    state.tick = TICKS_PER_DAY * 7;
+    const restored = deserializeState(serializeState(state));
+    expect(restored.season.season).toBe('summer');
+    expect(restored.season.dayOfSeason).toBe(3);
   });
 });

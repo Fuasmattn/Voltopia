@@ -228,6 +228,12 @@ export interface SaveGame {
   riverFlow?: number;
   /** Energy stored in pumped storage plants (absent in older saves). */
   pumpedStorageEnergy?: number;
+  /** Day number on which year 1 started (absent in older saves → the save's current day). */
+  seasonOriginDay?: number;
+  /** Snow cover 0..1 (absent in older saves → 0). */
+  snowpack?: number;
+  /** Building insulation bought (absent in older saves → false). */
+  insulation?: boolean;
   /** Raw copies of the tile layers. */
   layers: {
     tileType: ArrayBuffer;
