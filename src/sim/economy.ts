@@ -8,9 +8,21 @@ export interface EconomyBreakdown {
   taxIncome: number;
   gridUpkeep: number;
   plantUpkeep: number;
+  /** Upkeep split per plant type (feeds the budget panel). */
+  plantUpkeepByType: Record<PlantType, number>;
+  /** Plants placed per type (feeds the budget panel). */
+  plantCountByType: Record<PlantType, number>;
+  roadTiles: number;
   biogasFuelCost: number;
   gridImportCost: number;
   gridExportRevenue: number;
+}
+
+/** Zero-initialised map over every plant type. */
+export function emptyPlantMap(): Record<PlantType, number> {
+  const map = {} as Record<PlantType, number>;
+  for (const value of Object.values(PlantType)) map[value] = 0;
+  return map;
 }
 
 /**
@@ -26,10 +38,16 @@ export function economyStep(state: SimState, population: number, jobs: number): 
 
   let roadTiles = 0;
   let plantUpkeep = 0;
+  const plantUpkeepByType = emptyPlantMap();
+  const plantCountByType = emptyPlantMap();
   for (let i = 0; i < tileType.length; i++) {
     if (tileType[i] === TileType.Road) roadTiles++;
     else if (tileType[i] === TileType.Plant) {
-      plantUpkeep += BALANCE.upkeepPerTick.plant[plantType[i] as PlantType] ?? 0;
+      const plant = plantType[i] as PlantType;
+      const upkeep = BALANCE.upkeepPerTick.plant[plant] ?? 0;
+      plantUpkeep += upkeep;
+      plantUpkeepByType[plant] += upkeep;
+      plantCountByType[plant]++;
     }
   }
   // Grid upkeep: roads and power lines share one line item.
@@ -43,14 +61,19 @@ export function economyStep(state: SimState, population: number, jobs: number): 
 
   state.money +=
     taxIncome + gridExportRevenue - gridUpkeep - plantUpkeep - biogasFuelCost - gridImportCost;
-  return {
+  const breakdown: EconomyBreakdown = {
     taxIncome,
     gridUpkeep,
     plantUpkeep,
+    plantUpkeepByType,
+    plantCountByType,
+    roadTiles,
     biogasFuelCost,
     gridImportCost,
     gridExportRevenue,
   };
+  state.lastEconomy = breakdown;
+  return breakdown;
 }
 
 /** One-off, city-wide building insulation: halves the heating load. Not undoable. */

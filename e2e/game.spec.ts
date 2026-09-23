@@ -5,6 +5,13 @@ async function readTick(page: Page): Promise<number> {
   return Number(text?.replace(/\D/g, '') ?? '0');
 }
 
+/** Bounding box of a HUD island, or null when it is not on screen. */
+async function rect(page: Page, testId: string) {
+  const locator = page.getByTestId(testId);
+  if ((await locator.count()) === 0) return null;
+  return locator.first().boundingBox();
+}
+
 /** True when the environment has WebGL and the 3D canvas is present. */
 async function has3dView(page: Page): Promise<boolean> {
   return (await page.locator('.game-view canvas').count()) > 0;
@@ -19,7 +26,7 @@ test.beforeEach(async ({ page }) => {
     }
   });
   await page.goto('/');
-  await expect(page.getByTestId('tick-counter')).toBeVisible({ timeout: 15_000 });
+  await expect(page.getByTestId('money')).toBeVisible({ timeout: 15_000 });
 });
 
 test('tutorial guides brand-new games and can be skipped', async ({ page }) => {
@@ -36,7 +43,7 @@ test('tutorial guides brand-new games and can be skipped', async ({ page }) => {
   await expect(page.getByTestId('tutorial')).toHaveCount(0);
   // Skipping is remembered.
   await page.reload();
-  await expect(page.getByTestId('tick-counter')).toBeVisible({ timeout: 15_000 });
+  await expect(page.getByTestId('money')).toBeVisible({ timeout: 15_000 });
   await expect(page.getByTestId('tutorial')).toHaveCount(0);
 });
 
@@ -47,7 +54,7 @@ test('new-game dialog starts a fresh city with chosen difficulty', async ({ page
   await page.getByTestId('difficulty-hard').click();
   await page.getByTestId('seed-input').fill('gridtown');
   await page.getByTestId('start-city').click();
-  await expect(page.getByTestId('tick-counter')).toBeVisible({ timeout: 15_000 });
+  await expect(page.getByTestId('money')).toBeVisible({ timeout: 15_000 });
   // Hard difficulty: starting funds are 15,000.
   await expect(page.getByTestId('money')).toContainText('15,000');
 });
@@ -58,7 +65,7 @@ test('settings page toggles persist', async ({ page }) => {
   await page.getByTestId('setting-shadows').click();
   await page.getByTestId('setting-sound').click();
   await page.reload();
-  await expect(page.getByTestId('tick-counter')).toBeVisible({ timeout: 15_000 });
+  await expect(page.getByTestId('money')).toBeVisible({ timeout: 15_000 });
   await page.getByTestId('open-settings').click();
   await expect(page.getByTestId('setting-shadows')).not.toBeChecked();
   await expect(page.getByTestId('setting-sound')).not.toBeChecked();
@@ -73,14 +80,150 @@ test('boots with a running simulation', async ({ page }) => {
   await expect(page.getByTestId('energy-hydro')).toBeVisible();
 });
 
+test('the HUD detail drawer toggles without moving the rest of the HUD', async ({ page }) => {
+  // Open by default: the drawer holds the wide graph and the three sections.
+  await expect(page.getByTestId('hud-drawer')).toBeVisible();
+  await expect(page.getByTestId('energy-graph')).toBeVisible();
+  await expect(page.getByTestId('detail-energy-solar')).toBeVisible();
+  await expect(page.getByTestId('budget-panel')).toBeVisible();
+
+  const before = await rect(page, 'goals-panel');
+  const consoleBefore = await rect(page, 'hud-console');
+
+  await page.getByTestId('hud-details-toggle').click();
+  // Stays mounted so it can animate; hidden is the closed state.
+  await expect(page.getByTestId('hud-drawer')).toBeHidden();
+  // The condensed row and its sparkline stay, so the numbers and the shape
+  // of the day are never fully gone.
+  await expect(page.getByTestId('energy-hydro')).toBeVisible();
+  await expect(page.getByTestId('energy-sparkline')).toBeVisible();
+
+  // The drawer is an overlay: closing it must not resize or shift anything.
+  expect(await rect(page, 'goals-panel')).toEqual(before);
+  expect(await rect(page, 'hud-console')).toEqual(consoleBefore);
+
+  await page.reload();
+  await expect(page.getByTestId('money')).toBeVisible({ timeout: 15_000 });
+  await expect(page.getByTestId('hud-drawer')).toBeHidden();
+});
+
+test('HUD islands never overlap, down to a phone-sized window', async ({ page }) => {
+  const ids = [
+    'hud-vitals',
+    'hud-console',
+    'hud-controls',
+    'goals-panel',
+    'minimap',
+    'overlay-toggle',
+    'controls-hint',
+    'toolbar',
+    'select-tool',
+    'open-help',
+  ];
+  for (const size of [
+    { width: 1440, height: 900 },
+    { width: 1024, height: 768 },
+    { width: 800, height: 600 },
+    { width: 600, height: 900 },
+  ]) {
+    await page.setViewportSize(size);
+    await page.waitForTimeout(150);
+    const boxes: Array<{ id: string; box: NonNullable<Awaited<ReturnType<typeof rect>>> }> = [];
+    for (const id of ids) {
+      const box = await rect(page, id);
+      if (box) boxes.push({ id, box });
+    }
+    for (let i = 0; i < boxes.length; i++) {
+      for (let j = i + 1; j < boxes.length; j++) {
+        const a = boxes[i];
+        const b = boxes[j];
+        const overlaps =
+          a.box.x < b.box.x + b.box.width &&
+          b.box.x < a.box.x + a.box.width &&
+          a.box.y < b.box.y + b.box.height &&
+          b.box.y < a.box.y + a.box.height;
+        expect(overlaps, `${a.id} overlaps ${b.id} at ${size.width}x${size.height}`).toBe(false);
+      }
+    }
+    // Nothing may hang off the edges either.
+    for (const { id, box } of boxes) {
+      expect(box.x, `${id} off the left edge at ${size.width}px`).toBeGreaterThanOrEqual(-1);
+      expect(box.x + box.width, `${id} off the right edge at ${size.width}px`).toBeLessThanOrEqual(
+        size.width + 1,
+      );
+    }
+  }
+});
+
+test('build menu shows every tool in one row when the window is wide', async ({ page }) => {
+  await page.setViewportSize({ width: 1920, height: 1080 });
+  await expect(page.getByTestId('toolbar')).toHaveAttribute('data-layout', 'row');
+  await expect(page.getByTestId('build-category-energy')).toHaveCount(0);
+  await expect(page.getByTestId('tool-road')).toBeVisible();
+  await expect(page.getByTestId('tool-plant-wind')).toBeVisible();
+  await expect(page.getByTestId('tool-plant-park')).toBeVisible();
+
+  // Shrinking the window folds the row into tabs; growing unfolds it.
+  await page.setViewportSize({ width: 1024, height: 768 });
+  await expect(page.getByTestId('toolbar')).toHaveAttribute('data-layout', 'tabs');
+  await expect(page.getByTestId('tool-plant-wind')).toHaveCount(0);
+  await page.setViewportSize({ width: 1920, height: 1080 });
+  await expect(page.getByTestId('toolbar')).toHaveAttribute('data-layout', 'row');
+});
+
+test('build menu switches categories and explains its icons', async ({ page }) => {
+  // Narrow enough that the menu folds into tabs.
+  await page.setViewportSize({ width: 1024, height: 768 });
+  await expect(page.getByTestId('toolbar')).toHaveAttribute('data-layout', 'tabs');
+  // Basics is the category shown on load.
+  await expect(page.getByTestId('tool-road')).toBeVisible();
+  await expect(page.getByTestId('tool-plant-wind')).toHaveCount(0);
+
+  await page.getByTestId('build-category-energy').click();
+  const wind = page.getByTestId('tool-plant-wind');
+  await expect(wind).toBeVisible();
+  await expect(page.getByTestId('tool-road')).toHaveCount(0);
+
+  // Icon-only buttons carry their name, cost and description in a tooltip.
+  await wind.hover();
+  await expect(wind.locator('.build-tooltip')).toBeVisible();
+  await expect(wind.locator('.build-tooltip')).toContainText('1800');
+
+  // A hotkey for a tool in another category brings that category forward.
+  await page.keyboard.press('2'); // road
+  await expect(page.getByTestId('tool-road')).toHaveClass(/active/);
+});
+
 test('pause stops the simulation, play resumes it', async ({ page }) => {
   await page.getByTestId('speed-0').click();
+  // The paused state itself must reach the HUD: no tick reports it.
+  await expect(page.getByTestId('speed-0')).toHaveClass(/active/);
+  await expect(page.getByTestId('speed-1')).not.toHaveClass(/active/);
   await page.waitForTimeout(400);
   const paused = await readTick(page);
   await page.waitForTimeout(800);
   expect(await readTick(page)).toBe(paused);
   await page.getByTestId('speed-3').click();
   await expect.poll(async () => readTick(page), { timeout: 5_000 }).toBeGreaterThan(paused);
+  await expect(page.getByTestId('speed-3')).toHaveClass(/active/);
+});
+
+test('Escape deselects the inspected tile and closes the inspector (needs WebGL)', async ({
+  page,
+}) => {
+  test.skip(!(await has3dView(page)), 'WebGL not available in this environment');
+  await page.getByTestId('hud-details-toggle').click();
+  await expect(page.getByTestId('hud-drawer')).toBeHidden();
+
+  await page.getByTestId('tool-select').click();
+  const canvas = page.locator('.game-view canvas');
+  const box = await canvas.boundingBox();
+  if (!box) throw new Error('canvas has no bounding box');
+  await page.mouse.click(box.x + box.width / 2, box.y + box.height / 2);
+  await expect(page.getByTestId('tile-inspector')).toBeVisible();
+
+  await page.keyboard.press('Escape');
+  await expect(page.getByTestId('tile-inspector')).toHaveCount(0);
 });
 
 test('tax slider and smart charging are interactive', async ({ page }) => {
@@ -109,7 +252,7 @@ test('game state persists across a reload', async ({ page }) => {
   await page.keyboard.press('Control+s'); // quick-save
   await page.waitForTimeout(500);
   await page.reload();
-  await expect(page.getByTestId('tick-counter')).toBeVisible({ timeout: 15_000 });
+  await expect(page.getByTestId('money')).toBeVisible({ timeout: 15_000 });
   expect(await readTick(page)).toBeGreaterThanOrEqual(beforeSave);
 });
 
@@ -120,7 +263,7 @@ test('autosave persists without the quick-save key', async ({ page }) => {
   const beforeReload = await readTick(page);
   expect(beforeReload).toBeGreaterThan(50);
   await page.reload();
-  await expect(page.getByTestId('tick-counter')).toBeVisible({ timeout: 15_000 });
+  await expect(page.getByTestId('money')).toBeVisible({ timeout: 15_000 });
   // The reloaded city continues from a recent snapshot, not from zero.
   expect(await readTick(page)).toBeGreaterThan(beforeReload / 2);
 });
@@ -160,15 +303,24 @@ test('building a road costs money (needs WebGL)', async ({ page }) => {
   };
   const before = await moneyText();
 
+  // Collapse the detail drawer: it overlays the middle of the map, and how
+  // far down it reaches depends on its content.
+  await page.getByTestId('hud-details-toggle').click();
+  await expect(page.getByTestId('hud-drawer')).toBeHidden();
+
   await page.getByTestId('tool-road').click();
   const canvas = page.locator('.game-view canvas');
   const box = await canvas.boundingBox();
   if (!box) throw new Error('canvas has no bounding box');
+  // Between the collapsed console and the build bar, clear of both rails.
+  const consoleBox = await rect(page, 'hud-console');
+  const buildBox = await rect(page, 'toolbar');
+  if (!consoleBox || !buildBox) throw new Error('HUD not ready');
   const centerX = box.x + box.width / 2;
-  const centerY = box.y + box.height / 2;
-  await page.mouse.move(centerX - 60, centerY);
+  const dragY = (consoleBox.y + consoleBox.height + buildBox.y) / 2;
+  await page.mouse.move(centerX - 60, dragY);
   await page.mouse.down();
-  await page.mouse.move(centerX + 60, centerY, { steps: 8 });
+  await page.mouse.move(centerX + 60, dragY, { steps: 8 });
   await page.mouse.up();
 
   await expect.poll(moneyText, { timeout: 5_000 }).toBeLessThan(before);
@@ -183,15 +335,22 @@ test('drawing a power line costs money (needs WebGL)', async ({ page }) => {
   };
   const before = await moneyText();
 
+  // Same as the road test: the open drawer overlays the middle of the map.
+  await page.getByTestId('hud-details-toggle').click();
+  await expect(page.getByTestId('hud-drawer')).toBeHidden();
+
   await page.getByTestId('tool-power-line').click();
   const canvas = page.locator('.game-view canvas');
   const box = await canvas.boundingBox();
   if (!box) throw new Error('canvas has no bounding box');
+  const consoleBox = await rect(page, 'hud-console');
+  const buildBox = await rect(page, 'toolbar');
+  if (!consoleBox || !buildBox) throw new Error('HUD not ready');
   const centerX = box.x + box.width / 2;
-  const centerY = box.y + box.height / 2;
-  await page.mouse.move(centerX - 60, centerY + 40);
+  const dragY = (consoleBox.y + consoleBox.height + buildBox.y) / 2;
+  await page.mouse.move(centerX - 60, dragY);
   await page.mouse.down();
-  await page.mouse.move(centerX + 60, centerY + 40, { steps: 8 });
+  await page.mouse.move(centerX + 60, dragY, { steps: 8 });
   await page.mouse.up();
 
   await expect.poll(moneyText, { timeout: 5_000 }).toBeLessThan(before);

@@ -7,6 +7,21 @@ const pointerNdc = new THREE.Vector2();
 const hitPoint = new THREE.Vector3();
 
 /**
+ * Where a normalised device coordinate (-1..1 on both axes) hits the
+ * ground plane, in world/tile units; null when the ray misses it.
+ */
+export function groundPointAtNdc(
+  ndcX: number,
+  ndcY: number,
+  camera: THREE.Camera,
+): { x: number; z: number } | null {
+  pointerNdc.set(ndcX, ndcY);
+  raycaster.setFromCamera(pointerNdc, camera);
+  if (!raycaster.ray.intersectPlane(groundPlane, hitPoint)) return null;
+  return { x: hitPoint.x, z: hitPoint.z };
+}
+
+/**
  * Convert a pointer event position to the tile index under the cursor,
  * or null if the pointer is outside the grid.
  */

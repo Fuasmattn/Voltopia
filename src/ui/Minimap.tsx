@@ -19,28 +19,44 @@ export function Minimap({
 
   useEffect(() => {
     let lastVersion = -1;
-    let lastTargetKey = '';
+    let lastViewKey = '';
     const timer = setInterval(() => {
       const renderer = rendererRef.current;
       const canvas = canvasRef.current;
       if (!renderer || !canvas) return;
-      const target = renderer.getCameraTarget();
-      const targetKey = `${target.x.toFixed(1)},${target.z.toFixed(1)}`;
-      if (renderer.minimap.version === lastVersion && targetKey === lastTargetKey) {
+      // The viewfinder is the ground the camera actually shows, so it
+      // shrinks and grows with the zoom and turns with the camera.
+      const footprint = renderer.getViewFootprint();
+      const viewKey = footprint.map((p) => `${p.x.toFixed(1)},${p.z.toFixed(1)}`).join(';');
+      if (renderer.minimap.version === lastVersion && viewKey === lastViewKey) {
         return;
       }
       lastVersion = renderer.minimap.version;
-      lastTargetKey = targetKey;
+      lastViewKey = viewKey;
 
       const ctx = canvas.getContext('2d');
       if (!ctx) return;
       ctx.imageSmoothingEnabled = false;
       ctx.drawImage(renderer.minimap.canvas, 0, 0, CANVAS_SIZE, CANVAS_SIZE);
-      // Camera target marker
-      const scale = CANVAS_SIZE / gridSize;
-      ctx.strokeStyle = 'rgba(255, 209, 102, 0.9)';
-      ctx.lineWidth = 1.5;
-      ctx.strokeRect(target.x * scale - 8, target.z * scale - 8, 16, 16);
+      // Viewfinder: the visible patch of ground, drawn as the polygon it
+      // is (a rotated rectangle in isometric view), clipped to the map.
+      if (footprint.length === 4) {
+        const scale = CANVAS_SIZE / gridSize;
+        ctx.save();
+        ctx.beginPath();
+        ctx.rect(0, 0, CANVAS_SIZE, CANVAS_SIZE);
+        ctx.clip();
+        ctx.beginPath();
+        footprint.forEach((p, i) => {
+          if (i === 0) ctx.moveTo(p.x * scale, p.z * scale);
+          else ctx.lineTo(p.x * scale, p.z * scale);
+        });
+        ctx.closePath();
+        ctx.strokeStyle = 'rgba(255, 209, 102, 0.9)';
+        ctx.lineWidth = 1.5;
+        ctx.stroke();
+        ctx.restore();
+      }
     }, REDRAW_MS);
     return () => clearInterval(timer);
   }, [rendererRef, gridSize]);

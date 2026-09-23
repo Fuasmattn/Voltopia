@@ -1,8 +1,9 @@
 import { TICKS_PER_DAY } from '../shared/constants.ts';
-import type { GlobalStats } from '../shared/types.ts';
+import type { EnergyHistoryPoint, GlobalStats } from '../shared/types.ts';
 import { economyStep } from './economy.ts';
 import { energyStep } from './energy.ts';
 import { goalsStep, goalStates } from './goals.ts';
+import { inspectTile } from './inspect.ts';
 import { computeDemand, decayStep, growthStep } from './growth.ts';
 import { happinessStep } from './happiness.ts';
 import { countPowerLineTiles } from './powerLines.ts';
@@ -156,6 +157,7 @@ export function buildStats(state: SimState): GlobalStats {
       gridImport: e.gridImport,
       gridExport: e.gridExport,
       history: state.energyHistory.slice(),
+      pending: pendingHistoryPoint(state),
     },
     taxRate: state.taxRate,
     speed: state.speed,
@@ -163,5 +165,48 @@ export function buildStats(state: SimState): GlobalStats {
     insulation: state.insulation,
     goals: goalStates(state),
     counts: countTiles(state),
+    budget: buildBudget(state),
+    inspected: state.inspectedTile >= 0 ? inspectTile(state, state.inspectedTile) : null,
+  };
+}
+
+/**
+ * Average of the history sample under construction. Right after a sample
+ * was flushed nothing has accumulated yet, so fall back to that sample —
+ * the value the graph's leading edge is sitting on anyway.
+ */
+export function pendingHistoryPoint(state: SimState): EnergyHistoryPoint {
+  const accum = state.energyHistoryAccum;
+  if (accum.ticks === 0) {
+    const last = state.energyHistory[state.energyHistory.length - 1];
+    return last ? { ...last } : { generation: 0, consumption: 0, stateOfCharge: 0 };
+  }
+  return {
+    generation: accum.generation / accum.ticks,
+    consumption: accum.consumption / accum.ticks,
+    stateOfCharge: accum.soc / accum.ticks,
+  };
+}
+
+/** Last tick's budget, flattened for the budget panel. */
+function buildBudget(state: SimState): GlobalStats['budget'] {
+  const b = state.lastEconomy;
+  return {
+    taxIncome: b.taxIncome,
+    gridExportRevenue: b.gridExportRevenue,
+    gridUpkeep: b.gridUpkeep,
+    plantUpkeep: b.plantUpkeep,
+    plantUpkeepByType: { ...b.plantUpkeepByType },
+    plantCountByType: { ...b.plantCountByType },
+    roadTiles: b.roadTiles,
+    biogasFuelCost: b.biogasFuelCost,
+    gridImportCost: b.gridImportCost,
+    net:
+      b.taxIncome +
+      b.gridExportRevenue -
+      b.gridUpkeep -
+      b.plantUpkeep -
+      b.biogasFuelCost -
+      b.gridImportCost,
   };
 }

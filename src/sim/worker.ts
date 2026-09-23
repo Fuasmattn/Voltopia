@@ -42,7 +42,14 @@ self.onmessage = (message: MessageEvent<SimCommand>) => {
   if (!engine) return;
   const events = engine.applyCommand(command);
   for (const event of events) post(event);
-  const flushed = engine.flush();
+  // Selecting a tile must refresh the inspector even while paused, and a
+  // speed change must reach the HUD even when the new speed is "paused"
+  // (no tick will ever report it otherwise, so the pause button would
+  // never light up).
+  const flushed =
+    command.type === 'inspectTile' || command.type === 'setSpeed'
+      ? engine.snapshot()
+      : engine.flush();
   if (flushed) post(flushed);
   if (command.type === 'setSpeed') reschedule();
 };

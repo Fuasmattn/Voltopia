@@ -163,6 +163,15 @@ export function coolingConsumption(
   return base * coolingDegree(temperature) * weight * (insulation ? insulationFactor : 1);
 }
 
+/**
+ * Grid connection of a single tile, computed on demand for the inspector
+ * (the tick loop reads the same energized layer in bulk).
+ */
+export function isTileConnected(state: SimState, index: number): boolean {
+  recomputeGrid(state);
+  return state.layers.energized[index] === 1;
+}
+
 export interface EnergyTickInput {
   /** Additional charging consumption (EVs), served after buildings. */
   chargingDemand: number;
@@ -316,14 +325,29 @@ export function energyStep(state: SimState, input: EnergyTickInput): void {
     gridExport,
   };
 
+  // Average across the sample window instead of snapshotting the last
+  // tick: a single tick can catch a cloud passing or a load spike, which
+  // made the day graph noticeably jagged. Averaging is the same running-
+  // sums-then-flush pattern as `recordLifetime` in tick.ts.
+  const totalCapacity = storageCapacity + pumpedCapacity;
+  const soc =
+    totalCapacity > 0 ? (state.storedEnergy + state.pumpedStorageEnergy) / totalCapacity : 0;
+  const accum = state.energyHistoryAccum;
+  accum.generation += generation + biogas;
+  accum.consumption += totalDemand;
+  accum.soc += soc;
+  accum.ticks++;
+
   if (state.tick % TICKS_PER_HISTORY_SAMPLE === 0) {
-    const totalCapacity = storageCapacity + pumpedCapacity;
     pushEnergyHistory(state, {
-      generation: generation + biogas,
-      consumption: totalDemand,
-      stateOfCharge:
-        totalCapacity > 0 ? (state.storedEnergy + state.pumpedStorageEnergy) / totalCapacity : 0,
+      generation: accum.generation / accum.ticks,
+      consumption: accum.consumption / accum.ticks,
+      stateOfCharge: accum.soc / accum.ticks,
     });
+    accum.generation = 0;
+    accum.consumption = 0;
+    accum.soc = 0;
+    accum.ticks = 0;
   }
 }
 

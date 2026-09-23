@@ -1,9 +1,12 @@
 /** Persisted app settings (localStorage; independent of save games). */
+export type HudTheme = 'dark' | 'light';
+
 export interface AppSettings {
   soundEnabled: boolean;
   soundVolume: number;
   shadows: boolean;
   reducedMotion: boolean;
+  theme: HudTheme;
 }
 
 export const DEFAULT_SETTINGS: AppSettings = {
@@ -11,6 +14,7 @@ export const DEFAULT_SETTINGS: AppSettings = {
   soundVolume: 0.4,
   shadows: true,
   reducedMotion: false,
+  theme: 'dark',
 };
 
 const SETTINGS_STORAGE_KEY = 'voltopia.settings';
@@ -28,6 +32,7 @@ export function loadSettings(): AppSettings {
           : DEFAULT_SETTINGS.soundVolume,
       shadows: parsed.shadows ?? DEFAULT_SETTINGS.shadows,
       reducedMotion: parsed.reducedMotion ?? DEFAULT_SETTINGS.reducedMotion,
+      theme: parsed.theme === 'light' ? 'light' : 'dark',
     };
   } catch {
     return { ...DEFAULT_SETTINGS };

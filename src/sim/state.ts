@@ -17,6 +17,7 @@ import type {
   Weather,
 } from '../shared/types.ts';
 import { PlantType, SupplyStatus, Terrain, TileType, Zone } from '../shared/types.ts';
+import { emptyPlantMap, type EconomyBreakdown } from './economy.ts';
 import { grantLegacyNetwork } from './powerGrid.ts';
 import { seasonState } from './seasons.ts';
 
@@ -121,6 +122,8 @@ export interface SimState {
   vehicles: Vehicle[];
   undoStack: UndoEntry[];
   energyHistory: EnergyHistoryPoint[];
+  /** Running sums since the last history sample (not persisted). */
+  energyHistoryAccum: { generation: number; consumption: number; soc: number; ticks: number };
   /** Tile indices changed since the last diff collection. */
   dirty: Set<number>;
   /**
@@ -159,6 +162,10 @@ export interface SimState {
       ticks: number;
     };
   };
+  /** Budget breakdown of the last tick (for the budget panel). */
+  lastEconomy: EconomyBreakdown;
+  /** Tile selected in the inspector, -1 when none. */
+  inspectedTile: number;
   /** Set by the energy step; consumed by growth/happiness. */
   lastEnergy: {
     solar: number;
@@ -227,6 +234,7 @@ export function createSimState(
     vehicles: [],
     undoStack: [],
     energyHistory: [],
+    energyHistoryAccum: { generation: 0, consumption: 0, soc: 0, ticks: 0 },
     dirty: new Set(),
     statsDirty: false,
     lastDemand: { residential: 0, commercial: 0, retail: 0 },
@@ -238,6 +246,18 @@ export function createSimState(
       samples: [],
       daySums: { generation: 0, consumption: 0, heating: 0, cooling: 0, temperature: 0, ticks: 0 },
     },
+    lastEconomy: {
+      taxIncome: 0,
+      gridUpkeep: 0,
+      plantUpkeep: 0,
+      plantUpkeepByType: emptyPlantMap(),
+      plantCountByType: emptyPlantMap(),
+      roadTiles: 0,
+      biogasFuelCost: 0,
+      gridImportCost: 0,
+      gridExportRevenue: 0,
+    },
+    inspectedTile: -1,
     lastEnergy: {
       solar: 0,
       wind: 0,
