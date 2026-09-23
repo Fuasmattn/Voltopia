@@ -2,6 +2,7 @@ import { BALANCE } from '../shared/constants.ts';
 import type { SimCommand, SimEvent } from '../shared/messages.ts';
 import type { VehicleState } from '../shared/types.ts';
 import { buildRoads, bulldozeTiles, undoLastAction, type BuildResult } from './roads.ts';
+import { buyInsulation } from './economy.ts';
 import { placePlant } from './energy.ts';
 import { buildPowerLines } from './powerLines.ts';
 import { drivingVehicles } from './vehicles.ts';
@@ -72,6 +73,8 @@ export class SimEngine {
         return this.toEvents(paintZones(state, command.tiles, command.zone));
       case 'placePlant':
         return this.toEvents(placePlant(state, command.tile, command.plant));
+      case 'buyInsulation':
+        return this.toEvents(buyInsulation(state));
     }
   }
 

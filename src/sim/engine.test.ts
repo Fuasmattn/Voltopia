@@ -173,6 +173,27 @@ describe('SimEngine basics', () => {
     expect(next.stats.season.season).toBe('summer');
     expect(next.stats.season.dayOfSeason).toBe(1);
   });
+
+  it('sells building insulation once', () => {
+    const engine = makeEngine();
+    const before = engine.state.money;
+    expect(engine.applyCommand({ type: 'buyInsulation' })).toEqual([]);
+    expect(engine.state.insulation).toBe(true);
+    expect(engine.state.money).toBe(before - BALANCE.costs.insulation);
+    expect(engine.applyCommand({ type: 'buyInsulation' })).toEqual([
+      { type: 'rejected', reason: 'alreadyInsulated' },
+    ]);
+    expect(engine.state.money).toBe(before - BALANCE.costs.insulation);
+  });
+
+  it('rejects insulation when the city cannot afford it', () => {
+    const engine = makeEngine();
+    engine.state.money = BALANCE.costs.insulation - 1;
+    expect(engine.applyCommand({ type: 'buyInsulation' })).toEqual([
+      { type: 'rejected', reason: 'notEnoughMoney' },
+    ]);
+    expect(engine.state.insulation).toBe(false);
+  });
 });
 
 describe('time helpers', () => {

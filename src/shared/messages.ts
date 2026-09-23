@@ -28,6 +28,7 @@ export type SimCommand =
   | { type: 'undo' }
   | { type: 'setTaxRate'; rate: number }
   | { type: 'setSmartCharging'; enabled: boolean }
+  | { type: 'buyInsulation' }
   | { type: 'requestSave' }
   | { type: 'requestLifetime' };
 

@@ -1,6 +1,7 @@
 import { BALANCE } from '../shared/constants.ts';
 import { PlantType, TileType } from '../shared/types.ts';
 import { countPowerLineTiles } from './powerLines.ts';
+import type { BuildResult } from './roads.ts';
 import type { SimState } from './state.ts';
 
 export interface EconomyBreakdown {
@@ -50,4 +51,14 @@ export function economyStep(state: SimState, population: number, jobs: number): 
     gridImportCost,
     gridExportRevenue,
   };
+}
+
+/** One-off, city-wide building insulation: halves the heating load. Not undoable. */
+export function buyInsulation(state: SimState): BuildResult {
+  if (state.insulation) return { rejected: 'alreadyInsulated' };
+  const cost = BALANCE.costs.insulation;
+  if (cost > state.money) return { rejected: 'notEnoughMoney' };
+  state.money -= cost;
+  state.insulation = true;
+  return {};
 }
