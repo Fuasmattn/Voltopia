@@ -196,12 +196,16 @@ test('build menu switches categories and explains its icons', async ({ page }) =
 
 test('pause stops the simulation, play resumes it', async ({ page }) => {
   await page.getByTestId('speed-0').click();
+  // The paused state itself must reach the HUD: no tick reports it.
+  await expect(page.getByTestId('speed-0')).toHaveClass(/active/);
+  await expect(page.getByTestId('speed-1')).not.toHaveClass(/active/);
   await page.waitForTimeout(400);
   const paused = await readTick(page);
   await page.waitForTimeout(800);
   expect(await readTick(page)).toBe(paused);
   await page.getByTestId('speed-3').click();
   await expect.poll(async () => readTick(page), { timeout: 5_000 }).toBeGreaterThan(paused);
+  await expect(page.getByTestId('speed-3')).toHaveClass(/active/);
 });
 
 test('Escape deselects the inspected tile and closes the inspector (needs WebGL)', async ({
