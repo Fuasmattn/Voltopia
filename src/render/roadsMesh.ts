@@ -172,7 +172,7 @@ export class RoadsMesh implements DiffLayer {
       if ((x + y) % 2 !== 0) continue;
       const px = x + 0.88;
       const pz = y + 0.88;
-      const lift = this.elevation.centerY(index);
+      const lift = this.elevation.maxCornerY(index);
       this.matrix.identity();
       this.matrix.setPosition(px, 0 + lift, pz);
       this.lampPoles.setMatrixAt(count, this.matrix);
@@ -201,7 +201,7 @@ export class RoadsMesh implements DiffLayer {
       if (mask < 0 || this.terrain[index] !== Terrain.River) continue;
       const x = (index % this.gridSize) + 0.5;
       const z = Math.floor(index / this.gridSize) + 0.5;
-      const lift = this.elevation.centerY(index);
+      const lift = this.elevation.maxCornerY(index);
       this.matrix.makeScale(DECK_SIZE, DECK_HEIGHT, DECK_SIZE);
       this.matrix.setPosition(x, DECK_HEIGHT / 2 + lift, z);
       this.decks.setMatrixAt(deckCount++, this.matrix);
@@ -236,7 +236,7 @@ export class RoadsMesh implements DiffLayer {
     sizeZ: number,
   ): void {
     this.matrix.makeScale(sizeX, ROAD_HEIGHT, sizeZ);
-    this.matrix.setPosition(x, ROAD_HEIGHT / 2 + this.elevation.centerY(index), z);
+    this.matrix.setPosition(x, ROAD_HEIGHT / 2 + this.elevation.maxCornerY(index), z);
     this.mesh.setMatrixAt(slot, this.matrix);
   }
 }

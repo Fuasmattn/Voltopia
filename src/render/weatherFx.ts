@@ -2,6 +2,7 @@ import * as THREE from 'three';
 import type { TileDiff } from '../shared/types.ts';
 import { BALANCE } from '../shared/constants.ts';
 import type { DiffLayer, RenderEnvironment } from './renderer.ts';
+import type { ElevationField } from './elevationField.ts';
 
 const MAX_CLOUDS = 22;
 const CLOUD_ALTITUDE = 9;
@@ -59,7 +60,11 @@ export class WeatherFx implements DiffLayer {
   private readonly rainPhase: Float32Array;
   private readonly matrix = new THREE.Matrix4();
 
-  constructor(scene: THREE.Scene, gridSize: number) {
+  constructor(
+    scene: THREE.Scene,
+    gridSize: number,
+    private readonly elevation: ElevationField,
+  ) {
     this.gridSize = gridSize;
     const texture = createPuffTexture();
 
@@ -145,7 +150,11 @@ export class WeatherFx implements DiffLayer {
       this.matrix.makeScale(size, 1, size * (0.7 + hash01(i, 5) * 0.5));
       this.matrix.setPosition(worldX, CLOUD_ALTITUDE + hash01(i, 6) * 2, z);
       this.puffs.setMatrixAt(i, this.matrix);
-      this.matrix.setPosition(worldX + 2, 0.05, z + 2);
+      // Shadows hug the terrain: they are larger than a tile, so the
+      // ground height at their centre is close enough.
+      const shadowX = worldX + 2;
+      const shadowZ = z + 2;
+      this.matrix.setPosition(shadowX, 0.05 + this.elevation.surfaceY(shadowX, shadowZ), shadowZ);
       this.shadows.setMatrixAt(i, this.matrix);
     }
     this.puffs.count = count;

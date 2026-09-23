@@ -205,6 +205,8 @@ export const BALANCE = {
     hydroDropBonus: 0.2,
     /** Pumped-storage capacity/power bonus per level of head above the lake. */
     headBonusPerLevel: 0.12,
+    /** Chebyshev radius scanned for the pumped-storage head (nearby hilltop). */
+    headRadius: 2,
   },
 
   growth: {

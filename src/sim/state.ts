@@ -399,9 +399,25 @@ export function riverDropAt(state: SimState, index: number): number {
   return elevation[index] - lowest;
 }
 
-/** Head of a pumped-storage site: its height above the lake surface. */
+/** Head of a pumped-storage site: the highest ground within
+ *  headRadius above the lake surface (the upper reservoir sits on
+ *  the neighbouring hill). */
 export function pumpedHeadAt(state: SimState, index: number): number {
-  return Math.max(0, state.layers.elevation[index] - state.lakeLevel);
+  const { elevation } = state.layers;
+  const size = state.size;
+  const x = index % size;
+  const y = Math.floor(index / size);
+  const r = BALANCE.terrain.headRadius;
+  let highest = elevation[index];
+  for (let dy = -r; dy <= r; dy++) {
+    for (let dx = -r; dx <= r; dx++) {
+      const nx = x + dx;
+      const ny = y + dy;
+      if (nx < 0 || ny < 0 || nx >= size || ny >= size) continue;
+      highest = Math.max(highest, elevation[ny * size + nx]);
+    }
+  }
+  return Math.max(0, highest - state.lakeLevel);
 }
 
 /**

@@ -189,7 +189,7 @@ export class GameRenderer {
     this.addDiffLayer(this.overlays);
     this.minimap = new MinimapLayer(gridSize);
     this.addDiffLayer(this.minimap);
-    this.weatherFx = new WeatherFx(scene, gridSize);
+    this.weatherFx = new WeatherFx(scene, gridSize, this.elevation);
     this.addDiffLayer(this.weatherFx);
 
     const radiusGeometry = new THREE.RingGeometry(0.95, 1, 48).rotateX(-Math.PI / 2);
@@ -396,7 +396,7 @@ export class GameRenderer {
       const index = indices[i];
       matrix.setPosition(
         (index % this.gridSize) + 0.5,
-        0.06 + this.elevation.centerY(index),
+        0.06 + this.elevation.maxCornerY(index),
         Math.floor(index / this.gridSize) + 0.5,
       );
       this.previewMesh.setMatrixAt(i, matrix);
@@ -421,9 +421,9 @@ export class GameRenderer {
     this.selectionMarker.visible = true;
     const x = (index % this.gridSize) + 0.5;
     const z = Math.floor(index / this.gridSize) + 0.5;
-    const centerY = this.elevation.centerY(index);
-    this.selectionMarker.position.set(x, 0.02 + centerY, z);
-    this.selectionRing.position.set(x, 0.04 + centerY, z);
+    const decalY = this.elevation.maxCornerY(index);
+    this.selectionMarker.position.set(x, 0.02 + decalY, z);
+    this.selectionRing.position.set(x, 0.04 + decalY, z);
     this.updateSelectionRing();
     this.selectionOutline.scale.y = Math.max(
       SELECTION_MIN_HEIGHT,
@@ -657,11 +657,11 @@ export class GameRenderer {
       return;
     }
     this.hoverMarker.visible = true;
-    const centerY = this.elevation.centerY(tile.index);
-    this.hoverMarker.position.set(tile.x + 0.5, 0.03 + centerY, tile.y + 0.5);
+    const decalY = this.elevation.maxCornerY(tile.index);
+    this.hoverMarker.position.set(tile.x + 0.5, 0.03 + decalY, tile.y + 0.5);
     if (this.radiusTiles > 0) {
       this.radiusRing.visible = true;
-      this.radiusRing.position.set(tile.x + 0.5, 0.05 + centerY, tile.y + 0.5);
+      this.radiusRing.position.set(tile.x + 0.5, 0.05 + decalY, tile.y + 0.5);
       this.radiusRing.scale.setScalar(this.radiusTiles);
     }
   }

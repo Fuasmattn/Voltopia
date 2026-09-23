@@ -81,6 +81,20 @@ export class ElevationField implements DiffLayer {
     return count > 0 ? (sum / count) * LEVEL_HEIGHT : 0;
   }
 
+  /** Highest ground corner of a tile — flat decals sit here so the
+   *  corner-averaged ground can never cover them. */
+  maxCornerY(index: number): number {
+    const size = this.size;
+    const x = index % size;
+    const z = Math.floor(index / size);
+    return Math.max(
+      this.cornerY(x, z),
+      this.cornerY(x + 1, z),
+      this.cornerY(x, z + 1),
+      this.cornerY(x + 1, z + 1),
+    );
+  }
+
   /** Smooth ground height at a continuous tile-space position. */
   surfaceY(x: number, z: number): number {
     const size = this.size;

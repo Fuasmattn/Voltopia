@@ -334,6 +334,7 @@ const en = {
   'inspect.blocker.noFireCoverage': 'No fire station in reach for the next density',
   'inspector.elevation': 'Elevation',
   'inspector.steepSlope': 'Steep slope — cannot be built on',
+  'inspector.terrain': 'Terrain',
   'inspector.terrainBonus': 'Terrain bonus',
 } as const;
 
@@ -674,6 +675,7 @@ const de: Record<TranslationKey, string> = {
   'inspect.blocker.noFireCoverage': 'Keine Feuerwehr in Reichweite für die nächste Dichte',
   'inspector.elevation': 'Höhenstufe',
   'inspector.steepSlope': 'Steilhang — nicht bebaubar',
+  'inspector.terrain': 'Gelände',
   'inspector.terrainBonus': 'Geländebonus',
 };
 

@@ -105,8 +105,9 @@ multiplies the bridge price. Upkeep is unaffected.
 ### Wind elevation bonus
 
 Wind turbine output scales with the turbine tile's elevation:
-`1 + BALANCE.terrain.windBonusPerLevel * level` (about +6 % per level,
-so up to roughly +42 % at level 7). The energy census sums this factor
+`1 + BALANCE.terrain.windBonusPerLevel * level` (+4.5 % per level,
+calibrated by the balance probe; the highest buildable sites in practice
+reach roughly +27 %). The energy census sums this factor
 over wind turbine tiles instead of counting them, and wind generation
 uses the summed effective capacity. Rooftop PV and solar farms are
 unaffected.
@@ -119,7 +120,10 @@ unaffected.
   downstream river neighbour (0 on flat water — today's behaviour).
 - **Pumped storage.** Each plant's capacity and power limit gain
   `1 + BALANCE.terrain.headBonusPerLevel * head`, where `head` is the
-  plant tile's elevation minus the lake surface level, clamped to ≥ 0.
+  highest ground within `BALANCE.terrain.headRadius` (2 tiles, Chebyshev)
+  of the plant tile minus the lake surface level, clamped to ≥ 0 — the
+  upper reservoir sits on the neighbouring hill, not on the shore tile
+  itself (which the slope-1 build rule keeps close to the lake).
   Efficiency is unchanged. The census aggregates effective capacity and
   power the same way it will for wind.
 

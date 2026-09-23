@@ -141,7 +141,7 @@ export class OverlaysMesh implements DiffLayer {
         if (colorHex === null) continue;
         this.matrix.setPosition(
           (index % this.gridSize) + 0.5,
-          0.07 + this.elevation.centerY(index),
+          0.07 + this.elevation.maxCornerY(index),
           Math.floor(index / this.gridSize) + 0.5,
         );
         this.mesh.setMatrixAt(slot, this.matrix);

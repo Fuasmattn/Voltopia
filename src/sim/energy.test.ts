@@ -18,6 +18,7 @@ import { pendingHistoryPoint } from './tick.ts';
 import {
   createSimState,
   PlantType,
+  pumpedHeadAt,
   SupplyStatus,
   Terrain,
   TileType,
@@ -623,14 +624,17 @@ describe('terrain energy bonuses', () => {
     );
   });
 
-  it('pumped storage capacity grows with head above the lake', () => {
+  it('pumped storage capacity grows with the nearby hilltop above the lake', () => {
     const state = makeState();
     const shore = at(3, 3);
     state.layers.terrain[at(3, 4)] = Terrain.Lake;
-    state.layers.elevation[shore] = 3;
-    state.lakeLevel = 1; // head = 2
+    // The shore tile itself is barely above the lake; the upper reservoir
+    // sits on the hill two tiles away (within headRadius = 2).
+    state.layers.elevation[shore] = 1;
+    state.layers.elevation[at(5, 3)] = 5;
+    state.lakeLevel = 1; // head = 5 - 1 = 4, from the hilltop
     placeDirect(state, shore, PlantType.PumpedStorage);
-    const factor = 1 + BALANCE.terrain.headBonusPerLevel * 2;
+    const factor = 1 + BALANCE.terrain.headBonusPerLevel * 4;
     expect(totalPumpedStorageCapacity(state)).toBeCloseTo(
       BALANCE.energy.pumpedStorageCapacity * factor,
     );
@@ -640,6 +644,29 @@ describe('terrain energy bonuses', () => {
     expect(state.pumpedStorageEnergy).toBeLessThanOrEqual(
       BALANCE.energy.pumpedStorageCapacity * factor,
     );
+  });
+
+  it('ignores hills beyond the head radius', () => {
+    const state = makeState();
+    const shore = at(3, 3);
+    state.layers.terrain[at(3, 4)] = Terrain.Lake;
+    state.layers.elevation[shore] = 2;
+    // Three tiles away: outside headRadius = 2, so it must not count.
+    state.layers.elevation[at(6, 3)] = 7;
+    state.lakeLevel = 1; // head = 2 - 1 = 1, from the shore tile itself
+    placeDirect(state, shore, PlantType.PumpedStorage);
+    expect(totalPumpedStorageCapacity(state)).toBeCloseTo(
+      BALANCE.energy.pumpedStorageCapacity * (1 + BALANCE.terrain.headBonusPerLevel * 1),
+    );
+  });
+
+  it('gives no head bonus on a flat map', () => {
+    const state = makeState();
+    const shore = at(3, 3);
+    state.layers.terrain[at(3, 4)] = Terrain.Lake;
+    placeDirect(state, shore, PlantType.PumpedStorage);
+    expect(pumpedHeadAt(state, shore)).toBe(0);
+    expect(totalPumpedStorageCapacity(state)).toBeCloseTo(BALANCE.energy.pumpedStorageCapacity);
   });
 });
 

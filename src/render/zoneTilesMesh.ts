@@ -63,7 +63,7 @@ export class ZoneTilesMesh implements DiffLayer {
     for (const [index, zone] of this.zones) {
       this.matrix.setPosition(
         (index % this.gridSize) + 0.5,
-        0.04 + this.elevation.centerY(index),
+        0.04 + this.elevation.maxCornerY(index),
         Math.floor(index / this.gridSize) + 0.5,
       );
       this.mesh.setMatrixAt(slot, this.matrix);

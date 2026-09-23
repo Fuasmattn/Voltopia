@@ -77,7 +77,7 @@ export class WaterMesh implements DiffLayer {
       if (terrain === Terrain.Land) continue;
       const x = (index % this.gridSize) + 0.5;
       const z = Math.floor(index / this.gridSize) + 0.5;
-      const lift = this.elevation.centerY(index);
+      const lift = this.elevation.maxCornerY(index);
       this.matrix.identity();
       this.matrix.setPosition(x, WATER_HEIGHT + lift, z);
       this.mesh.setMatrixAt(count, this.matrix);
