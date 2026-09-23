@@ -15,6 +15,7 @@ export const GOAL_IDS = [
   'hydroPower',
   'winterResilience',
   'summerResilience',
+  'safeCity',
 ] as const;
 export type GoalId = (typeof GOAL_IDS)[number];
 
@@ -102,6 +103,15 @@ export function goalsStep(state: SimState): void {
     progress.summerTicks >= BALANCE.seasons.daysPerSeason * TICKS_PER_DAY
   ) {
     achieved.add('summerResilience');
+  }
+  const { minPopulation, goalCoverage } = BALANCE.services;
+  if (
+    !achieved.has('safeCity') &&
+    population >= minPopulation &&
+    state.lastServices.fire >= goalCoverage &&
+    state.lastServices.police >= goalCoverage
+  ) {
+    achieved.add('safeCity');
   }
 }
 

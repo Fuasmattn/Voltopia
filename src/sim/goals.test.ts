@@ -167,4 +167,26 @@ describe('goals', () => {
     goalsStep(state);
     expect(state.goalProgress.summerTicks).toBe(0);
   });
+
+  it('safeCity needs population and both coverages', () => {
+    const state = createSimState(1, SIZE);
+    for (let i = 0; i < 5; i++) {
+      state.layers.zone[at(i, 1)] = Zone.Residential;
+      state.layers.density[at(i, 1)] = 3; // 130 residents
+    }
+    const { goalCoverage } = BALANCE.services;
+    state.lastServices = { fire: goalCoverage, police: goalCoverage - 0.01 };
+    goalsStep(state);
+    expect(state.goalsAchieved.has('safeCity')).toBe(false);
+    state.lastServices = { fire: goalCoverage, police: goalCoverage };
+    goalsStep(state);
+    expect(state.goalsAchieved.has('safeCity')).toBe(true);
+  });
+
+  it('safeCity ignores empty coverage in a small city', () => {
+    const state = createSimState(1, SIZE);
+    state.lastServices = { fire: 1, police: 1 };
+    goalsStep(state);
+    expect(state.goalsAchieved.has('safeCity')).toBe(false);
+  });
 });
