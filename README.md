@@ -58,7 +58,7 @@ _Screenshots coming soon — run `pnpm dev`, build a city, and snap away._
 - **Economy**: construction costs, taxes (with a slider), upkeep, biogas
   fuel costs.
 - **Overlays** show supply status (connected, undersupplied, not connected
-  to the grid) and growth demand; the energy panel
+  to the grid), growth demand, and fire/police coverage; the energy panel
   tracks generation per source, consumption, state of charge, curtailment
   and the last in-game day.
 
@@ -66,8 +66,8 @@ Beyond the core loop: **multi-day weather fronts** (including genuine
 Dunkelflaute spells), **rooftop PV** that grows with density, a limited
 **grid interconnector** (expensive imports, modest export revenue),
 **abandonment** of chronically unpowered buildings, **fire and police
-stations** with powered coverage rings, a services overlay and a
-safe-city goal, **city goals**, an
+stations** with powered coverage rings, a services overlay, and city
+goals (including a safe-city goal), an
 **interactive tutorial**, warning icons in the world, touch gestures,
 tool hotkeys, synthesized sound effects, and a settings panel with save
 slots and JSON save export/import. UI in **English and German**.

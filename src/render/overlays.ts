@@ -1,6 +1,13 @@
 import * as THREE from 'three';
 import type { TileDiff } from '../shared/types.ts';
-import { OverlayMode, SupplyStatus, TileType, Zone } from '../shared/types.ts';
+import {
+  OverlayMode,
+  SERVICE_FIRE,
+  SERVICE_POLICE,
+  SupplyStatus,
+  TileType,
+  Zone,
+} from '../shared/types.ts';
 import type { DiffLayer, RenderEnvironment } from './renderer.ts';
 
 const SUPPLY_COLORS: Record<number, number> = {
@@ -9,8 +16,6 @@ const SUPPLY_COLORS: Record<number, number> = {
   [SupplyStatus.NotConnected]: 0xe05263,
 };
 
-const SERVICE_FIRE = 1;
-const SERVICE_POLICE = 2;
 const SERVICE_COLORS = {
   both: 0x4cd964,
   fireOnly: 0xffb347,

@@ -1,11 +1,13 @@
 import { BALANCE } from '../shared/constants.ts';
 import { tileIndex, tileX, tileY } from '../shared/grid.ts';
-import { PlantType, TileType } from '../shared/types.ts';
+import { PlantType, SERVICE_FIRE, SERVICE_POLICE, TileType } from '../shared/types.ts';
 import { recomputeGrid } from './powerGrid.ts';
 import { markDirty, type SimState } from './state.ts';
 
-export const SERVICE_FIRE = 1;
-export const SERVICE_POLICE = 2;
+// Re-exported so existing sim imports (`import { SERVICE_FIRE } from
+// './services.ts'`) keep working; the canonical definition lives in
+// shared/types.ts next to TileDiff.services.
+export { SERVICE_FIRE, SERVICE_POLICE };
 
 /** OR `bit` into every tile within a Chebyshev radius, clipped to the map. */
 function stampBit(

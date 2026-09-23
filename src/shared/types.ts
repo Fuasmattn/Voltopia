@@ -300,6 +300,10 @@ export interface GlobalStats {
   inspected: TileInfo | null;
 }
 
+/** Service coverage bits for `TileDiff.services` / `GlobalStats.services`. */
+export const SERVICE_FIRE = 1;
+export const SERVICE_POLICE = 2;
+
 /** Per-tile fields the renderer needs; sent as diffs for changed tiles only. */
 export interface TileDiff {
   index: number;

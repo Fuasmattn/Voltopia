@@ -35,6 +35,9 @@ rewards covering the city.
 - Every tuning value lives in `BALANCE.services`, `BALANCE.costs.plant`
   and `BALANCE.upkeepPerTick.plant`.
 - Save format unchanged: the plant layer already persists the stations.
+- Consequence: because the top density needs fire cover and the safe-city
+  goal is part of the win condition, both stations are effectively
+  required to finish the game; that is intended.
 
 ## Section 1: Stations
 

@@ -29,6 +29,10 @@ export function emptyPlantMap(): Record<PlantType, number> {
  * Tax multiplier for police coverage: 1 while the city is small, then a
  * blend of full tax for covered buildings and uncoveredTaxFactor for the
  * rest.
+ *
+ * `police` is a share of building tiles while tax is weighted by residents
+ * and jobs, so the budget and the per-tile inspector agree exactly at 0 and
+ * 1 coverage and approximate in between.
  */
 export function policeTaxFactor(police: number, population: number): number {
   const { minPopulation, uncoveredTaxFactor } = BALANCE.services;
