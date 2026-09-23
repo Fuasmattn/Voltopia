@@ -1,22 +1,19 @@
 import { useEffect, useRef, useState } from 'react';
-import { OverlayMode, type SaveGame, type SeasonId } from '../shared/types.ts';
-import { BALANCE } from '../shared/constants.ts';
+import { OverlayMode, type SaveGame } from '../shared/types.ts';
 import { IndexedDbStorage } from '../storage/indexeddb.ts';
-import { OverlayToggle } from './OverlayToggle.tsx';
 import type { GameRenderer, RendererCallbacks } from '../render/renderer.ts';
-import type { Speed } from '../shared/types.ts';
-import { Clock } from './Clock.tsx';
-import { DemandBars } from './DemandBars.tsx';
-import { EnergyPanel } from './EnergyPanel.tsx';
+import { CityVitals } from './CityVitals.tsx';
+import { HudConsole } from './HudConsole.tsx';
+import { TimeControls } from './TimeControls.tsx';
+import { TileInspector } from './TileInspector.tsx';
 import { HelpPage } from './HelpPage.tsx';
 import { ImprintPage } from './ImprintPage.tsx';
-import { rejectionKey, useI18n, type Locale, type TranslationKey } from './i18n.tsx';
-import { TaxSlider } from './TaxSlider.tsx';
+import { rejectionKey, useI18n, type Locale } from './i18n.tsx';
 import { GameView } from './GameView.tsx';
 import { GoalsPanel } from './GoalsPanel.tsx';
 import { Minimap } from './Minimap.tsx';
-import { SpeedControls } from './SpeedControls.tsx';
-import { Toolbar } from './Toolbar.tsx';
+import { OverlayToggle } from './OverlayToggle.tsx';
+import { BuildBar } from './BuildBar.tsx';
 import { consumePendingNewGame, type NewGameOptions } from './newGame.ts';
 import { NewGamePage } from './NewGamePage.tsx';
 import { SettingsPage } from './SettingsPage.tsx';
@@ -32,10 +29,15 @@ const AUTOSAVE_INTERVAL_MS = 10_000;
 
 const storage = new IndexedDbStorage();
 
-function happinessEmoji(happiness: number): string {
-  if (happiness >= 0.7) return '😊';
-  if (happiness >= 0.45) return '😐';
-  return '😞';
+/** Remembers whether the HUD detail drawer is open, across sessions. */
+const DETAILS_STORAGE_KEY = 'voltopia.hudDetails';
+
+function loadDetailsOpen(): boolean {
+  try {
+    return localStorage.getItem(DETAILS_STORAGE_KEY) !== '0';
+  } catch {
+    return true;
+  }
 }
 
 /** Loads the autosave before booting the simulation. */
@@ -84,13 +86,6 @@ function LanguageSwitch() {
   );
 }
 
-const SEASON_GLYPH: Record<SeasonId, string> = {
-  spring: '🌸',
-  summer: '☀️',
-  autumn: '🍂',
-  winter: '❄️',
-};
-
 function Game({ save, options }: { save: SaveGame | null; options: NewGameOptions }) {
   const { t } = useI18n();
   // A saved city keeps its own size/seed; new cities use the chosen options.
@@ -103,14 +98,31 @@ function Game({ save, options }: { save: SaveGame | null; options: NewGameOption
   });
   const callbacksRef = useRef<RendererCallbacks>({});
   const rendererRef = useRef<GameRenderer | null>(null);
-  const { tool, setTool, costPreview } = useTools(bridge, callbacksRef, rendererRef, gridSize);
+  const { tool, setTool, costPreview, selectedTile, clearSelectedTile } = useTools(
+    bridge,
+    callbacksRef,
+    rendererRef,
+    gridSize,
+  );
   const [overlay, setOverlay] = useState<OverlayMode>(OverlayMode.None);
   const [page, setPage] = useState<'help' | 'imprint' | 'settings' | 'newGame' | 'stats' | null>(
     null,
   );
   const [settings, setSettings] = useState<AppSettings>(loadSettings);
+  const [detailsOpen, setDetailsOpen] = useState(loadDetailsOpen);
   // The tutorial runs for brand-new cities only (no autosave existed).
   const [showTutorial, setShowTutorial] = useState(() => save === null && !isTutorialDone());
+
+  const toggleDetails = (): void => {
+    setDetailsOpen((open) => {
+      try {
+        localStorage.setItem(DETAILS_STORAGE_KEY, open ? '0' : '1');
+      } catch {
+        // best effort only
+      }
+      return !open;
+    });
+  };
 
   const stats = bridge.stats;
 
@@ -197,113 +209,86 @@ function Game({ save, options }: { save: SaveGame | null; options: NewGameOption
         callbacksRef={callbacksRef}
         rendererRef={rendererRef}
       />
-      <header className="hud-top">
-        <div className="hud-title">Voltopia</div>
-        {stats && (
-          <>
-            <div className="hud-stat" data-testid="money">
-              <span className="hud-stat-value">
-                {Math.round(stats.money).toLocaleString('en-US')} ⌁
-              </span>
-              <span className="hud-stat-label">{t('hud.funds')}</span>
-            </div>
-            <div className="hud-stat" data-testid="population">
-              <span className="hud-stat-value">{stats.population}</span>
-              <span className="hud-stat-label">{t('hud.residents')}</span>
-            </div>
-            <div className="hud-stat" data-testid="jobs">
-              <span className="hud-stat-value">{stats.jobs}</span>
-              <span className="hud-stat-label">{t('hud.jobs')}</span>
-            </div>
-            <div className="hud-stat" data-testid="happiness">
-              <span className="hud-stat-value">
-                {happinessEmoji(stats.happiness)} {Math.round(stats.happiness * 100)}%
-              </span>
-              <span className="hud-stat-label">{t('hud.happiness')}</span>
-            </div>
-            <DemandBars demand={stats.demand} />
-            <Clock timeOfDay={stats.timeOfDay} day={stats.day} />
-            <div className="hud-weather" data-testid="weather" title={t('hud.weather.title')}>
-              <span data-testid="season">
-                {SEASON_GLYPH[stats.season.season]}{' '}
-                {t('hud.season', {
-                  season: t(`season.${stats.season.season}` as TranslationKey),
-                  day: stats.season.dayOfSeason,
-                  days: BALANCE.seasons.daysPerSeason,
-                  temperature: Math.round(stats.season.temperature),
-                })}
-              </span>
-              <span>☁️ {Math.round(stats.weather.cloudCover * 100)}%</span>
-              <span>💨 {Math.round(stats.weather.windSpeed * 100)}%</span>
-            </div>
-            <SpeedControls
-              speed={stats.speed as Speed}
-              onChange={(speed) => bridge.send({ type: 'setSpeed', speed })}
+      {/* One grid over the canvas: rows and columns keep the HUD islands
+          apart at any window size, so nothing can overlap. */}
+      <div className="hud-layer">
+        {/* Three plates docked to the top edge: vitals left, energy centre,
+            time controls right. On narrower windows the console drops under
+            the two corner plates and hangs from them. */}
+        <div className="hud-slot hud-slot-top">
+          {stats && <CityVitals stats={stats} />}
+          {stats && (
+            <HudConsole
+              stats={stats}
+              detailsOpen={detailsOpen}
+              onToggleDetails={toggleDetails}
+              onSetTaxRate={(rate) => bridge.send({ type: 'setTaxRate', rate })}
+              onSetSmartCharging={(enabled) => bridge.send({ type: 'setSmartCharging', enabled })}
+              onBuyInsulation={() => bridge.send({ type: 'buyInsulation' })}
             />
-            <div className="hud-tick" data-testid="tick-counter">
-              tick {stats.tick}
-            </div>
-          </>
-        )}
-      </header>
-      <Toolbar
-        tool={tool}
-        onSelectTool={(next) => {
-          sound.play('click');
-          setTool(next);
-        }}
-        onUndo={() => bridge.send({ type: 'undo' })}
-      />
-      {stats && (
-        <div className="right-panel">
-          <EnergyPanel energy={stats.energy} riverFlow={stats.weather.riverFlow} />
-          <TaxSlider
-            rate={stats.taxRate}
-            onChange={(rate) => bridge.send({ type: 'setTaxRate', rate })}
-          />
-          <label
-            className="smart-charging-toggle"
-            data-testid="smart-charging"
-            title={t('smartCharging.title')}
-          >
-            <input
-              type="checkbox"
-              checked={stats.smartCharging}
-              onChange={(e) => bridge.send({ type: 'setSmartCharging', enabled: e.target.checked })}
+          )}
+          {stats && (
+            <TimeControls
+              stats={stats}
+              onSetSpeed={(speed) => bridge.send({ type: 'setSpeed', speed })}
+              onNewGame={() => setPage('newGame')}
             />
-            <span>{t('smartCharging.label')}</span>
-          </label>
-          <div
-            className="smart-charging-toggle"
-            data-testid="insulation"
-            title={t('insulation.title')}
-          >
-            <span>{t('insulation.label')}</span>
-            {stats.insulation ? (
-              <span className="insulation-state">✓ {t('insulation.bought')}</span>
-            ) : (
-              <button
-                type="button"
-                className="insulation-buy"
-                data-testid="insulation-buy"
-                aria-label={t('insulation.title')}
-                disabled={stats.money < BALANCE.costs.insulation}
-                onClick={() => bridge.send({ type: 'buyInsulation' })}
-              >
-                {t('insulation.buy', { cost: BALANCE.costs.insulation.toLocaleString('en-US') })}
-              </button>
-            )}
-          </div>
-          <button
-            type="button"
-            className="new-game-button"
-            data-testid="new-game"
-            onClick={() => setPage('newGame')}
-          >
-            {t('newCity.label')}
-          </button>
+          )}
         </div>
-      )}
+
+        <div className="hud-slot hud-slot-left">
+          <div className="hud-rail-bottom">
+            {stats && (
+              <GoalsPanel goals={stats.goals} onAchievement={() => sound.play('achievement')} />
+            )}
+            {/* One plate in the corner: minimap, overlay switch and the
+                controls hint share it, so the corner has a single edge. */}
+            <div className="hud-plate hud-corner-plate">
+              <div className="minimap-card">
+                <Minimap rendererRef={rendererRef} gridSize={gridSize} />
+              </div>
+              <OverlayToggle mode={overlay} onChange={setOverlay} />
+              <p className="controls-hint" data-testid="controls-hint">
+                {t('footer.hint')}
+              </p>
+            </div>
+          </div>
+        </div>
+
+        <div className="hud-slot hud-slot-bottom-center">
+          <BuildBar
+            tool={tool}
+            onSelectTool={(next) => {
+              sound.play('click');
+              setTool(next);
+            }}
+            onUndo={() => bridge.send({ type: 'undo' })}
+          />
+        </div>
+
+        <div className="hud-slot hud-slot-right">
+          <div className="hud-rail-bottom">
+            {/* Bottom-anchored like the left cluster, which also keeps it
+                clear of the console drawer hanging down from the top. */}
+            {selectedTile !== null && stats?.inspected && (
+              <TileInspector info={stats.inspected} onClose={clearSelectedTile} />
+            )}
+            <footer className="hud-plate hud-footer">
+              <button type="button" data-testid="open-help" onClick={() => setPage('help')}>
+                {t('footer.help')}
+              </button>
+              <button type="button" data-testid="open-imprint" onClick={() => setPage('imprint')}>
+                {t('footer.imprint')}
+              </button>
+              <button type="button" data-testid="open-settings" onClick={() => setPage('settings')}>
+                {t('footer.settings')}
+              </button>
+              <LanguageSwitch />
+            </footer>
+          </div>
+        </div>
+      </div>
+
       {rejection && (
         <div className="rejection-toast" data-testid="rejection">
           {rejection}
@@ -314,28 +299,12 @@ function Game({ save, options }: { save: SaveGame | null; options: NewGameOption
           {costPreview.tiles} ▦ · {costPreview.cost.toLocaleString('en-US')} ⌁
         </div>
       )}
-      {stats && <GoalsPanel goals={stats.goals} onAchievement={() => sound.play('achievement')} />}
+      {/* Coach mark, not a HUD island: it floats above the layout for the
+          handful of steps it runs, then never comes back. */}
       {showTutorial && stats && (
         <Tutorial stats={stats} onFinished={() => setShowTutorial(false)} />
       )}
       {stats && <WinScreen stats={stats} onCelebrate={() => sound.play('achievement')} />}
-      <div className="bottom-right-stack">
-        <Minimap rendererRef={rendererRef} gridSize={gridSize} />
-        <OverlayToggle mode={overlay} onChange={setOverlay} />
-      </div>
-      <footer className="hud-footer">
-        <span className="hud-footer-hint">{t('footer.hint')}</span>
-        <button type="button" data-testid="open-help" onClick={() => setPage('help')}>
-          {t('footer.help')}
-        </button>
-        <button type="button" data-testid="open-imprint" onClick={() => setPage('imprint')}>
-          {t('footer.imprint')}
-        </button>
-        <button type="button" data-testid="open-settings" onClick={() => setPage('settings')}>
-          {t('footer.settings')}
-        </button>
-        <LanguageSwitch />
-      </footer>
       {page === 'help' && <HelpPage onClose={() => setPage(null)} />}
       {page === 'imprint' && <ImprintPage onClose={() => setPage(null)} />}
       {page === 'stats' && <StatsPage bridge={bridge} onClose={() => setPage(null)} />}

@@ -7,6 +7,10 @@ import type { DiffLayer, RenderEnvironment } from './renderer.ts';
 const MAX_BOX_PARTS_PER_PLANT = 8;
 const ROTOR_MAX_SPEED_RAD_PER_S = 6;
 const HUB_HEIGHT = 0.85;
+const DOME_RADIUS = 0.3;
+const DOME_SQUASH = 0.75;
+const DOME_BASE = 0.12;
+const BIOGAS_DOME_TOP = DOME_BASE + DOME_RADIUS * DOME_SQUASH;
 
 interface BoxPart {
   sx: number;
@@ -188,12 +192,29 @@ function plantBoxParts(plant: PlantType, site: PlantSite): BoxPart[] {
   }
 }
 
+/** Blade length, measured from the hub outward. */
+const ROTOR_RADIUS = 0.42;
+
+/**
+ * How high a plant rises above its tile. Site-independent: the hydro
+ * shapes change orientation with the river/lake, never height.
+ */
+export function plantHeight(plant: PlantType): number {
+  const site: PlantSite = { riverAlongZ: false, lakeDx: 0, lakeDz: 0 };
+  let top = 0;
+  for (const part of plantBoxParts(plant, site)) top = Math.max(top, part.oy + part.sy);
+  // Rotor and dome are separate meshes, so they are not in the box parts.
+  if (plant === PlantType.WindTurbine) top = Math.max(top, HUB_HEIGHT + ROTOR_RADIUS);
+  if (plant === PlantType.BiogasPlant) top = Math.max(top, BIOGAS_DOME_TOP);
+  return top;
+}
+
 /** Three thin blades merged into one rotor geometry, hub at the origin. */
 function createRotorGeometry(): THREE.BufferGeometry {
   const blades: THREE.BufferGeometry[] = [];
   for (let i = 0; i < 3; i++) {
-    const blade = new THREE.BoxGeometry(0.015, 0.42, 0.05);
-    blade.translate(0, 0.21, 0);
+    const blade = new THREE.BoxGeometry(0.015, ROTOR_RADIUS, 0.05);
+    blade.translate(0, ROTOR_RADIUS / 2, 0);
     blade.rotateX((i * 2 * Math.PI) / 3);
     blades.push(blade);
   }
@@ -256,7 +277,7 @@ export class PlantsMesh implements DiffLayer {
     this.rotorMesh.count = 0;
     scene.add(this.rotorMesh);
 
-    const domeGeometry = new THREE.SphereGeometry(0.3, 10, 6);
+    const domeGeometry = new THREE.SphereGeometry(DOME_RADIUS, 10, 6);
     this.domeMesh = new THREE.InstancedMesh(
       domeGeometry,
       new THREE.MeshLambertMaterial({ color: COLORS.biogasDome }),
@@ -342,8 +363,8 @@ export class PlantsMesh implements DiffLayer {
       if (plant === PlantType.WindTurbine) {
         this.rotorPositions.push(new THREE.Vector3(cx, HUB_HEIGHT, cz + 0.09));
       } else if (plant === PlantType.BiogasPlant) {
-        this.matrix.makeScale(1, 0.75, 1);
-        this.matrix.setPosition(cx - 0.12, 0.12, cz - 0.05);
+        this.matrix.makeScale(1, DOME_SQUASH, 1);
+        this.matrix.setPosition(cx - 0.12, DOME_BASE, cz - 0.05);
         this.domeMesh.setMatrixAt(domeSlot++, this.matrix);
       } else if (plant === PlantType.Battery) {
         this.batteryPositions.push(new THREE.Vector3(cx, 0, cz));

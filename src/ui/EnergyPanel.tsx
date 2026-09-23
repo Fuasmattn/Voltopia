@@ -1,28 +1,76 @@
 import type { EnergyStats } from '../shared/types.ts';
 import { useI18n } from './i18n.tsx';
-
-const GRAPH_WIDTH = 220;
-const GRAPH_HEIGHT = 64;
-
-/** Polyline points for one metric over the history samples. */
-function polyline(values: number[], maxValue: number): string {
-  if (values.length < 2) return '';
-  const stepX = GRAPH_WIDTH / (values.length - 1);
-  return values
-    .map((value, i) => {
-      const y = GRAPH_HEIGHT - (Math.min(value, maxValue) / maxValue) * (GRAPH_HEIGHT - 4) - 2;
-      return `${(i * stepX).toFixed(1)},${y.toFixed(1)}`;
-    })
-    .join(' ');
-}
+import { useSmoothedNumber } from './useSmoothedNumber.ts';
 
 function formatEnergy(value: number): string {
   return value.toFixed(1);
 }
 
+/** Below this a value is "nothing to see", and the row is dimmed. */
+const IDLE_THRESHOLD = 0.05;
+
+function Row({
+  label,
+  value,
+  testId,
+  tone,
+  standby,
+}: {
+  label: string;
+  value: number;
+  testId: string;
+  tone?: 'positive' | 'negative';
+  /** Show a standby label instead of the value (installed but idle). */
+  standby?: boolean;
+}) {
+  const { t } = useI18n();
+  // Eased so weather/load noise doesn't make the digit flicker every tick.
+  const smoothed = useSmoothedNumber(value);
+  // Idle rows stay in place and grey out. They used to unmount, which
+  // reshuffled the panel every time a plant came online or went idle.
+  const idle = Math.abs(smoothed) < IDLE_THRESHOLD;
+  return (
+    <div className={`energy-row ${idle && !standby ? 'muted' : (tone ?? '')}`} data-testid={testId}>
+      <span>{label}</span>
+      <span>{standby ? t('energy.standby') : formatEnergy(smoothed)}</span>
+    </div>
+  );
+}
+
+function SocBlock({
+  label,
+  stored,
+  capacity,
+  testId,
+}: {
+  label: string;
+  stored: number;
+  capacity: number;
+  testId: string;
+}) {
+  const share = capacity > 0 ? stored / capacity : 0;
+  const smoothedShare = useSmoothedNumber(share);
+  return (
+    <div className={`soc-block ${capacity > 0 ? '' : 'muted'}`} data-testid={testId}>
+      <div className="soc-label">
+        <span>{label}</span>
+        <span>{capacity > 0 ? `${Math.round(smoothedShare * 100)}%` : '—'}</span>
+      </div>
+      <div className="soc-track">
+        <div className="soc-fill" style={{ width: `${smoothedShare * 100}%` }} />
+      </div>
+    </div>
+  );
+}
+
 /**
- * Energy panel: per-source generation, consumption, storage state of
- * charge, curtailment/deficit, and a mini graph of the last in-game day.
+ * Energy section of the HUD drawer: the labelled per-source breakdown
+ * behind the condensed strip, plus storage state of charge. The day graph
+ * lives in the band above it.
+ *
+ * Every row and meter is always rendered, dimmed when it has nothing to
+ * report, so building a battery or firing up a biogas plant never changes
+ * the panel's height or shuffles the rows underneath.
  */
 export function EnergyPanel({ energy, riverFlow }: { energy: EnergyStats; riverFlow: number }) {
   const { t } = useI18n();
@@ -34,135 +82,89 @@ export function EnergyPanel({ energy, riverFlow }: { energy: EnergyStats; riverF
     energy.generation.hydro;
   const totalConsumption =
     energy.consumption.buildings + energy.consumption.charging + energy.consumption.heating;
-  const balance = totalGeneration - totalConsumption;
-  const stateOfCharge =
-    energy.storageCapacity > 0 ? energy.storedEnergy / energy.storageCapacity : 0;
-
-  const generationSeries = energy.history.map((p) => p.generation);
-  const consumptionSeries = energy.history.map((p) => p.consumption);
-  const graphMax = Math.max(1, ...generationSeries, ...consumptionSeries) * 1.1;
+  const balance = useSmoothedNumber(totalGeneration - totalConsumption);
 
   return (
-    <aside className="energy-panel" data-testid="energy-panel">
+    <section className="hud-section energy-panel" data-testid="energy-panel">
       <h2>{t('energy.title')}</h2>
       <div className="energy-rows">
-        <div className="energy-row" data-testid="energy-solar">
-          <span>{t('energy.solar')}</span>
-          <span>{formatEnergy(energy.generation.solar)}</span>
-        </div>
-        <div className="energy-row" data-testid="energy-wind">
-          <span>{t('energy.wind')}</span>
-          <span>{formatEnergy(energy.generation.wind)}</span>
-        </div>
-        {/* Unconditional on purpose (unlike the rooftop row below): the
-            e2e suite asserts energy-hydro is visible on a fresh city. */}
-        <div className="energy-row" data-testid="energy-hydro">
-          <span>{t('energy.hydro', { flow: Math.round(riverFlow * 100) })}</span>
-          <span>{formatEnergy(energy.generation.hydro)}</span>
-        </div>
-        <div className="energy-row" data-testid="energy-biogas">
-          <span>{t('energy.biogas')}</span>
-          {/* Biogas is dispatchable backup: an installed but idle plant is
-              on standby, not broken. */}
-          <span>
-            {energy.biogasCapacity > 0 && energy.generation.biogas <= 0
-              ? t('energy.standby')
-              : formatEnergy(energy.generation.biogas)}
-          </span>
-        </div>
-        {energy.generation.rooftop > 0.05 && (
-          <div className="energy-row" data-testid="energy-rooftop">
-            <span>{t('energy.rooftop')}</span>
-            <span>{formatEnergy(energy.generation.rooftop)}</span>
-          </div>
-        )}
-        <div className="energy-row" data-testid="energy-consumption">
-          <span>{t('energy.consumption')}</span>
-          <span>{formatEnergy(totalConsumption)}</span>
-        </div>
-        <div className="energy-row" data-testid="energy-charging">
-          <span>{t('energy.charging')}</span>
-          <span>{formatEnergy(energy.consumption.charging)}</span>
-        </div>
-        <div className="energy-row" data-testid="energy-heating">
-          <span>{t('energy.heating')}</span>
-          <span>{formatEnergy(energy.consumption.heating)}</span>
-        </div>
+        <Row
+          label={t('energy.solar')}
+          value={energy.generation.solar}
+          testId="detail-energy-solar"
+        />
+        <Row label={t('energy.wind')} value={energy.generation.wind} testId="detail-energy-wind" />
+        <Row
+          label={t('energy.hydro', { flow: Math.round(riverFlow * 100) })}
+          value={energy.generation.hydro}
+          testId="detail-energy-hydro"
+        />
+        {/* Biogas is dispatchable backup: an installed but idle plant is
+            on standby, not broken. */}
+        <Row
+          label={t('energy.biogas')}
+          value={energy.generation.biogas}
+          testId="detail-energy-biogas"
+          standby={energy.biogasCapacity > 0 && energy.generation.biogas <= 0}
+        />
+        <Row
+          label={t('energy.rooftop')}
+          value={energy.generation.rooftop}
+          testId="detail-energy-rooftop"
+        />
+        <Row
+          label={t('energy.consumption')}
+          value={totalConsumption}
+          testId="detail-energy-consumption"
+        />
+        <Row
+          label={t('energy.charging')}
+          value={energy.consumption.charging}
+          testId="detail-energy-charging"
+        />
+        <Row
+          label={t('energy.heating')}
+          value={energy.consumption.heating}
+          testId="detail-energy-heating"
+        />
         <div
           className={`energy-row balance ${balance >= 0 ? 'positive' : 'negative'}`}
-          data-testid="energy-balance"
+          data-testid="detail-energy-balance"
         >
           <span>{balance >= 0 ? t('energy.surplus') : t('energy.deficit')}</span>
           <span>{formatEnergy(Math.abs(balance))}</span>
         </div>
-        {energy.gridImport > 0.05 && (
-          <div className="energy-row negative-muted" data-testid="energy-import">
-            <span>{t('energy.import')}</span>
-            <span>{formatEnergy(energy.gridImport)}</span>
-          </div>
-        )}
-        {energy.gridExport > 0.05 && (
-          <div className="energy-row muted" data-testid="energy-export">
-            <span>{t('energy.export')}</span>
-            <span>{formatEnergy(energy.gridExport)}</span>
-          </div>
-        )}
-        {energy.curtailment > 0.05 && (
-          <div className="energy-row muted" data-testid="energy-curtailment">
-            <span>{t('energy.curtailed')}</span>
-            <span>{formatEnergy(energy.curtailment)}</span>
-          </div>
-        )}
-      </div>
-
-      <div className="soc-block" data-testid="energy-soc">
-        <div className="soc-label">
-          <span>{t('energy.storage')}</span>
-          <span>{energy.storageCapacity > 0 ? `${Math.round(stateOfCharge * 100)}%` : '—'}</span>
-        </div>
-        <div className="soc-track">
-          <div className="soc-fill" style={{ width: `${stateOfCharge * 100}%` }} />
-        </div>
-      </div>
-
-      {energy.pumpedCapacity > 0 && (
-        <div className="soc-block" data-testid="energy-pumped-soc">
-          <div className="soc-label">
-            <span>{t('energy.pumpedStorage')}</span>
-            <span>{`${Math.round((energy.pumpedStoredEnergy / energy.pumpedCapacity) * 100)}%`}</span>
-          </div>
-          <div className="soc-track">
-            <div
-              className="soc-fill"
-              style={{ width: `${(energy.pumpedStoredEnergy / energy.pumpedCapacity) * 100}%` }}
-            />
-          </div>
-        </div>
-      )}
-
-      <svg
-        className="energy-graph"
-        viewBox={`0 0 ${GRAPH_WIDTH} ${GRAPH_HEIGHT}`}
-        role="img"
-        aria-label={t('energy.graph.label')}
-      >
-        <polyline
-          points={polyline(consumptionSeries, graphMax)}
-          fill="none"
-          stroke="#e0788a"
-          strokeWidth="1.5"
+        <Row
+          label={t('energy.import')}
+          value={energy.gridImport}
+          testId="detail-energy-import"
+          tone="negative"
         />
-        <polyline
-          points={polyline(generationSeries, graphMax)}
-          fill="none"
-          stroke="#7be07f"
-          strokeWidth="1.5"
+        <Row
+          label={t('energy.export')}
+          value={energy.gridExport}
+          testId="detail-energy-export"
+          tone="positive"
         />
-      </svg>
-      <div className="energy-legend">
-        <span className="legend-generation">{t('energy.legend.generation')}</span>
-        <span className="legend-consumption">{t('energy.legend.consumption')}</span>
+        <Row
+          label={t('energy.curtailed')}
+          value={energy.curtailment}
+          testId="detail-energy-curtailment"
+        />
       </div>
-    </aside>
+
+      <SocBlock
+        label={t('energy.storage')}
+        stored={energy.storedEnergy}
+        capacity={energy.storageCapacity}
+        testId="energy-soc"
+      />
+      <SocBlock
+        label={t('energy.pumpedStorage')}
+        stored={energy.pumpedStoredEnergy}
+        capacity={energy.pumpedCapacity}
+        testId="energy-pumped-soc"
+      />
+    </section>
   );
 }

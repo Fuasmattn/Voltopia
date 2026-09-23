@@ -29,6 +29,8 @@ export type SimCommand =
   | { type: 'setTaxRate'; rate: number }
   | { type: 'setSmartCharging'; enabled: boolean }
   | { type: 'buyInsulation' }
+  /** Select a tile for the inspector (null clears it). */
+  | { type: 'inspectTile'; tile: number | null }
   | { type: 'requestSave' }
   | { type: 'requestLifetime' };
 

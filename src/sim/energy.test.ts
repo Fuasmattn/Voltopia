@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { BALANCE, TICKS_PER_DAY } from '../shared/constants.ts';
+import { BALANCE, TICKS_PER_DAY, TICKS_PER_HISTORY_SAMPLE } from '../shared/constants.ts';
 import { tileIndex } from '../shared/grid.ts';
 import {
   buildingConsumption,
@@ -11,6 +11,7 @@ import {
 } from './energy.ts';
 import { buildPowerLines } from './powerLines.ts';
 import { bulldozeTiles, undoLastAction } from './roads.ts';
+import { pendingHistoryPoint } from './tick.ts';
 import {
   createSimState,
   PlantType,
@@ -386,6 +387,63 @@ describe('energyStep', () => {
     setNoonClearSky(state);
     energyStep(state, { chargingDemand: 0 });
     expect(state.lastEnergy.rooftop).toBe(0);
+  });
+
+  /** Total generation of the last tick, as the history records it. */
+  function tickGeneration(state: SimState): number {
+    const e = state.lastEnergy;
+    return e.solar + e.wind + e.rooftop + e.hydro + e.biogas;
+  }
+
+  it('history samples average the window instead of snapshotting the last tick', () => {
+    const state = makeState();
+    placePlant(state, at(5, 5), PlantType.SolarFarm);
+    state.weather.cloudCover = 0;
+    // Start at 06:00 (a sample boundary), so the window covers the sunrise
+    // ramp and per-tick output actually differs within it.
+    state.tick = TICKS_PER_DAY / 4;
+    const perTick: number[] = [];
+    for (let i = 0; i < TICKS_PER_HISTORY_SAMPLE; i++) {
+      state.tick++;
+      energyStep(state, { chargingDemand: 0 });
+      perTick.push(tickGeneration(state));
+    }
+    expect(new Set(perTick).size).toBeGreaterThan(1);
+    expect(state.energyHistory).toHaveLength(1);
+    const mean = perTick.reduce((sum, v) => sum + v, 0) / perTick.length;
+    expect(state.energyHistory[0].generation).toBeCloseTo(mean, 6);
+    expect(state.energyHistory[0].generation).not.toBe(perTick[perTick.length - 1]);
+    // The window was flushed, so the next sample starts from scratch.
+    expect(state.energyHistoryAccum.ticks).toBe(0);
+  });
+
+  it('exposes the in-progress sample average, landing exactly on the next sample', () => {
+    const state = makeState();
+    placePlant(state, at(5, 5), PlantType.SolarFarm);
+    state.weather.cloudCover = 0;
+    state.tick = TICKS_PER_DAY / 4;
+    const perTick: number[] = [];
+    const partial = 5;
+    for (let i = 0; i < partial; i++) {
+      state.tick++;
+      energyStep(state, { chargingDemand: 0 });
+      perTick.push(tickGeneration(state));
+    }
+    const mean = perTick.reduce((sum, v) => sum + v, 0) / partial;
+    expect(pendingHistoryPoint(state).generation).toBeCloseTo(mean, 6);
+
+    for (let i = partial; i < TICKS_PER_HISTORY_SAMPLE; i++) {
+      state.tick++;
+      energyStep(state, { chargingDemand: 0 });
+    }
+    // Flush tick: nothing accumulated yet, so pending sits on the fresh sample.
+    expect(pendingHistoryPoint(state)).toEqual(state.energyHistory[state.energyHistory.length - 1]);
+    // And with no history at all it is simply empty.
+    expect(pendingHistoryPoint(makeState())).toEqual({
+      generation: 0,
+      consumption: 0,
+      stateOfCharge: 0,
+    });
   });
 
   it('records energy history samples', () => {

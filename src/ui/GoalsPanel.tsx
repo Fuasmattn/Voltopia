@@ -45,9 +45,16 @@ export function GoalsPanel({
           type="button"
           className="goals-header"
           data-testid="goals-toggle"
+          aria-expanded={open}
           onClick={() => setOpen((value) => !value)}
         >
-          🏆 {t('goals.title')} {achievedCount}/{goals.length}
+          <span>
+            🏆 {t('goals.title')} {achievedCount}/{goals.length}
+          </span>
+          {/* Without this the card reads as a label, not something to open. */}
+          <span className="goals-chevron" aria-hidden="true">
+            {open ? '▾' : '▸'}
+          </span>
         </button>
         {open && (
           <ul className="goals-list">
