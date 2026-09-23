@@ -65,15 +65,15 @@ export function EnergyStrip({
       label: t('energy.biogas'),
       value: energy.generation.biogas,
     },
-  ];
-  if (energy.generation.rooftop > 0.05) {
-    generation.push({
+    // Always present: a chip that comes and goes would shift the whole
+    // row. Idle chips grey out instead (see the drawer rows).
+    {
       testId: 'energy-rooftop',
       icon: '🏠',
       label: t('energy.rooftop'),
       value: energy.generation.rooftop,
-    });
-  }
+    },
+  ];
   const consumption: Chip[] = [
     {
       testId: 'energy-consumption',
@@ -98,7 +98,7 @@ export function EnergyStrip({
   const chip = (item: Chip) => (
     <span
       key={item.testId}
-      className="energy-chip"
+      className={`energy-chip ${Math.abs(item.value) < 0.05 ? 'idle' : ''}`}
       data-testid={item.testId}
       // An icon alone is ambiguous with the drawer closed.
       title={`${item.label}: ${formatEnergy(item.value)}`}
