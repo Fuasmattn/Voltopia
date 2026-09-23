@@ -33,7 +33,10 @@ export function EnergyPanel({ energy, riverFlow }: { energy: EnergyStats; riverF
     energy.generation.rooftop +
     energy.generation.hydro;
   const totalConsumption =
-    energy.consumption.buildings + energy.consumption.charging + energy.consumption.heating;
+    energy.consumption.buildings +
+    energy.consumption.charging +
+    energy.consumption.heating +
+    energy.consumption.cooling;
   const balance = totalGeneration - totalConsumption;
   const stateOfCharge =
     energy.storageCapacity > 0 ? energy.storedEnergy / energy.storageCapacity : 0;
@@ -87,6 +90,10 @@ export function EnergyPanel({ energy, riverFlow }: { energy: EnergyStats; riverF
         <div className="energy-row" data-testid="energy-heating">
           <span>{t('energy.heating')}</span>
           <span>{formatEnergy(energy.consumption.heating)}</span>
+        </div>
+        <div className="energy-row" data-testid="energy-cooling">
+          <span>{t('energy.cooling')}</span>
+          <span>{formatEnergy(energy.consumption.cooling)}</span>
         </div>
         <div
           className={`energy-row balance ${balance >= 0 ? 'positive' : 'negative'}`}

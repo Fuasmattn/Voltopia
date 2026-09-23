@@ -52,6 +52,7 @@ const en = {
   'energy.consumption': '🏙 Consumption',
   'energy.charging': '🔌 EV charging',
   'energy.heating': '🔥 Heating',
+  'energy.cooling': '❄️ Cooling',
   'energy.surplus': 'Surplus',
   'energy.deficit': 'Deficit',
   'energy.curtailed': 'Curtailed',
@@ -67,7 +68,8 @@ const en = {
   'smartCharging.label': '⚡ Smart charging',
   'smartCharging.title': 'EV charging automatically follows the generation surplus',
   'insulation.label': '🏠 Building insulation',
-  'insulation.title': 'One-off upgrade: halves the electric heating load of every building',
+  'insulation.title':
+    'One-off upgrade: halves the electric heating and cooling load of every building',
   'insulation.buy': 'Buy for {cost} ⌁',
   'insulation.bought': 'installed',
   'newGame.title': 'New city',
@@ -123,9 +125,9 @@ const en = {
   'help.water.title': 'Water and hydro',
   'help.water.body':
     'Every map has a river and a lake. Roads cross the river as bridges (pricier per tile). A run-of-river plant on the river generates day and night — more after rainy spells, less in a drought. Pumped storage on the lake shore is a large but slower store that fills after your batteries.',
-  'help.seasons.title': 'Seasons and heating',
+  'help.seasons.title': 'Seasons, heating and cooling',
   'help.seasons.body':
-    'A year has four seasons of five days each. Summer brings long days and strong sun; winter brings short days, weak PV, more cloud and wind, and cold. Every building heats electrically, so the heating load rises with the cold — the winter evening is the hardest hour of the year. Snow that falls in winter melts into the river in spring. Building insulation is a one-off upgrade that halves the heating load.',
+    'A year has four seasons of five days each. Summer brings long days and strong sun; winter brings short days, weak PV, more cloud and wind, and cold. Every building heats electrically, so the heating load rises with the cold — the winter evening is the hardest hour of the year. In summer every building cools electrically, so the cooling load peaks in the late afternoon as PV fades. Snow that falls in winter melts into the river in spring. Building insulation is a one-off upgrade that halves the heating and cooling load.',
   'help.ev.title': 'E-mobility',
   'help.ev.body':
     'Your citizens drive EVs. Home charging peaks in the evening — right when solar is gone. Charging hubs shift the load into the sunny midday, and the smart-charging upgrade follows the surplus automatically.',
@@ -221,6 +223,9 @@ const en = {
   'goal.winterResilience.title': 'Winter-proof',
   'goal.winterResilience.body':
     'Get through a whole winter without a single undersupplied tick (50+ residents).',
+  'goal.summerResilience.title': 'Heat-proof',
+  'goal.summerResilience.body':
+    'Get through a whole summer without a single undersupplied tick (50+ residents).',
 } as const;
 
 export type TranslationKey = keyof typeof en;
@@ -276,6 +281,7 @@ const de: Record<TranslationKey, string> = {
   'energy.consumption': '🏙 Verbrauch',
   'energy.charging': '🔌 E-Auto-Laden',
   'energy.heating': '🔥 Heizung',
+  'energy.cooling': '❄️ Kühlung',
   'energy.surplus': 'Überschuss',
   'energy.deficit': 'Defizit',
   'energy.curtailed': 'Abgeregelt',
@@ -291,7 +297,8 @@ const de: Record<TranslationKey, string> = {
   'smartCharging.label': '⚡ Smart Charging',
   'smartCharging.title': 'E-Auto-Laden folgt automatisch dem Erzeugungsüberschuss',
   'insulation.label': '🏠 Gebäudedämmung',
-  'insulation.title': 'Einmaliges Upgrade: halbiert die elektrische Heizlast aller Gebäude',
+  'insulation.title':
+    'Einmaliges Upgrade: halbiert die elektrische Heiz- und Kühllast aller Gebäude',
   'insulation.buy': 'Kaufen für {cost} ⌁',
   'insulation.bought': 'installiert',
   'newGame.title': 'Neue Stadt',
@@ -347,9 +354,9 @@ const de: Record<TranslationKey, string> = {
   'help.water.title': 'Wasser und Wasserkraft',
   'help.water.body':
     'Jede Karte hat einen Fluss und einen See. Straßen überqueren den Fluss als Brücken (teurer pro Feld). Ein Laufwasserkraftwerk auf dem Fluss erzeugt Tag und Nacht Strom — mehr nach Regenphasen, weniger in Trockenzeiten. Ein Pumpspeicher am Seeufer ist ein großer, aber trägerer Speicher, der sich nach den Batterien füllt.',
-  'help.seasons.title': 'Jahreszeiten und Heizung',
+  'help.seasons.title': 'Jahreszeiten, Heizung und Kühlung',
   'help.seasons.body':
-    'Ein Jahr hat vier Jahreszeiten zu je fünf Tagen. Der Sommer bringt lange Tage und kräftige Sonne; der Winter kurze Tage, schwache PV, mehr Wolken und Wind — und Kälte. Alle Gebäude heizen elektrisch, die Heizlast steigt mit der Kälte: Der Winterabend ist die schwerste Stunde des Jahres. Schnee aus dem Winter schmilzt im Frühling in den Fluss. Die Gebäudedämmung ist ein einmaliges Upgrade, das die Heizlast halbiert.',
+    'Ein Jahr hat vier Jahreszeiten zu je fünf Tagen. Der Sommer bringt lange Tage und kräftige Sonne; der Winter kurze Tage, schwache PV, mehr Wolken und Wind — und Kälte. Alle Gebäude heizen elektrisch, die Heizlast steigt mit der Kälte: Der Winterabend ist die schwerste Stunde des Jahres. Im Sommer kühlen alle Gebäude elektrisch: Die Kühllast erreicht ihren Gipfel am späten Nachmittag, wenn die PV nachlässt. Schnee aus dem Winter schmilzt im Frühling in den Fluss. Die Gebäudedämmung ist ein einmaliges Upgrade, das Heiz- und Kühllast halbiert.',
   'help.ev.title': 'E-Mobilität',
   'help.ev.body':
     'Deine Bürger fahren E-Autos. Das Laden zu Hause hat abends seinen Höhepunkt — genau dann, wenn die Sonne weg ist. Ladeparks verschieben die Last in den sonnigen Mittag, und das Smart-Charging-Upgrade folgt dem Überschuss automatisch.',
@@ -446,6 +453,9 @@ const de: Record<TranslationKey, string> = {
   'goal.winterResilience.title': 'Winterfest',
   'goal.winterResilience.body':
     'Überstehe einen ganzen Winter ohne einen einzigen unterversorgten Tick (ab 50 Einwohnern).',
+  'goal.summerResilience.title': 'Hitzefest',
+  'goal.summerResilience.body':
+    'Überstehe einen ganzen Sommer ohne einen einzigen unterversorgten Tick (ab 50 Einwohnern).',
 };
 
 const translations: Record<Locale, Record<TranslationKey, string>> = { en, de };

@@ -86,8 +86,9 @@ in balance.
 - Temperature, day length, sun strength and weather-front biases follow
   the year; sub-zero precipitation builds a snowpack that melts into the
   river in spring
-- Every building heats electrically: a heating load that grows with the
-  cold, halved by a one-off building insulation upgrade
+- Every building heats and cools electrically: a heating load that grows
+  with the cold and a cooling load that grows with summer heat, both
+  halved by a one-off building insulation upgrade
 
 ### Generation & Storage
 

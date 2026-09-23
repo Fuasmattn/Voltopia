@@ -39,11 +39,12 @@ _Screenshots coming soon — run `pnpm dev`, build a city, and snap away._
   the road tool, build run-of-river plants on it (output follows rain
   and drought) and pumped storage on the lake shore — a big, slow store
   that fills after your batteries.
-- **Seasons**: a 20-day year. Summer means long days and PV surplus;
-  winter means short days, weak sun, more cloud and wind, snow on the
-  ground and an electric heating load that peaks on cold nights.
-  Snowpack melts into the river in spring. A one-off building
-  insulation upgrade halves the heating load.
+- **Seasons**: a 20-day year. Summer means long days and PV surplus, but
+  also an electric cooling load that peaks in the late afternoon as PV
+  fades; winter means short days, weak sun, more cloud and wind, snow on
+  the ground and a heating load that peaks on cold nights. Snowpack
+  melts into the river in spring. A one-off building insulation upgrade
+  halves both the heating and the cooling load.
 - **Watch the balance**: surplus charges batteries, then is curtailed.
   Deficits discharge storage, dispatch biogas — and beyond that, buildings
   flicker and go dark, happiness drops, growth stops.

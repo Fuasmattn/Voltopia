@@ -203,5 +203,6 @@ test('the HUD shows the season and a fresh city starts in spring', async ({ page
   await expect(season).toContainText(/Spring|Frühling/);
   await expect(season).toContainText('°C');
   await expect(page.getByTestId('energy-heating')).toBeVisible();
+  await expect(page.getByTestId('energy-cooling')).toBeVisible();
   await expect(page.getByTestId('insulation')).toBeVisible();
 });
