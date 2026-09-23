@@ -5,7 +5,8 @@ import { tileIndex } from '../shared/grid.ts';
 import { economyStep } from './economy.ts';
 import { buildingConsumption, placePlant } from './energy.ts';
 import { inspectTile } from './inspect.ts';
-import { buildRoads } from './roads.ts';
+import { buildPowerLines } from './powerLines.ts';
+import { buildRoads, bulldozeTiles } from './roads.ts';
 import { createSimState, PlantType, SupplyStatus, Terrain, Zone } from './state.ts';
 import { paintZones } from './zones.ts';
 
@@ -37,7 +38,7 @@ describe('inspectTile', () => {
     expect(info.consumption).toBe(0);
   });
 
-  it('reports plant upkeep, generation and supply radius connection', () => {
+  it('reports plant upkeep and generation', () => {
     const state = createSimState(1, SIZE);
     placePlant(state, at(10, 10), PlantType.WindTurbine);
     state.weather.windSpeed = 1;
@@ -45,7 +46,60 @@ describe('inspectTile', () => {
     expect(info.upkeepPerTick).toBeCloseTo(BALANCE.upkeepPerTick.plant[PlantType.WindTurbine], 9);
     expect(info.generation).toBeGreaterThan(0);
     expect(info.peakGeneration).toBe(BALANCE.energy.windPeakOutput);
-    expect(info.connected).toBe(true);
+  });
+
+  it('a supply plant counts as grid-connected only once a line is attached', () => {
+    const state = createSimState(1, SIZE);
+    state.money = 1e9;
+    placePlant(state, at(10, 10), PlantType.Battery);
+    // Standalone: the plant energises its own ring, but nothing ties it
+    // to the network, so the inspector must not claim a connection.
+    expect(inspectTile(state, at(10, 10))!.connected).toBe(false);
+
+    buildPowerLines(state, [at(11, 10), at(12, 10)]);
+    expect(inspectTile(state, at(10, 10))!.connected).toBe(true);
+
+    bulldozeTiles(state, [at(11, 10)]);
+    expect(inspectTile(state, at(10, 10))!.connected).toBe(false);
+  });
+
+  it('reports the ring a tile projects: plants, hubs, parks and live lines', () => {
+    const state = createSimState(1, SIZE);
+    state.money = 1e9;
+    placePlant(state, at(10, 10), PlantType.WindTurbine);
+    placePlant(state, at(20, 10), PlantType.Park);
+    placePlant(state, at(20, 20), PlantType.ChargingHub);
+    expect(inspectTile(state, at(10, 10))!.ringRadius).toBe(BALANCE.energy.lineSupplyRadius);
+    expect(inspectTile(state, at(20, 10))!.ringRadius).toBe(BALANCE.happiness.parkRadius);
+    expect(inspectTile(state, at(20, 20))!.ringRadius).toBe(BALANCE.vehicles.hubRadius);
+    expect(inspectTile(state, at(5, 5))!.ringRadius).toBe(0);
+
+    // A line fed by the turbine projects the supply ring; a stray one does not.
+    buildPowerLines(state, [at(11, 10), at(12, 10)]);
+    buildPowerLines(state, [at(25, 25), at(26, 25)]);
+    expect(inspectTile(state, at(12, 10))!.ringRadius).toBe(BALANCE.energy.lineSupplyRadius);
+    expect(inspectTile(state, at(26, 25))!.ringRadius).toBe(0);
+  });
+
+  it('a lot beyond a plant ring connects through an energised line and drops when it is cut', () => {
+    const state = createSimState(7, SIZE);
+    state.money = 1e9;
+    placePlant(state, at(2, 10), PlantType.WindTurbine);
+    const road = Array.from({ length: 13 }, (_, i) => at(3 + i, 12));
+    buildRoads(state, road);
+    paintZones(state, [at(14, 11)], Zone.Residential);
+    const lot = at(14, 11);
+    state.layers.density[lot] = 1;
+    expect(inspectTile(state, lot)!.connected).toBe(false);
+    expect(inspectTile(state, lot)!.growthBlockers).toContain('notConnected');
+
+    buildPowerLines(state, [at(3, 10), at(3, 11), ...road]);
+    expect(inspectTile(state, lot)!.connected).toBe(true);
+    expect(inspectTile(state, lot)!.growthBlockers).not.toContain('notConnected');
+
+    // Cut next to the plant: the rest of the line is dead.
+    bulldozeTiles(state, [at(3, 11)]);
+    expect(inspectTile(state, lot)!.connected).toBe(false);
   });
 
   it('splits stored energy across battery tiles', () => {

@@ -212,8 +212,17 @@ export interface TileInfo {
   density: number;
   plantType: PlantType;
   supplied: SupplyStatus;
-  /** Within the supply radius of any grid-connected plant. */
+  /**
+   * Reached by the power network (lines or a plant ring); for a supply
+   * plant, whether a power line is attached to it.
+   */
   connected: boolean;
+  /**
+   * Radius in tiles of the ring this tile projects on the map: the supply
+   * ring of a plant or an energised power line, a park's happiness ring,
+   * a hub's service ring. 0 when the tile projects nothing.
+   */
+  ringRadius: number;
   /** Money upkeep of this tile per tick (roads and plants only). */
   upkeepPerTick: number;
   /** Fuel cost per tick attributed to this tile (biogas only). */

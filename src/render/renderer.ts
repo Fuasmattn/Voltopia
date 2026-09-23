@@ -128,6 +128,9 @@ export class GameRenderer {
   >;
   private previewMesh!: THREE.InstancedMesh;
   private radiusRing!: THREE.Mesh;
+  /** Ring around the selected tile (what it supplies or serves). */
+  private selectionRing!: THREE.Mesh;
+  private selectionRadius = 0;
   private radiusTiles = 0;
   private vehiclesMesh!: VehiclesMesh;
   private overlays!: OverlaysMesh;
@@ -195,6 +198,21 @@ export class GameRenderer {
     );
     this.radiusRing.visible = false;
     scene.add(this.radiusRing);
+
+    // Same shape as the hover ring, dimmer, so the two read as one idiom
+    // ("this reaches that far") whether previewing or inspecting.
+    this.selectionRing = new THREE.Mesh(
+      radiusGeometry,
+      new THREE.MeshBasicMaterial({
+        color: 0x58b7a4,
+        transparent: true,
+        opacity: 0.45,
+        depthWrite: false,
+        side: THREE.DoubleSide,
+      }),
+    );
+    this.selectionRing.visible = false;
+    scene.add(this.selectionRing);
 
     const previewGeometry = new THREE.PlaneGeometry(1, 1).rotateX(-Math.PI / 2);
     const previewMaterial = new THREE.MeshBasicMaterial({
@@ -379,19 +397,35 @@ export class GameRenderer {
     if (index === null || index < 0 || index >= this.gridSize * this.gridSize) {
       this.selectedIndex = null;
       this.selectionMarker.visible = false;
+      this.selectionRing.visible = false;
       return;
     }
     this.selectedIndex = index;
     this.selectionMarker.visible = true;
-    this.selectionMarker.position.set(
-      (index % this.gridSize) + 0.5,
-      0.02,
-      Math.floor(index / this.gridSize) + 0.5,
-    );
+    const x = (index % this.gridSize) + 0.5;
+    const z = Math.floor(index / this.gridSize) + 0.5;
+    this.selectionMarker.position.set(x, 0.02, z);
+    this.selectionRing.position.set(x, 0.04, z);
+    this.updateSelectionRing();
     this.selectionOutline.scale.y = Math.max(
       SELECTION_MIN_HEIGHT,
       this.tileHeights[index] + SELECTION_HEADROOM,
     );
+  }
+
+  /**
+   * Radius (in tiles) of the ring drawn around the selected tile — what a
+   * plant supplies, a hub serves, a park cheers up. 0 hides it.
+   */
+  setSelectionRadius(tiles: number): void {
+    this.selectionRadius = tiles;
+    this.updateSelectionRing();
+  }
+
+  private updateSelectionRing(): void {
+    const show = this.selectedIndex !== null && this.selectionRadius > 0;
+    this.selectionRing.visible = show;
+    if (show) this.selectionRing.scale.setScalar(this.selectionRadius);
   }
 
   setOverlayMode(mode: OverlayMode): void {
