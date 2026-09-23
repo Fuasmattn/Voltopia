@@ -157,6 +157,22 @@ describe('SimEngine basics', () => {
     restored.tick();
     expect(restored.state.layers.supplied[tileIndex(9, 9, 16)]).not.toBe(0); // not NotConnected
   });
+
+  it('reports the season in stats and advances it with the days', () => {
+    const engine = makeEngine();
+    const first = engine.tick();
+    if (first.type !== 'tick') throw new Error('expected tick');
+    expect(first.stats.season.season).toBe('spring');
+    expect(first.stats.season.dayOfSeason).toBe(1);
+    expect(first.stats.season.year).toBe(1);
+    expect(first.stats.insulation).toBe(false);
+    expect(first.stats.energy.consumption.heating).toBe(0);
+    engine.state.tick = TICKS_PER_DAY * BALANCE.seasons.daysPerSeason - 1;
+    const next = engine.tick();
+    if (next.type !== 'tick') throw new Error('expected tick');
+    expect(next.stats.season.season).toBe('summer');
+    expect(next.stats.season.dayOfSeason).toBe(1);
+  });
 });
 
 describe('time helpers', () => {

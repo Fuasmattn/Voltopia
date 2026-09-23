@@ -6,6 +6,7 @@ import { goalsStep, goalStates } from './goals.ts';
 import { computeDemand, decayStep, growthStep } from './growth.ts';
 import { happinessStep } from './happiness.ts';
 import { countPowerLineTiles } from './powerLines.ts';
+import { seasonState } from './seasons.ts';
 import { chargingDemand, vehiclesStep } from './vehicles.ts';
 import { updateWeather } from './weather.ts';
 import {
@@ -30,6 +31,13 @@ export function dayNumber(tick: number): number {
 /** Advance the simulation by exactly one tick. */
 export function stepTick(state: SimState): void {
   state.tick++;
+  // Season first: weather biases, snow and heating all read it this tick.
+  state.season = seasonState({
+    day: dayNumber(state.tick),
+    timeOfDay: timeOfDay(state.tick),
+    seasonOriginDay: state.seasonOriginDay,
+    cloudCover: state.weather.cloudCover,
+  });
   updateWeather(state);
   vehiclesStep(state);
   energyStep(state, { chargingDemand: chargingDemand(state) });
@@ -51,24 +59,31 @@ function recordLifetime(state: SimState, population: number, jobs: number): void
   const e = state.lastEnergy;
   const sums = state.lifetime.daySums;
   sums.generation += e.solar + e.wind + e.rooftop + e.hydro + e.biogas;
-  sums.consumption += e.buildingConsumption + e.chargingConsumption;
+  sums.consumption += e.buildingConsumption + e.chargingConsumption + e.heatingConsumption;
+  sums.heating += e.heatingConsumption;
+  sums.temperature += state.season.temperature;
   sums.ticks++;
 
   if (state.tick % TICKS_PER_DAY !== 0) return;
+  const ticks = Math.max(1, sums.ticks);
   state.lifetime.samples.push({
     day: dayNumber(state.tick) - 1,
     population,
     jobs,
     happiness: state.happiness,
-    avgGeneration: sums.generation / Math.max(1, sums.ticks),
-    avgConsumption: sums.consumption / Math.max(1, sums.ticks),
+    avgGeneration: sums.generation / ticks,
+    avgConsumption: sums.consumption / ticks,
     money: state.money,
+    temperature: sums.temperature / ticks,
+    heating: sums.heating / ticks,
   });
   if (state.lifetime.samples.length > MAX_LIFETIME_SAMPLES) {
     state.lifetime.samples.shift();
   }
   sums.generation = 0;
   sums.consumption = 0;
+  sums.heating = 0;
+  sums.temperature = 0;
   sums.ticks = 0;
 }
 
@@ -112,6 +127,7 @@ export function buildStats(state: SimState): GlobalStats {
     timeOfDay: timeOfDay(state.tick),
     day: dayNumber(state.tick),
     weather: { ...state.weather },
+    season: { ...state.season },
     energy: {
       generation: {
         solar: e.solar,
@@ -123,6 +139,7 @@ export function buildStats(state: SimState): GlobalStats {
       consumption: {
         buildings: e.buildingConsumption,
         charging: e.chargingConsumption,
+        heating: e.heatingConsumption,
       },
       storedEnergy: state.storedEnergy,
       storageCapacity: totalStorageCapacity(state),
@@ -138,6 +155,7 @@ export function buildStats(state: SimState): GlobalStats {
     taxRate: state.taxRate,
     speed: state.speed,
     smartCharging: state.smartCharging,
+    insulation: state.insulation,
     goals: goalStates(state),
     counts: countTiles(state),
   };

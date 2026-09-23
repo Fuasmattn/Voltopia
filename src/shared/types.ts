@@ -99,7 +99,7 @@ export interface EnergyHistoryPoint {
 
 export interface EnergyStats {
   generation: { solar: number; wind: number; biogas: number; rooftop: number; hydro: number };
-  consumption: { buildings: number; charging: number };
+  consumption: { buildings: number; charging: number; heating: number };
   /** Absolute stored energy across all batteries. */
   storedEnergy: number;
   /** Total installed battery capacity. */
@@ -134,6 +134,10 @@ export interface LifetimeSample {
   /** Average consumption per tick over the day. */
   avgConsumption: number;
   money: number;
+  /** Daily mean air temperature in °C (absent in samples from before seasons). */
+  temperature?: number;
+  /** Average heating consumption per tick over the day (absent in older samples). */
+  heating?: number;
 }
 
 export interface GoalState {
@@ -172,12 +176,15 @@ export interface GlobalStats {
   /** Day counter since city founding. */
   day: number;
   weather: Weather;
+  season: SeasonState;
   energy: EnergyStats;
   /** Current tax rate, 0..MAX_TAX_RATE. */
   taxRate: number;
   speed: Speed;
   /** Whether smart charging (charging follows surplus) is enabled. */
   smartCharging: boolean;
+  /** Whether the building insulation upgrade has been bought. */
+  insulation: boolean;
   goals: GoalState[];
   counts: TileCounts;
 }

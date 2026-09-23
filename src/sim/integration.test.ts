@@ -122,6 +122,8 @@ describe('lifetime statistics', () => {
     expect(samples[0].day).toBe(0);
     expect(samples[2].population).toBeGreaterThan(0);
     expect(samples[2].avgGeneration).toBeGreaterThan(0);
+    expect(typeof samples[2].temperature).toBe('number');
+    expect(samples[2].heating).toBeGreaterThanOrEqual(0);
 
     // Round trip through a save keeps the history.
     const events = engine.applyCommand({ type: 'requestSave' });
