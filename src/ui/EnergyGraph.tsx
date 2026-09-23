@@ -17,8 +17,9 @@ import {
 import type { EnergyStats } from '../shared/types.ts';
 import { useI18n } from './i18n.tsx';
 
-const GENERATION_COLOR = '#8ef58f';
-const CONSUMPTION_COLOR = '#f08a9c';
+// Theme variables (see :root in app.css), so the curves follow the HUD theme.
+const GENERATION_COLOR = 'var(--hud-positive-strong)';
+const CONSUMPTION_COLOR = 'var(--hud-negative-strong)';
 
 /**
  * The graph always spans one full history window, edge to edge, whether
@@ -147,7 +148,7 @@ function Curves({ series, width }: { series: Series; width: number }) {
           <polyline
             points={line(curve.points)}
             fill="none"
-            stroke="rgba(6, 12, 20, 0.55)"
+            style={{ stroke: 'var(--hud-graph-halo)' }}
             strokeWidth={curve.stroke + 2.5}
             strokeLinejoin="round"
             vectorEffect="non-scaling-stroke"
@@ -155,7 +156,7 @@ function Curves({ series, width }: { series: Series; width: number }) {
           <polyline
             points={line(curve.points)}
             fill="none"
-            stroke={curve.color}
+            style={{ stroke: curve.color }}
             strokeWidth={curve.stroke}
             strokeLinejoin="round"
             vectorEffect="non-scaling-stroke"
@@ -258,8 +259,8 @@ export function EnergyGraph({ energy, timeOfDay }: { energy: EnergyStats; timeOf
       >
         <defs>
           <linearGradient id="energy-graph-fade" x1="0" y1="0" x2="0" y2="1">
-            <stop offset="0%" stopColor={GENERATION_COLOR} stopOpacity="0.22" />
-            <stop offset="100%" stopColor={GENERATION_COLOR} stopOpacity="0" />
+            <stop offset="0%" style={{ stopColor: GENERATION_COLOR }} stopOpacity="0.22" />
+            <stop offset="100%" style={{ stopColor: GENERATION_COLOR }} stopOpacity="0" />
           </linearGradient>
         </defs>
         {ticks.map((tick) => (
@@ -269,7 +270,7 @@ export function EnergyGraph({ energy, timeOfDay }: { energy: EnergyStats; timeOf
             x2={tick.position * BAND_WIDTH}
             y1="0"
             y2={BAND_HEIGHT}
-            stroke="rgba(255, 255, 255, 0.12)"
+            style={{ stroke: 'var(--hud-track)' }}
             strokeWidth="1"
             vectorEffect="non-scaling-stroke"
           />

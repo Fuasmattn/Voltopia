@@ -4,9 +4,59 @@
   --hud-text: #e8eef4;
   --hud-muted: #93a3b3;
   --accent: #ffd166;
+  /* Text on an accent-filled control. */
+  --hud-on-accent: #10161f;
+  /* Hover washes and meter tracks, from faint to firm. */
+  --hud-hover-soft: rgba(255, 255, 255, 0.04);
+  --hud-hover: rgba(255, 255, 255, 0.05);
+  --hud-hover-strong: rgba(255, 255, 255, 0.07);
+  --hud-track: rgba(255, 255, 255, 0.08);
+  --hud-scrollbar: rgba(255, 255, 255, 0.22);
+  /* Energy balance colours; the strong pair is for chart lines. */
+  --hud-positive: #7be07f;
+  --hud-negative: #e0788a;
+  --hud-positive-strong: #8ef58f;
+  --hud-negative-strong: #f08a9c;
+  --hud-negative-muted: #d99a9a;
+  --hud-warn: #e0b07f;
+  --hud-tooltip-bg: rgba(10, 16, 24, 0.96);
+  /* Dark halo under the day-graph curves, so thin lines survive the map. */
+  --hud-graph-halo: rgba(6, 12, 20, 0.55);
+  /* Lifts small text off the map; a light HUD needs none. */
+  --hud-text-shadow: 0 1px 2px rgba(6, 12, 20, 0.85);
   /* Depth for the plates docked to the screen edges. */
   --hud-shadow: 0 8px 28px rgba(3, 8, 14, 0.4);
+  --modal-backdrop: rgba(8, 12, 18, 0.65);
+  --modal-bg: #141d29;
   font-family: 'Inter', 'Segoe UI', system-ui, sans-serif;
+}
+
+/* Light HUD: cool paper glass over the map. Same accent family, darker so
+   it still reads as text; balance colours deepened for contrast. */
+:root[data-theme='light'] {
+  --hud-bg: rgba(246, 248, 250, 0.88);
+  --hud-border: rgba(18, 30, 42, 0.12);
+  --hud-text: #16212c;
+  --hud-muted: #5c6b79;
+  --accent: #e0a520;
+  --hud-on-accent: #1a1409;
+  --hud-hover-soft: rgba(18, 30, 42, 0.045);
+  --hud-hover: rgba(18, 30, 42, 0.06);
+  --hud-hover-strong: rgba(18, 30, 42, 0.09);
+  --hud-track: rgba(18, 30, 42, 0.12);
+  --hud-scrollbar: rgba(18, 30, 42, 0.3);
+  --hud-positive: #1f8a4c;
+  --hud-negative: #c0394f;
+  --hud-positive-strong: #178a3f;
+  --hud-negative-strong: #c72f48;
+  --hud-negative-muted: #b06a72;
+  --hud-warn: #a8700f;
+  --hud-tooltip-bg: rgba(250, 252, 253, 0.97);
+  --hud-graph-halo: rgba(255, 255, 255, 0.75);
+  --hud-text-shadow: none;
+  --hud-shadow: 0 8px 28px rgba(18, 30, 42, 0.18);
+  --modal-backdrop: rgba(225, 232, 238, 0.6);
+  --modal-bg: #f4f7f9;
 }
 
 * {
@@ -295,7 +345,7 @@ body,
   border-radius: 0 0 14px 14px;
   backdrop-filter: blur(8px);
   scrollbar-width: thin;
-  scrollbar-color: rgba(255, 255, 255, 0.22) transparent;
+  scrollbar-color: var(--hud-scrollbar) transparent;
   transition:
     max-height 0.22s ease,
     opacity 0.16s ease,
@@ -333,7 +383,7 @@ body,
 }
 
 .hud-drawer-panel::-webkit-scrollbar-thumb {
-  background: rgba(255, 255, 255, 0.22);
+  background: var(--hud-scrollbar);
   border-radius: 3px;
 }
 
@@ -429,7 +479,7 @@ body,
 }
 
 .speed-controls button.active {
-  color: #10161f;
+  color: var(--hud-on-accent);
   background: var(--accent);
   border-color: var(--accent);
 }
@@ -540,7 +590,7 @@ body,
 .build-tab.active {
   color: var(--hud-text);
   border-color: var(--hud-border);
-  background: rgba(255, 255, 255, 0.07);
+  background: var(--hud-hover-strong);
 }
 
 .build-tools {
@@ -556,7 +606,7 @@ body,
   place-items: center;
   width: 44px;
   height: 44px;
-  background: rgba(255, 255, 255, 0.05);
+  background: var(--hud-hover);
   border: 1px solid var(--hud-border);
   border-radius: 10px;
   color: var(--hud-text);
@@ -590,7 +640,7 @@ body,
   gap: 3px;
   width: 220px;
   padding: 8px 10px;
-  background: rgba(10, 16, 24, 0.96);
+  background: var(--hud-tooltip-bg);
   border: 1px solid var(--hud-border);
   border-radius: 10px;
   color: var(--hud-text);
@@ -678,7 +728,7 @@ body,
   display: flex;
   flex-direction: column;
   justify-content: flex-end;
-  background: rgba(255, 255, 255, 0.08);
+  background: var(--hud-track);
   border-radius: 3px;
   overflow: hidden;
 }
@@ -708,7 +758,7 @@ body,
   width: 100%;
   text-align: center;
   font-size: 9px;
-  color: rgba(255, 255, 255, 0.8);
+  color: var(--hud-text);
   pointer-events: none;
 }
 
@@ -751,10 +801,10 @@ body,
   font-weight: 600;
 }
 .energy-chip.balance.positive {
-  color: #7be07f;
+  color: var(--hud-positive);
 }
 .energy-chip.balance.negative {
-  color: #e0788a;
+  color: var(--hud-negative);
 }
 
 .energy-rows {
@@ -778,10 +828,10 @@ body,
 }
 
 .energy-row.balance.positive {
-  color: #7be07f;
+  color: var(--hud-positive);
 }
 .energy-row.balance.negative {
-  color: #e0788a;
+  color: var(--hud-negative);
 }
 .energy-row.muted {
   color: var(--hud-muted);
@@ -807,14 +857,14 @@ body,
 
 .soc-track {
   height: 6px;
-  background: rgba(255, 255, 255, 0.1);
+  background: var(--hud-track);
   border-radius: 3px;
   overflow: hidden;
 }
 
 .soc-fill {
   height: 100%;
-  background: #7be07f;
+  background: var(--hud-positive);
   transition: width 0.4s;
 }
 
@@ -882,7 +932,7 @@ body,
   font-size: 9px;
   font-variant-numeric: tabular-nums;
   color: var(--hud-muted);
-  text-shadow: 0 1px 2px rgba(6, 12, 20, 0.85);
+  text-shadow: var(--hud-text-shadow);
   white-space: nowrap;
 }
 
@@ -895,26 +945,26 @@ body,
   gap: 12px;
   font-size: 9px;
   font-weight: 600;
-  text-shadow: 0 1px 2px rgba(6, 12, 20, 0.85);
+  text-shadow: var(--hud-text-shadow);
 }
 
 .energy-graph-legend .legend-generation {
-  color: #8ef58f;
+  color: var(--hud-positive-strong);
 }
 
 .energy-graph-legend .legend-consumption {
-  color: #f08a9c;
+  color: var(--hud-negative-strong);
 }
 
 .legend-generation {
-  color: #7be07f;
+  color: var(--hud-positive);
 }
 .legend-consumption {
-  color: #e0788a;
+  color: var(--hud-negative);
 }
 
 .tax-slider {
-  background: rgba(255, 255, 255, 0.04);
+  background: var(--hud-hover-soft);
   border: 1px solid var(--hud-border);
   border-radius: 10px;
   padding: 8px 12px;
@@ -932,7 +982,7 @@ body,
 }
 
 .smart-charging-toggle {
-  background: rgba(255, 255, 255, 0.04);
+  background: var(--hud-hover-soft);
   border: 1px solid var(--hud-border);
   border-radius: 10px;
   padding: 8px 12px;
@@ -995,7 +1045,7 @@ body,
 }
 
 .overlay-toggle button {
-  background: rgba(255, 255, 255, 0.05);
+  background: var(--hud-hover);
   border: 1px solid var(--hud-border);
   border-radius: 7px;
   color: var(--hud-muted);
@@ -1005,13 +1055,13 @@ body,
 }
 
 .overlay-toggle button.active {
-  color: #10161f;
+  color: var(--hud-on-accent);
   background: var(--accent);
   border-color: var(--accent);
 }
 
 .new-game-button {
-  background: rgba(255, 255, 255, 0.05);
+  background: var(--hud-hover);
   border: 1px solid var(--hud-border);
   border-radius: 9px;
   padding: 6px 12px;
@@ -1065,7 +1115,7 @@ body,
 }
 
 .language-switch button.active {
-  color: #10161f;
+  color: var(--hud-on-accent);
   background: var(--accent);
   border-color: var(--accent);
 }
@@ -1073,7 +1123,7 @@ body,
 .modal-backdrop {
   position: absolute;
   inset: 0;
-  background: rgba(8, 12, 18, 0.6);
+  background: var(--modal-backdrop);
   display: grid;
   place-items: center;
   /* Above the console, which raises itself for its drawer overlay. */
@@ -1084,7 +1134,7 @@ body,
   width: min(560px, calc(100vw - 32px));
   max-height: calc(100vh - 64px);
   overflow-y: auto;
-  background: #141d29;
+  background: var(--modal-bg);
   border: 1px solid var(--hud-border);
   border-radius: 14px;
   color: var(--hud-text);
@@ -1136,7 +1186,7 @@ body,
 }
 
 .energy-row.negative-muted {
-  color: #d99a9a;
+  color: var(--hud-negative-muted);
 }
 
 .minimap-card {
@@ -1149,7 +1199,7 @@ body,
   font-size: 10px;
   line-height: 1.45;
   color: var(--hud-muted);
-  text-shadow: 0 1px 3px rgba(6, 12, 20, 0.85);
+  text-shadow: var(--hud-text-shadow);
   user-select: none;
 }
 
@@ -1213,7 +1263,7 @@ body,
 }
 
 .goals-list li.achieved .goals-check {
-  color: #7be07f;
+  color: var(--hud-positive);
 }
 
 .goals-check {
@@ -1275,6 +1325,17 @@ body,
 
 .settings-row input[type='checkbox'] {
   accent-color: var(--accent);
+}
+
+.settings-row select {
+  margin-left: auto;
+  background: var(--hud-hover);
+  border: 1px solid var(--hud-border);
+  border-radius: 8px;
+  color: var(--hud-text);
+  padding: 4px 8px;
+  font: inherit;
+  font-size: 13px;
 }
 
 .settings-slot {
@@ -1374,7 +1435,7 @@ body,
 .tutorial-actions button[data-testid='tutorial-next'] {
   background: var(--accent);
   border-color: var(--accent);
-  color: #10161f;
+  color: var(--hud-on-accent);
 }
 
 .tutorial-waiting {
@@ -1401,12 +1462,12 @@ body,
 .option-row button.active {
   background: var(--accent);
   border-color: var(--accent);
-  color: #10161f;
+  color: var(--hud-on-accent);
 }
 
 .seed-input {
   width: 100%;
-  background: rgba(255, 255, 255, 0.06);
+  background: var(--hud-hover-strong);
   border: 1px solid var(--hud-border);
   border-radius: 8px;
   color: var(--hud-text);
@@ -1433,7 +1494,7 @@ body,
 .new-game-actions button.primary {
   background: var(--accent);
   border-color: var(--accent);
-  color: #10161f;
+  color: var(--hud-on-accent);
   font-weight: 600;
 }
 
@@ -1455,7 +1516,7 @@ body,
 
 .stats-chart svg {
   width: 100%;
-  background: rgba(255, 255, 255, 0.04);
+  background: var(--hud-hover-soft);
   border-radius: 6px;
 }
 
@@ -1474,14 +1535,14 @@ body,
 .win-backdrop {
   position: absolute;
   inset: 0;
-  background: rgba(8, 12, 18, 0.7);
+  background: var(--modal-backdrop);
   display: grid;
   place-items: center;
   z-index: 100;
 }
 
 .win-card {
-  background: #141d29;
+  background: var(--modal-bg);
   border: 1px solid var(--accent);
   border-radius: 16px;
   padding: 28px 36px;
@@ -1516,7 +1577,7 @@ body,
   background: var(--accent);
   border: none;
   border-radius: 10px;
-  color: #10161f;
+  color: var(--hud-on-accent);
   font-weight: 600;
   padding: 8px 22px;
   cursor: pointer;
@@ -1544,10 +1605,10 @@ body,
   letter-spacing: 0;
 }
 .budget-net.positive {
-  color: #7be07f;
+  color: var(--hud-positive);
 }
 .budget-net.negative {
-  color: #e0788a;
+  color: var(--hud-negative);
 }
 /* The legend grows with the number of plant types. Capping it keeps the
    budget column from driving the drawer's height, which the energy column
@@ -1557,7 +1618,7 @@ body,
   overflow-y: auto;
   overscroll-behavior: contain;
   scrollbar-width: thin;
-  scrollbar-color: rgba(255, 255, 255, 0.22) transparent;
+  scrollbar-color: var(--hud-scrollbar) transparent;
 }
 
 .budget-body::-webkit-scrollbar {
@@ -1565,7 +1626,7 @@ body,
 }
 
 .budget-body::-webkit-scrollbar-thumb {
-  background: rgba(255, 255, 255, 0.22);
+  background: var(--hud-scrollbar);
   border-radius: 3px;
 }
 
@@ -1700,10 +1761,10 @@ body,
   flex: none;
 }
 .inspect-row.positive > span:last-child {
-  color: #7be07f;
+  color: var(--hud-positive);
 }
 .inspect-row.negative > span:last-child {
-  color: #e0788a;
+  color: var(--hud-negative);
 }
 .inspect-row.muted {
   color: var(--hud-muted);
@@ -1712,7 +1773,7 @@ body,
 .inspect-meter {
   height: 5px;
   border-radius: 3px;
-  background: rgba(255, 255, 255, 0.08);
+  background: var(--hud-track);
   overflow: hidden;
   margin: 4px 0;
 }
@@ -1726,7 +1787,7 @@ body,
   position: relative;
   height: 5px;
   border-radius: 3px;
-  background: rgba(255, 255, 255, 0.08);
+  background: var(--hud-track);
   margin: 4px 0 6px;
 }
 
@@ -1737,10 +1798,10 @@ body,
   border-radius: 3px;
 }
 .inspect-demand-fill.positive {
-  background: #7be07f;
+  background: var(--hud-positive);
 }
 .inspect-demand-fill.negative {
-  background: #e0788a;
+  background: var(--hud-negative);
 }
 
 .inspect-blockers {
@@ -1751,13 +1812,13 @@ body,
   flex-direction: column;
   gap: 2px;
   font-size: 11px;
-  color: #e0b07f;
+  color: var(--hud-warn);
 }
 
 .inspect-ok {
   margin-top: 6px;
   font-size: 11px;
-  color: #7be07f;
+  color: var(--hud-positive);
 }
 
 /* Narrow windows: the grid already prevents overlap, so this only trims

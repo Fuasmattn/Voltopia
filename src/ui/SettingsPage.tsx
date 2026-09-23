@@ -123,6 +123,17 @@ export function SettingsPage({
           />
           <span>{t('settings.reducedMotion')}</span>
         </label>
+        <label className="settings-row">
+          <span>{t('settings.theme')}</span>
+          <select
+            data-testid="setting-theme"
+            value={settings.theme}
+            onChange={(e) => update({ theme: e.target.value === 'light' ? 'light' : 'dark' })}
+          >
+            <option value="dark">{t('settings.theme.dark')}</option>
+            <option value="light">{t('settings.theme.light')}</option>
+          </select>
+        </label>
       </section>
       <section>
         <h3>{t('settings.saveSlots')}</h3>

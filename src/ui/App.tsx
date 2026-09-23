@@ -189,6 +189,8 @@ function Game({ save, options }: { save: SaveGame | null; options: NewGameOption
     sound.volume = settings.soundVolume;
     rendererRef.current?.setShadows(settings.shadows);
     rendererRef.current?.setReducedMotion(settings.reducedMotion);
+    // On the root element so modals and the boot screen follow it too.
+    document.documentElement.dataset.theme = settings.theme;
   }, [settings, rendererReady]);
 
   const requestSnapshot = (): Promise<SaveGame> =>
