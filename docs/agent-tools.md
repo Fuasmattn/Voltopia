@@ -30,6 +30,22 @@ are MCP-style `{ content: [{ type: 'text', text: '<JSON>' }] }`. Chrome
 154's `executeTool(tool, input)` expects `input` as a JSON **string**
 (`'{"from":{"x":1,"y":1}}'`), not an object.
 
+**Claude Code via Chrome DevTools MCP (native discovery).** Google's
+[chrome-devtools-mcp](https://github.com/ChromeDevTools/chrome-devtools-mcp)
+exposes `list_webmcp_tools` and `execute_webmcp_tool` (Chrome ≥ 150).
+Register it once:
+
+```bash
+claude mcp add chrome-devtools -- npx -y chrome-devtools-mcp@latest --categoryExperimentalWebmcp=true --chromeArg=--enable-features=WebMCP,WebMCPTesting
+```
+
+Then, in a new Claude Code session: "open http://localhost:5173, list the
+WebMCP tools and grow the city to 100 residents". It launches its own
+Chrome profile (so its own save); to drive your existing Chrome start it
+with `--remote-debugging-port=9222` and use `--browserUrl=http://127.0.0.1:9222`
+instead of `--chromeArg`. `node scripts/webmcp-demo.mjs` runs this whole
+pipeline unattended as a smoke test.
+
 **Without WebMCP.** Every tool is on `window.voltopia`:
 
 ```js
