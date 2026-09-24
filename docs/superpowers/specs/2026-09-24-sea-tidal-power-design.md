@@ -72,12 +72,13 @@ each already have one).
   reaches 0 at the mouth, so the channel meets the sea without a step.
 - Bank relaxation at the end of `generateWater` treats every non-land
   tile the same, so sea cliffs are smoothed by the existing code.
-- Buildable-land guarantee: `generateTerrain` enforces
-  `minBuildableFraction` over the whole map before water exists. After
-  carving, `carveSea` re-checks the fraction of buildable _land_ tiles;
-  while it is below the threshold, the band shrinks by one tile
-  deterministically (deepest columns first) down to a floor of 2 tiles.
-  The check is a loop with a fixed bound, never unbounded.
+- Size cap: the band is capped at `maxSeaFraction` (0.12) of the map.
+  While it is over the cap, the deepest column loses one tile (ties go to
+  the lowest lateral index) down to a floor of `minDepth` (2). Bounded —
+  each pass removes exactly one tile. (`generateTerrain`'s
+  `minBuildableFraction` is not reusable here: it is measured over a
+  water-free map, so any sizeable water body would push it under the
+  threshold and shrink the band to the floor every time.)
 
 ## Tide model
 
@@ -234,9 +235,8 @@ plant), placed after the existing hydro goal.
 Unit tests (`src/sim/sea.test.ts` plus additions to existing suites):
 
 - Sea generation: the band sits on the river's downstream edge; depth
-  within `seaDepthRange`; the estuary widening touches the river mouth;
-  buildable-land guarantee still holds; identical output for identical
-  seeds, different output across seeds.
+  within `depthRange`; the river reaches the sea; the size cap holds;
+  identical output for identical seeds, different output across seeds.
 - Tide: value range; slack water exactly at high and low water; four
   generation peaks per in-game day; spring-neap beat period ~7.4 days
   with neap ≈ 0.55 of spring; pure function of tick.
@@ -267,10 +267,12 @@ numbers in sim code.
 
 ```
 sea: {
-  seaDepthRange: [3, 7],
+  depthRange: [3, 7],
+  depthCellSize: 10,
   minDepth: 2,
   estuaryWidening: 3,
   estuaryTaper: 6,
+  maxSeaFraction: 0.12,
   coastRadius: 4,
   coastBonus: 0.05,
   tide: {
@@ -281,6 +283,7 @@ sea: {
   tidal: {
     currentBonus: 0.6,
     estuaryBonus: 0.35,
+    estuaryRadius: 2,
     maxSiteFactor: 2.0,
   },
   offshoreWindBonus: 0.35,
