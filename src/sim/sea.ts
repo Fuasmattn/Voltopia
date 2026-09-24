@@ -1,5 +1,5 @@
 import { BALANCE, TICKS_PER_DAY } from '../shared/constants.ts';
-import { tileIndex } from '../shared/grid.ts';
+import { neighbors4, tileIndex } from '../shared/grid.ts';
 import { Rng } from '../shared/rng.ts';
 import { Terrain } from '../shared/types.ts';
 import { markDirty, type SimState } from './state.ts';
@@ -131,4 +131,11 @@ export function tideFactor(tick: number): number {
   const lunar = Math.sin(tidePhase(tick, lunarPeriodHours));
   const solar = Math.sin(tidePhase(tick, solarPeriodHours));
   return Math.abs(lunar + solarWeight * solar) / (1 + solarWeight);
+}
+
+/** True on a sea tile that touches land — where a tidal plant may stand. */
+export function isCoastalSea(state: SimState, index: number): boolean {
+  const { terrain } = state.layers;
+  if (terrain[index] !== Terrain.Sea) return false;
+  return neighbors4(index, state.size).some((n) => terrain[n] === Terrain.Land);
 }

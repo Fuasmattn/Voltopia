@@ -29,6 +29,7 @@ import {
 } from '../shared/types.ts';
 import { emptyPlantMap, type EconomyBreakdown } from './economy.ts';
 import { grantLegacyNetwork } from './powerGrid.ts';
+import { isCoastalSea } from './sea.ts';
 import { seasonState } from './seasons.ts';
 
 /** Commute phases of a vehicle. */
@@ -650,6 +651,16 @@ export function buildRejection(
   }
   const terrain = layers.terrain[index] as Terrain;
   const wantsRiver = intent === BuildIntent.Plant && plant === PlantType.RunOfRiver;
+  const wantsTidal = intent === BuildIntent.Plant && plant === PlantType.TidalPlant;
+  const offshoreWind = intent === BuildIntent.Plant && plant === PlantType.WindTurbine;
+  if (terrain === Terrain.Sea) {
+    // The sea carries tidal plants on its shore and offshore turbines;
+    // roads stop at the coast (bridges cross the river, not the sea).
+    if (wantsTidal) return isCoastalSea(state, index) ? null : 'needsCoast';
+    if (offshoreWind) return null;
+    return 'cannotBuildOnWater';
+  }
+  if (wantsTidal) return 'needsSeaTile';
   if (terrain === Terrain.Lake) return 'cannotBuildOnWater';
   if (terrain === Terrain.River && !(intent === BuildIntent.Road || wantsRiver)) {
     return 'cannotBuildOnWater';

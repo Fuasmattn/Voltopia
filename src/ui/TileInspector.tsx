@@ -42,6 +42,8 @@ const PLANT_LABEL: Record<PlantType, TranslationKey | null> = {
   [PlantType.PoliceStation]: 'tool.plant-police',
   [PlantType.LogisticsDepot]: 'tool.plant-depot',
   [PlantType.BusDepot]: 'tool.plant-busdepot',
+  // Stopgap: no build tool for tidal plants yet (task 10 adds the label).
+  [PlantType.TidalPlant]: null,
 };
 
 const ZONE_LABEL: Record<Zone, TranslationKey | null> = {
