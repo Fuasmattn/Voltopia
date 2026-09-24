@@ -95,6 +95,23 @@ export class ElevationField implements DiffLayer {
     );
   }
 
+  /**
+   * Rise of the ground across a tile, in world units per tile, along +x
+   * and +z: the plane through the tile's four corners. Decals (roads,
+   * water, zone paint) are sheared onto this plane so they lie flush on
+   * slopes instead of floating above the lower corners.
+   */
+  tileSlope(index: number): { gx: number; gz: number } {
+    const size = this.size;
+    const x = index % size;
+    const z = Math.floor(index / size);
+    const h00 = this.cornerY(x, z);
+    const h10 = this.cornerY(x + 1, z);
+    const h01 = this.cornerY(x, z + 1);
+    const h11 = this.cornerY(x + 1, z + 1);
+    return { gx: (h10 + h11 - h00 - h01) / 2, gz: (h01 + h11 - h00 - h10) / 2 };
+  }
+
   /** Smooth ground height at a continuous tile-space position. */
   surfaceY(x: number, z: number): number {
     const size = this.size;

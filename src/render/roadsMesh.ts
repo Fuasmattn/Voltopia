@@ -5,6 +5,7 @@ import { RoadClass, Terrain, TileType } from '../shared/types.ts';
 import { PALETTE } from './scene.ts';
 import type { DiffLayer, RenderEnvironment } from './renderer.ts';
 import type { ElevationField } from './elevationField.ts';
+import { composeGroundDecal } from './decal.ts';
 
 const ROAD_HEIGHT = 0.05;
 const CENTER_SIZE = 0.62;
@@ -212,7 +213,10 @@ export class RoadsMesh implements DiffLayer {
       if ((x + y) % 2 !== 0) continue;
       const px = x + 0.88;
       const pz = y + 0.88;
-      const lift = this.elevation.maxCornerY(index);
+      // Poles stand upright on the ground under their own corner.
+      const lift = this.isBridge(index)
+        ? this.elevation.maxCornerY(index)
+        : this.elevation.surfaceY(px, pz);
       this.matrix.identity();
       this.matrix.setPosition(px, 0 + lift, pz);
       this.lampPoles.setMatrixAt(count, this.matrix);
@@ -267,6 +271,11 @@ export class RoadsMesh implements DiffLayer {
     this.rails.instanceMatrix.needsUpdate = true;
   }
 
+  /** Bridges are flat slabs at the bank's height; everything else follows the ground. */
+  private isBridge(index: number): boolean {
+    return this.terrain[index] === Terrain.River;
+  }
+
   private setInstance(
     slot: number,
     index: number,
@@ -275,8 +284,12 @@ export class RoadsMesh implements DiffLayer {
     sizeX: number,
     sizeZ: number,
   ): void {
-    this.matrix.makeScale(sizeX, ROAD_HEIGHT, sizeZ);
-    this.matrix.setPosition(x, ROAD_HEIGHT / 2 + this.elevation.maxCornerY(index), z);
+    if (this.isBridge(index)) {
+      this.matrix.makeScale(sizeX, ROAD_HEIGHT, sizeZ);
+      this.matrix.setPosition(x, ROAD_HEIGHT / 2 + this.elevation.maxCornerY(index), z);
+    } else {
+      composeGroundDecal(this.matrix, this.elevation, index, x, z, sizeX, ROAD_HEIGHT, sizeZ, 0);
+    }
     this.mesh.setMatrixAt(slot, this.matrix);
   }
 
@@ -288,8 +301,26 @@ export class RoadsMesh implements DiffLayer {
     sizeX: number,
     sizeZ: number,
   ): void {
-    this.matrix.makeScale(sizeX, LINE_HEIGHT, sizeZ);
-    this.matrix.setPosition(x, ROAD_HEIGHT + LINE_HEIGHT / 2 + this.elevation.maxCornerY(index), z);
+    if (this.isBridge(index)) {
+      this.matrix.makeScale(sizeX, LINE_HEIGHT, sizeZ);
+      this.matrix.setPosition(
+        x,
+        ROAD_HEIGHT + LINE_HEIGHT / 2 + this.elevation.maxCornerY(index),
+        z,
+      );
+    } else {
+      composeGroundDecal(
+        this.matrix,
+        this.elevation,
+        index,
+        x,
+        z,
+        sizeX,
+        LINE_HEIGHT,
+        sizeZ,
+        ROAD_HEIGHT,
+      );
+    }
     this.centreLines.setMatrixAt(slot, this.matrix);
   }
 

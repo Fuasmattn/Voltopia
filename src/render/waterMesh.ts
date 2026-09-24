@@ -4,15 +4,18 @@ import { Terrain } from '../shared/types.ts';
 import { PALETTE } from './scene.ts';
 import type { DiffLayer, RenderEnvironment } from './renderer.ts';
 import type { ElevationField } from './elevationField.ts';
+import { composeGroundDecal } from './decal.ts';
 
 /** Just above the ground plane, below roads (0.05) and the build grid. */
 const WATER_HEIGHT = 0.015;
+/** Thickness of the water slab (it is a box so it can be sheared onto slopes). */
+const WATER_THICKNESS = 0.01;
 const WOBBLE_AMPLITUDE = 0.06;
 const WOBBLE_SPEED = 1.3;
 const NIGHT_DIM = 0.55;
 
 /**
- * One flat instanced quad per river or lake tile. Water never changes
+ * One thin instanced slab per river or lake tile. Water never changes
  * after map generation, so the mesh only rebuilds when terrain diffs
  * arrive (new game / load). A slow brightness wobble keeps it alive.
  */
@@ -32,8 +35,7 @@ export class WaterMesh implements DiffLayer {
   ) {
     this.gridSize = gridSize;
     this.terrain = new Uint8Array(gridSize * gridSize);
-    const geometry = new THREE.PlaneGeometry(1, 1);
-    geometry.rotateX(-Math.PI / 2);
+    const geometry = new THREE.BoxGeometry(1, 1, 1);
     this.material = new THREE.MeshLambertMaterial({ color: 0xffffff });
     this.mesh = new THREE.InstancedMesh(geometry, this.material, gridSize * gridSize);
     // Instance transforms live across the whole grid; the base geometry's
@@ -77,9 +79,28 @@ export class WaterMesh implements DiffLayer {
       if (terrain === Terrain.Land) continue;
       const x = (index % this.gridSize) + 0.5;
       const z = Math.floor(index / this.gridSize) + 0.5;
-      const lift = this.elevation.maxCornerY(index);
-      this.matrix.identity();
-      this.matrix.setPosition(x, WATER_HEIGHT + lift, z);
+      if (terrain === Terrain.Lake) {
+        // Every lake tile shares one level: one flat surface, banks rise around it.
+        this.matrix.makeScale(1, WATER_THICKNESS, 1);
+        this.matrix.setPosition(
+          x,
+          this.elevation.centerY(index) + WATER_HEIGHT + WATER_THICKNESS / 2,
+          z,
+        );
+      } else {
+        // The river bed is carved into the ground; the water follows it downhill.
+        composeGroundDecal(
+          this.matrix,
+          this.elevation,
+          index,
+          x,
+          z,
+          1,
+          WATER_THICKNESS,
+          1,
+          WATER_HEIGHT,
+        );
+      }
       this.mesh.setMatrixAt(count, this.matrix);
       this.mesh.setColorAt(
         count,

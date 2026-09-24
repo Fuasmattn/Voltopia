@@ -3,6 +3,12 @@ import type { TileDiff } from '../shared/types.ts';
 import { TileType, Zone } from '../shared/types.ts';
 import type { DiffLayer } from './renderer.ts';
 import type { ElevationField } from './elevationField.ts';
+import { composeGroundDecal } from './decal.ts';
+
+/** Footprint of the tint within its tile, its slab thickness and lift above the ground. */
+const ZONE_SIZE = 0.92;
+const ZONE_THICKNESS = 0.01;
+const ZONE_LIFT = 0.04;
 
 const ZONE_TINTS: Record<number, THREE.Color> = {
   [Zone.Residential]: new THREE.Color(0x67c26b),
@@ -26,7 +32,8 @@ export class ZoneTilesMesh implements DiffLayer {
     private readonly elevation: ElevationField,
   ) {
     this.gridSize = gridSize;
-    const geometry = new THREE.PlaneGeometry(0.92, 0.92).rotateX(-Math.PI / 2);
+    // A unit box, sheared onto the ground per tile (see composeGroundDecal).
+    const geometry = new THREE.BoxGeometry(1, 1, 1);
     const material = new THREE.MeshBasicMaterial({
       transparent: true,
       opacity: 0.28,
@@ -61,10 +68,16 @@ export class ZoneTilesMesh implements DiffLayer {
   private rebuild(): void {
     let slot = 0;
     for (const [index, zone] of this.zones) {
-      this.matrix.setPosition(
+      composeGroundDecal(
+        this.matrix,
+        this.elevation,
+        index,
         (index % this.gridSize) + 0.5,
-        0.04 + this.elevation.maxCornerY(index),
         Math.floor(index / this.gridSize) + 0.5,
+        ZONE_SIZE,
+        ZONE_THICKNESS,
+        ZONE_SIZE,
+        ZONE_LIFT,
       );
       this.mesh.setMatrixAt(slot, this.matrix);
       this.mesh.setColorAt(slot, ZONE_TINTS[zone] ?? new THREE.Color(0xffffff));
