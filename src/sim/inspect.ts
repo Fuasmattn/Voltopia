@@ -66,6 +66,14 @@ function plantGeneration(
         peak: e.biogasMaxOutput,
       };
     }
+    case PlantType.HydrogenPlant: {
+      // The fuel cell dispatches city-wide too; equal share per plant.
+      const plants = censusPlants(state).hydrogenPlants;
+      return {
+        generation: plants > 0 ? state.lastEnergy.fuelCell / plants : 0,
+        peak: BALANCE.hydrogen.fuelCellPowerLimit,
+      };
+    }
     default:
       return { generation: 0, peak: 0 };
   }
@@ -82,6 +90,12 @@ function plantStorage(
     return {
       stored: state.storedEnergy / census.batteries,
       capacity: BALANCE.energy.batteryCapacity,
+    };
+  }
+  if (plant === PlantType.HydrogenPlant && census.hydrogenPlants > 0) {
+    return {
+      stored: state.hydrogenEnergy / census.hydrogenPlants,
+      capacity: BALANCE.hydrogen.capacity,
     };
   }
   if (plant === PlantType.PumpedStorage && census.pumpedStoragePlants > 0) {

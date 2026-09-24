@@ -19,6 +19,8 @@ export interface EconomyBreakdown {
   biogasFuelCost: number;
   gridImportCost: number;
   gridExportRevenue: number;
+  /** Revenue from hydrogen sold while the tanks were full. */
+  hydrogenRevenue: number;
   /** Upkeep of the avenue tiles (part of gridUpkeep). */
   avenueUpkeep: number;
   /** Bus stops on the roads. */
@@ -92,9 +94,16 @@ export function economyStep(state: SimState, population: number, jobs: number): 
     state.lastEnergy.biogas * BALANCE.upkeepPerTick.biogasFuelCostPerEnergyUnit;
   const gridImportCost = state.lastEnergy.gridImport * BALANCE.market.importCostPerEnergyUnit;
   const gridExportRevenue = state.lastEnergy.gridExport * BALANCE.market.exportRevenuePerEnergyUnit;
+  const hydrogenRevenue = state.lastEnergy.hydrogenSold * BALANCE.hydrogen.saleRevenuePerEnergyUnit;
 
   state.money +=
-    taxIncome + gridExportRevenue - gridUpkeep - plantUpkeep - biogasFuelCost - gridImportCost;
+    taxIncome +
+    gridExportRevenue +
+    hydrogenRevenue -
+    gridUpkeep -
+    plantUpkeep -
+    biogasFuelCost -
+    gridImportCost;
   const breakdown: EconomyBreakdown = {
     taxIncome,
     gridUpkeep,
@@ -106,6 +115,7 @@ export function economyStep(state: SimState, population: number, jobs: number): 
     biogasFuelCost,
     gridImportCost,
     gridExportRevenue,
+    hydrogenRevenue,
     avenueUpkeep,
     busStops,
     busStopUpkeep,

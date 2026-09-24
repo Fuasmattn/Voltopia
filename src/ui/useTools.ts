@@ -27,6 +27,7 @@ export type ToolId =
   | 'plant-busdepot'
   | 'plant-hydro'
   | 'plant-pumped'
+  | 'plant-hydrogen'
   | 'bulldoze';
 
 const ZONE_BY_TOOL: Partial<Record<ToolId, Zone>> = {
@@ -51,6 +52,7 @@ export const TOOL_HOTKEYS: Record<string, ToolId> = {
   p: 'plant-park',
   h: 'plant-hydro',
   u: 'plant-pumped',
+  y: 'plant-hydrogen',
   l: 'power-line',
   f: 'plant-fire',
   c: 'plant-police',
@@ -78,6 +80,7 @@ export const PLANT_BY_TOOL: Partial<Record<ToolId, PlantType>> = {
   'plant-busdepot': PlantType.BusDepot,
   'plant-hydro': PlantType.RunOfRiver,
   'plant-pumped': PlantType.PumpedStorage,
+  'plant-hydrogen': PlantType.HydrogenPlant,
 };
 
 /**

@@ -84,6 +84,7 @@ export const PLANT_NAMES = {
   park: PlantType.Park,
   run_of_river: PlantType.RunOfRiver,
   pumped_storage: PlantType.PumpedStorage,
+  hydrogen: PlantType.HydrogenPlant,
   logistics_depot: PlantType.LogisticsDepot,
   bus_depot: PlantType.BusDepot,
 } as const;
@@ -131,6 +132,7 @@ const PLANT_TOOL_KEY: Record<PlantName, TranslationKey> = {
   park: 'tool.plant-park',
   run_of_river: 'tool.plant-hydro',
   pumped_storage: 'tool.plant-pumped',
+  hydrogen: 'tool.plant-hydrogen',
   logistics_depot: 'tool.plant-depot',
   bus_depot: 'tool.plant-busdepot',
 };
@@ -144,6 +146,8 @@ const PLANT_PLACEMENT: Record<PlantName, string> = {
   park: 'any empty land tile; raises happiness of buildings within its radius',
   run_of_river: 'an empty river tile',
   pumped_storage: 'an empty land tile with a lake tile as direct (4-)neighbour',
+  hydrogen:
+    'any empty land tile; electrolyses surplus beyond the export link, re-electrifies in a lull, sells overflow',
   logistics_depot:
     'an empty land tile with a road as direct (4-)neighbour; vans serve shops within route reach',
   bus_depot:
@@ -332,6 +336,7 @@ function overviewGlyph(tiles: TileMirror, i: number): string {
       park: 'P',
       run_of_river: 'F',
       pumped_storage: 'U',
+      hydrogen: 'Y',
       logistics_depot: 'D',
       bus_depot: 'T',
     };
@@ -475,11 +480,13 @@ export function createAgentTools(ctx: AgentContext): AgentTool[] {
               hydro: round(e.generation.hydro),
               biogas: round(e.generation.biogas),
               rooftop: round(e.generation.rooftop),
+              fuelCell: round(e.generation.hydrogen),
             },
             consumption: {
               buildings: round(e.consumption.buildings),
               charging: round(e.consumption.charging),
               heating: round(e.consumption.heating),
+              electrolysis: round(e.consumption.electrolysis),
             },
             deficit: round(e.deficit),
             curtailment: round(e.curtailment),
@@ -487,6 +494,11 @@ export function createAgentTools(ctx: AgentContext): AgentTool[] {
             gridExport: round(e.gridExport),
             batteries: { stored: Math.round(e.storedEnergy), capacity: e.storageCapacity },
             pumpedStorage: { stored: Math.round(e.pumpedStoredEnergy), capacity: e.pumpedCapacity },
+            hydrogen: {
+              stored: Math.round(e.hydrogenStoredEnergy),
+              capacity: e.hydrogenCapacity,
+              soldPerTick: round(e.hydrogenSold),
+            },
             biogasCapacity: e.biogasCapacity,
           },
           budgetPerTick: {
@@ -496,6 +508,7 @@ export function createAgentTools(ctx: AgentContext): AgentTool[] {
             biogasFuelCost: round(s.budget.biogasFuelCost, 3),
             gridImportCost: round(s.budget.gridImportCost, 3),
             gridExportRevenue: round(s.budget.gridExportRevenue, 3),
+            hydrogenRevenue: round(s.budget.hydrogenRevenue, 3),
             net: round(s.budget.net, 3),
             ticksPerDay: TICKS_PER_DAY,
           },
@@ -812,8 +825,8 @@ export function createAgentTools(ctx: AgentContext): AgentTool[] {
       name: 'place_plant',
       description:
         'Place a plant on one tile: solar, wind, battery, biogas, charging_hub, park, ' +
-        'run_of_river (river tile), pumped_storage (land tile next to the lake), logistics_depot, ' +
-        'bus_depot. See get_build_catalog for costs and roles.',
+        'run_of_river (river tile), pumped_storage (land tile next to the lake), hydrogen, ' +
+        'logistics_depot, bus_depot. See get_build_catalog for costs and roles.',
       inputSchema: {
         type: 'object',
         properties: {

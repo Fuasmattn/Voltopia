@@ -19,6 +19,7 @@ import {
   countPopulationAndJobs,
   TileType,
   totalBiogasCapacity,
+  totalHydrogenCapacity,
   totalPumpedStorageCapacity,
   totalStorageCapacity,
   Zone,
@@ -162,17 +163,22 @@ export function buildStats(state: SimState): GlobalStats {
         biogas: e.biogas,
         rooftop: e.rooftop,
         hydro: e.hydro,
+        hydrogen: e.fuelCell,
       },
       consumption: {
         buildings: e.buildingConsumption,
         charging: e.chargingConsumption,
         heating: e.heatingConsumption,
         cooling: e.coolingConsumption,
+        electrolysis: e.electrolysis,
       },
       storedEnergy: state.storedEnergy,
       storageCapacity: totalStorageCapacity(state),
       pumpedStoredEnergy: state.pumpedStorageEnergy,
       pumpedCapacity: totalPumpedStorageCapacity(state),
+      hydrogenStoredEnergy: state.hydrogenEnergy,
+      hydrogenCapacity: totalHydrogenCapacity(state),
+      hydrogenSold: e.hydrogenSold,
       biogasCapacity: totalBiogasCapacity(state),
       curtailment: e.curtailment,
       deficit: e.deficit,
@@ -224,6 +230,7 @@ function buildBudget(state: SimState): GlobalStats['budget'] {
   return {
     taxIncome: b.taxIncome,
     gridExportRevenue: b.gridExportRevenue,
+    hydrogenRevenue: b.hydrogenRevenue,
     gridUpkeep: b.gridUpkeep,
     plantUpkeep: b.plantUpkeep,
     plantUpkeepByType: { ...b.plantUpkeepByType },
@@ -237,7 +244,8 @@ function buildBudget(state: SimState): GlobalStats['budget'] {
     gridImportCost: b.gridImportCost,
     net:
       b.taxIncome +
-      b.gridExportRevenue -
+      b.gridExportRevenue +
+      b.hydrogenRevenue -
       b.gridUpkeep -
       b.plantUpkeep -
       b.biogasFuelCost -

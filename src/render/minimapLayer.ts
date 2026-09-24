@@ -29,6 +29,7 @@ const COLORS = {
     [PlantType.Park]: '#3f7d46',
     [PlantType.RunOfRiver]: '#9aa3ad',
     [PlantType.PumpedStorage]: '#5d6b7a',
+    [PlantType.HydrogenPlant]: '#54b8c9',
     [PlantType.FireStation]: '#c0392b',
     [PlantType.PoliceStation]: '#2f5fa8',
     [PlantType.LogisticsDepot]: '#8d99a6',

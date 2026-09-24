@@ -207,6 +207,8 @@ export interface SimState {
   storedEnergy: number;
   /** Energy stored in pumped storage plants (separate pool from batteries). */
   pumpedStorageEnergy: number;
+  /** Hydrogen stored in hydrogen plants (third pool, filled from surplus). */
+  hydrogenEnergy: number;
   /** Incremented whenever plants or power lines change; drives recomputeGrid. */
   gridVersion: number;
   /** gridVersion the energized layer was last computed for (-1 = never). */
@@ -288,6 +290,12 @@ export interface SimState {
     deficit: number;
     gridImport: number;
     gridExport: number;
+    /** Electrolyser input this tick (stored or sold as hydrogen). */
+    electrolysis: number;
+    /** Fuel-cell output re-electrified from the hydrogen pool this tick. */
+    fuelCell: number;
+    /** Hydrogen units sold this tick because the tanks were full. */
+    hydrogenSold: number;
   };
 }
 
@@ -337,6 +345,7 @@ export function createSimState(
     happiness: BALANCE.happiness.base,
     storedEnergy: 0,
     pumpedStorageEnergy: 0,
+    hydrogenEnergy: 0,
     gridVersion: 0,
     gridComputedVersion: -1,
     weather: {
@@ -379,6 +388,7 @@ export function createSimState(
       taxIncome: 0,
       gridUpkeep: 0,
       plantUpkeep: 0,
+      hydrogenRevenue: 0,
       plantUpkeepByType: emptyPlantMap(),
       plantCountByType: emptyPlantMap(),
       roadTiles: 0,
@@ -405,6 +415,9 @@ export function createSimState(
       deficit: 0,
       gridImport: 0,
       gridExport: 0,
+      electrolysis: 0,
+      fuelCell: 0,
+      hydrogenSold: 0,
     },
   };
 }
@@ -670,6 +683,7 @@ export function serializeState(state: SimState): SaveGame {
     lifetime: state.lifetime.samples.map((sample) => ({ ...sample })),
     riverFlow: state.weather.riverFlow,
     pumpedStorageEnergy: state.pumpedStorageEnergy,
+    hydrogenEnergy: state.hydrogenEnergy,
     seasonOriginDay: state.seasonOriginDay,
     snowpack: state.weather.snowpack,
     insulation: state.insulation,
@@ -712,6 +726,7 @@ export function deserializeState(save: SaveGame): SimState {
   state.layers.supplied.set(new Uint8Array(save.layers.supplied));
   state.layers.plantType.set(new Uint8Array(save.layers.plantType));
   state.pumpedStorageEnergy = save.pumpedStorageEnergy ?? 0;
+  state.hydrogenEnergy = save.hydrogenEnergy ?? 0;
   state.weather.riverFlow = save.riverFlow ?? BALANCE.water.dryBaselineFlow;
   // Hand-edited JSON exports may hold out-of-range values; keep the
   // season readable (whole days, snow cover 0..1).
@@ -786,6 +801,10 @@ export function totalStorageCapacity(state: SimState): number {
 /** Biogas output the city could dispatch per tick if every plant ran flat out. */
 export function totalBiogasCapacity(state: SimState): number {
   return countPlants(state, PlantType.BiogasPlant) * BALANCE.energy.biogasMaxOutput;
+}
+
+export function totalHydrogenCapacity(state: SimState): number {
+  return countPlants(state, PlantType.HydrogenPlant) * BALANCE.hydrogen.capacity;
 }
 
 export function totalPumpedStorageCapacity(state: SimState): number {

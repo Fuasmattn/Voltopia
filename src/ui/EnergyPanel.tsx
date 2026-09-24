@@ -79,12 +79,14 @@ export function EnergyPanel({ energy, riverFlow }: { energy: EnergyStats; riverF
     energy.generation.wind +
     energy.generation.biogas +
     energy.generation.rooftop +
-    energy.generation.hydro;
+    energy.generation.hydro +
+    energy.generation.hydrogen;
   const totalConsumption =
     energy.consumption.buildings +
     energy.consumption.charging +
     energy.consumption.heating +
-    energy.consumption.cooling;
+    energy.consumption.cooling +
+    energy.consumption.electrolysis;
   const balance = useSmoothedNumber(totalGeneration - totalConsumption);
 
   return (
@@ -115,6 +117,14 @@ export function EnergyPanel({ energy, riverFlow }: { energy: EnergyStats; riverF
           value={energy.generation.rooftop}
           testId="detail-energy-rooftop"
         />
+        {/* The fuel cell is dispatchable like biogas: installed but idle
+            means standby, not broken. */}
+        <Row
+          label={t('energy.fuelCell')}
+          value={energy.generation.hydrogen}
+          testId="detail-energy-fuelcell"
+          standby={energy.hydrogenCapacity > 0 && energy.generation.hydrogen <= 0}
+        />
         <Row
           label={t('energy.consumption')}
           value={totalConsumption}
@@ -134,6 +144,11 @@ export function EnergyPanel({ energy, riverFlow }: { energy: EnergyStats; riverF
           label={t('energy.cooling')}
           value={energy.consumption.cooling}
           testId="detail-energy-cooling"
+        />
+        <Row
+          label={t('energy.electrolysis')}
+          value={energy.consumption.electrolysis}
+          testId="detail-energy-electrolysis"
         />
         <div
           className={`energy-row balance ${balance >= 0 ? 'positive' : 'negative'}`}
@@ -155,6 +170,12 @@ export function EnergyPanel({ energy, riverFlow }: { energy: EnergyStats; riverF
           tone="positive"
         />
         <Row
+          label={t('energy.hydrogenSold')}
+          value={energy.hydrogenSold}
+          testId="detail-energy-hydrogen-sold"
+          tone="positive"
+        />
+        <Row
           label={t('energy.curtailed')}
           value={energy.curtailment}
           testId="detail-energy-curtailment"
@@ -172,6 +193,12 @@ export function EnergyPanel({ energy, riverFlow }: { energy: EnergyStats; riverF
         stored={energy.pumpedStoredEnergy}
         capacity={energy.pumpedCapacity}
         testId="energy-pumped-soc"
+      />
+      <SocBlock
+        label={t('energy.hydrogenStorage')}
+        stored={energy.hydrogenStoredEnergy}
+        capacity={energy.hydrogenCapacity}
+        testId="energy-hydrogen-soc"
       />
     </section>
   );

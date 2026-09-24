@@ -55,6 +55,7 @@ const en = {
   'tool.plant-busdepot': 'Bus depot',
   'tool.plant-hydro': 'Run-of-river plant',
   'tool.plant-pumped': 'Pumped storage',
+  'tool.plant-hydrogen': 'Hydrogen plant',
   'tool.bulldoze': 'Bulldozer',
   'tool.undo': 'Undo',
   'tool.undo.title': 'Undo last build action',
@@ -91,6 +92,8 @@ const en = {
     'Sends three electric buses on tours over your stops. Needs a road and power to charge.',
   'tool.plant-hydro.desc': 'Built on the river. Output follows the river flow.',
   'tool.plant-pumped.desc': 'Large storage on a lake shore. Pumps up on surplus.',
+  'tool.plant-hydrogen.desc':
+    'Electrolyses surplus the grid cannot take into hydrogen, re-electrifies it in a lull and sells the overflow once the tank is full.',
   'tool.bulldoze.desc': 'Clears roads, zones and plants. Drag to clear an area.',
   'tool.undo.desc': 'Undo the last build action.',
 
@@ -112,6 +115,10 @@ const en = {
   'energy.export': '⤴️ Grid export',
   'energy.storage': 'Storage (SoC)',
   'energy.pumpedStorage': 'Pumped storage (SoC)',
+  'energy.fuelCell': 'Fuel cell',
+  'energy.electrolysis': 'Electrolysis',
+  'energy.hydrogenSold': 'Hydrogen sold',
+  'energy.hydrogenStorage': 'Hydrogen tank',
   'energy.graph.label': 'Generation and consumption over the last day',
   'energy.legend.generation': 'generation',
   'energy.legend.consumption': 'consumption',
@@ -182,7 +189,7 @@ const en = {
     'Drag roads, then paint residential, commercial and retail zones next to them. Buildings appear on their own when there is demand (see the R/C/S bars) and densify over time — but only while they are fully supplied with energy.',
   'help.energy.title': 'Energy',
   'help.energy.body':
-    'Plants supply only what power lines connect to them (see Grid and power lines). Solar peaks at noon and suffers under clouds; wind follows the weather day and night. Batteries store the midday surplus for the evening; the biogas plant is dispatchable backup — reliable but expensive to run, and it only fires when sun, wind, water and storage cannot cover the load, so it usually sits on standby. Dense buildings add rooftop PV automatically.',
+    'Plants supply only what power lines connect to them (see Grid and power lines). Solar peaks at noon and suffers under clouds; wind follows the weather day and night. Batteries store the midday surplus for the evening; the biogas plant is dispatchable backup — reliable but expensive to run, and it only fires when sun, wind, water and storage cannot cover the load, so it usually sits on standby. Dense buildings add rooftop PV automatically. The hydrogen plant electrolyses surplus that batteries, pumped storage and the export link cannot absorb: it fills a large tank, re-electrifies through its fuel cell in a lull, and sells hydrogen for profit once the tank is full — curtailed energy becomes income.',
   'help.grid.title': 'Grid and power lines',
   'help.grid.body':
     'Plants only supply buildings connected to them. Draw power lines (⚡, key L) from a plant along your streets — they run over roads and across water. Every energised line tile and every plant connects buildings within three tiles. A line that does not touch a plant carries nothing; the supply overlay shows what is connected. Cities from before power lines got lines along their roads for free.',
@@ -325,6 +332,7 @@ const en = {
   'budget.expenses': 'Upkeep & costs',
   'budget.tax': 'Taxes',
   'budget.export': 'Grid export',
+  'budget.hydrogen': 'Hydrogen sales',
   'budget.roads': 'Roads & power lines',
   'budget.avenues': 'Avenues',
   'budget.busStops': 'Bus stops',
@@ -471,6 +479,7 @@ const de: Record<TranslationKey, string> = {
   'tool.plant-busdepot': 'Busdepot',
   'tool.plant-hydro': 'Laufwasserkraftwerk',
   'tool.plant-pumped': 'Pumpspeicher',
+  'tool.plant-hydrogen': 'Wasserstoffanlage',
   'tool.bulldoze': 'Abriss',
   'tool.undo': 'Rückgängig',
   'tool.undo.title': 'Letzte Bauaktion rückgängig machen',
@@ -508,6 +517,8 @@ const de: Record<TranslationKey, string> = {
     'Schickt drei Elektrobusse über deine Haltestellen. Braucht Straße und Strom zum Laden.',
   'tool.plant-hydro.desc': 'Am Fluss gebaut. Leistung folgt dem Abfluss.',
   'tool.plant-pumped.desc': 'Großer Speicher am Seeufer. Pumpt bei Überschuss hoch.',
+  'tool.plant-hydrogen.desc':
+    'Elektrolysiert Überschuss, den das Netz nicht aufnimmt, zu Wasserstoff, verstromt ihn in der Flaute und verkauft den Überlauf bei vollem Tank.',
   'tool.bulldoze.desc': 'Entfernt Straßen, Gebiete und Anlagen. Ziehen räumt eine Fläche.',
   'tool.undo.desc': 'Macht die letzte Bauaktion rückgängig.',
 
@@ -529,6 +540,10 @@ const de: Record<TranslationKey, string> = {
   'energy.export': '⤴️ Einspeisung',
   'energy.storage': 'Speicher (Ladestand)',
   'energy.pumpedStorage': 'Pumpspeicher (Ladestand)',
+  'energy.fuelCell': 'Brennstoffzelle',
+  'energy.electrolysis': 'Elektrolyse',
+  'energy.hydrogenSold': 'Wasserstoff verkauft',
+  'energy.hydrogenStorage': 'Wasserstofftank',
   'energy.graph.label': 'Erzeugung und Verbrauch des letzten Tages',
   'energy.legend.generation': 'Erzeugung',
   'energy.legend.consumption': 'Verbrauch',
@@ -599,7 +614,7 @@ const de: Record<TranslationKey, string> = {
     'Ziehe Straßen und male daneben Wohn-, Gewerbe- und Einzelhandelszonen. Gebäude entstehen von selbst, wenn Nachfrage besteht (siehe die R/C/S-Balken), und verdichten sich mit der Zeit — aber nur, solange sie vollständig mit Energie versorgt sind.',
   'help.energy.title': 'Energie',
   'help.energy.body':
-    'Anlagen versorgen nur, was Stromleitungen mit ihnen verbinden (siehe Netz und Leitungen). Solar liefert mittags am meisten und leidet unter Wolken; Wind folgt dem Wetter, Tag und Nacht. Batterien speichern den Mittagsüberschuss für den Abend; die Biogasanlage ist regelbare Reserve — zuverlässig, aber teuer im Betrieb, und sie springt nur an, wenn Sonne, Wind, Wasser und Speicher die Last nicht decken; meist steht sie in Bereitschaft. Dichte Gebäude bekommen automatisch Dach-PV.',
+    'Anlagen versorgen nur, was Stromleitungen mit ihnen verbinden (siehe Netz und Leitungen). Solar liefert mittags am meisten und leidet unter Wolken; Wind folgt dem Wetter, Tag und Nacht. Batterien speichern den Mittagsüberschuss für den Abend; die Biogasanlage ist regelbare Reserve — zuverlässig, aber teuer im Betrieb, und sie springt nur an, wenn Sonne, Wind, Wasser und Speicher die Last nicht decken; meist steht sie in Bereitschaft. Dichte Gebäude bekommen automatisch Dach-PV. Die Wasserstoffanlage elektrolysiert Überschuss, den Batterien, Pumpspeicher und die Netzeinspeisung nicht aufnehmen können: Sie füllt einen großen Tank, verstromt in der Flaute über ihre Brennstoffzelle und verkauft bei vollem Tank Wasserstoff mit Gewinn — abgeregelte Energie wird zu Einnahmen.',
   'help.grid.title': 'Netz und Leitungen',
   'help.grid.body':
     'Anlagen versorgen nur Gebäude, die mit ihnen verbunden sind. Ziehe Stromleitungen (⚡, Taste L) von einer Anlage entlang deiner Straßen — sie laufen über Straßen und über Wasser. Jedes angeschlossene Leitungsfeld und jede Anlage versorgt Gebäude im Umkreis von drei Feldern. Eine Leitung ohne Anlage führt keinen Strom; das Versorgungs-Overlay zeigt, was angeschlossen ist. Städte aus der Zeit vor den Leitungen haben ihre Leitungen entlang der Straßen geschenkt bekommen.',
@@ -744,6 +759,7 @@ const de: Record<TranslationKey, string> = {
   'budget.expenses': 'Unterhalt & Kosten',
   'budget.tax': 'Steuern',
   'budget.export': 'Netzeinspeisung',
+  'budget.hydrogen': 'Wasserstoffverkauf',
   'budget.roads': 'Straßen & Leitungen',
   'budget.avenues': 'Alleen',
   'budget.busStops': 'Haltestellen',

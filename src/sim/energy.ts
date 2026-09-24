@@ -75,6 +75,7 @@ interface PlantCensus {
   policeStations: number;
   logisticsDepots: number;
   busDepots: number;
+  hydrogenPlants: number;
   /** Sum of wind turbines' elevation bonus factors (== count on flat maps). */
   windCapacity: number;
   /** Sum of run-of-river plants' drop bonus factors (== count on flat maps). */
@@ -98,6 +99,7 @@ export function censusPlants(state: SimState): PlantCensus {
     policeStations: 0,
     logisticsDepots: 0,
     busDepots: 0,
+    hydrogenPlants: 0,
     windCapacity: 0,
     hydroCapacity: 0,
     pumpedCapacity: 0,
@@ -144,6 +146,9 @@ export function censusPlants(state: SimState): PlantCensus {
         break;
       case PlantType.BusDepot:
         census.busDepots++;
+        break;
+      case PlantType.HydrogenPlant:
+        census.hydrogenPlants++;
         break;
       case PlantType.None:
         break;
@@ -245,9 +250,12 @@ function dischargePool(
  * 1. renewable generation (solar + wind + rooftop + hydro) covers
  *    consumption (buildings, heating, cooling, charging),
  * 2. surplus charges batteries, then pumped storage, anything beyond is
- *    exported over the transmission link or curtailed,
- * 3. deficit discharges batteries, then pumped storage, then dispatches
- *    biogas, then imports over the transmission link,
+ *    exported over the transmission link; electrolysers absorb what the
+ *    link cannot take (selling hydrogen once the tanks are full) and
+ *    only the rest is curtailed,
+ * 3. deficit discharges batteries, then pumped storage, then the
+ *    hydrogen fuel cells, then dispatches biogas, then imports over the
+ *    transmission link,
  * 4. remaining deficit becomes undersupply: a matching share of connected
  *    (energised) buildings is flagged undersupplied (deterministic flicker).
  */
@@ -304,12 +312,19 @@ export function energyStep(state: SimState, input: EnergyTickInput): void {
   const pumpedCapacity = census.pumpedCapacity * BALANCE.energy.pumpedStorageCapacity;
   const pumpedPowerLimit = census.pumpedCapacity * BALANCE.energy.pumpedStoragePowerLimit;
   state.pumpedStorageEnergy = Math.min(state.pumpedStorageEnergy, pumpedCapacity);
+  const hydrogenCapacity = census.hydrogenPlants * BALANCE.hydrogen.capacity;
+  const electrolyserLimit = census.hydrogenPlants * BALANCE.hydrogen.electrolyserPowerLimit;
+  const fuelCellLimit = census.hydrogenPlants * BALANCE.hydrogen.fuelCellPowerLimit;
+  state.hydrogenEnergy = Math.min(state.hydrogenEnergy, hydrogenCapacity);
 
   let curtailment = 0;
   let biogas = 0;
   let deficit = 0;
   let gridImport = 0;
   let gridExport = 0;
+  let electrolysis = 0;
+  let fuelCell = 0;
+  let hydrogenSold = 0;
 
   const net = generation - totalDemand;
   if (net >= 0) {
@@ -330,9 +345,26 @@ export function energyStep(state: SimState, input: EnergyTickInput): void {
     );
     state.pumpedStorageEnergy = pumped.stored;
     const remaining = net - battery.absorbed - pumped.absorbed;
-    // Sell what storage cannot absorb; curtail beyond the link.
+    // Sell what storage cannot absorb over the link, then electrolyse
+    // what the link cannot take; only the rest is curtailed.
     gridExport = Math.min(remaining, BALANCE.market.exportCapacity);
-    curtailment = remaining - gridExport;
+    const beyondExport = remaining - gridExport;
+    const hydrogen = chargePool(
+      state.hydrogenEnergy,
+      hydrogenCapacity,
+      electrolyserLimit,
+      BALANCE.hydrogen.chargeEfficiency,
+      beyondExport,
+    );
+    state.hydrogenEnergy = hydrogen.stored;
+    // Full tanks keep the electrolysers running and sell the output.
+    const saleInput = Math.min(
+      beyondExport - hydrogen.absorbed,
+      electrolyserLimit - hydrogen.absorbed,
+    );
+    hydrogenSold = saleInput * BALANCE.hydrogen.chargeEfficiency;
+    electrolysis = hydrogen.absorbed + saleInput;
+    curtailment = beyondExport - electrolysis;
   } else {
     let shortfall = -net;
     const battery = dischargePool(state.storedEnergy, powerLimit, shortfall);
@@ -341,6 +373,10 @@ export function energyStep(state: SimState, input: EnergyTickInput): void {
     const pumped = dischargePool(state.pumpedStorageEnergy, pumpedPowerLimit, shortfall);
     state.pumpedStorageEnergy = pumped.stored;
     shortfall -= pumped.released;
+    const hydrogen = dischargePool(state.hydrogenEnergy, fuelCellLimit, shortfall);
+    state.hydrogenEnergy = hydrogen.stored;
+    fuelCell = hydrogen.released;
+    shortfall -= fuelCell;
     biogas = Math.min(shortfall, census.biogasPlants * BALANCE.energy.biogasMaxOutput);
     shortfall -= biogas;
     // Expensive imports over the limited transmission link come last.
@@ -371,6 +407,9 @@ export function energyStep(state: SimState, input: EnergyTickInput): void {
     deficit,
     gridImport,
     gridExport,
+    electrolysis,
+    fuelCell,
+    hydrogenSold,
   };
 
   // Average across the sample window instead of snapshotting the last
@@ -381,7 +420,7 @@ export function energyStep(state: SimState, input: EnergyTickInput): void {
   const soc =
     totalCapacity > 0 ? (state.storedEnergy + state.pumpedStorageEnergy) / totalCapacity : 0;
   const accum = state.energyHistoryAccum;
-  accum.generation += generation + biogas;
+  accum.generation += generation + biogas + fuelCell;
   accum.consumption += totalDemand;
   accum.soc += soc;
   accum.ticks++;

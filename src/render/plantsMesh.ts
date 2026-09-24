@@ -55,6 +55,9 @@ const COLORS = {
   depotDoor: 0x3a4048,
   depotRamp: 0x6f7a86,
   busHall: 0x5b8fc7,
+  hydrogenTank: 0xe6ebee,
+  hydrogenBand: 0x54b8c9,
+  hydrogenHall: 0x9aa3ad,
   busRoof: 0xe4e7ea,
   busDoor: 0x3a4048,
   busApron: 0x6f7a86,
@@ -232,6 +235,17 @@ function plantBoxParts(plant: PlantType, site: PlantSite): BoxPart[] {
         { sx: 0.9, sy: 0.04, sz: 0.54, ox: 0, oy: 0.32, oz: 0.12, color: COLORS.busRoof },
         { sx: 0.5, sy: 0.24, sz: 0.03, ox: 0, oy: 0, oz: -0.14, color: COLORS.busDoor },
         { sx: 0.8, sy: 0.03, sz: 0.24, ox: 0, oy: 0, oz: -0.3, color: COLORS.busApron },
+      ];
+    case PlantType.HydrogenPlant:
+      return [
+        // Horizontal storage tank (stepped boxes fake the round shell)
+        // with a teal H2 band, next to the electrolyser hall and a vent.
+        { sx: 0.62, sy: 0.2, sz: 0.3, ox: -0.12, oy: 0.06, oz: 0.24, color: COLORS.hydrogenTank },
+        { sx: 0.54, sy: 0.3, sz: 0.24, ox: -0.12, oy: 0.02, oz: 0.24, color: COLORS.hydrogenTank },
+        { sx: 0.1, sy: 0.34, sz: 0.26, ox: -0.12, oy: 0, oz: 0.24, color: COLORS.hydrogenBand },
+        { sx: 0.7, sy: 0.34, sz: 0.44, ox: 0, oy: 0, oz: -0.2, color: COLORS.hydrogenHall },
+        { sx: 0.74, sy: 0.04, sz: 0.48, ox: 0, oy: 0.34, oz: -0.2, color: COLORS.depotRoof },
+        { sx: 0.07, sy: 0.56, sz: 0.07, ox: 0.28, oy: 0, oz: -0.3, color: COLORS.batteryFrame },
       ];
     default:
       return [];

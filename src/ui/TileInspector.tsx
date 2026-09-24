@@ -32,6 +32,7 @@ const PLANT_LABEL: Record<PlantType, TranslationKey | null> = {
   [PlantType.Park]: 'tool.plant-park',
   [PlantType.RunOfRiver]: 'tool.plant-hydro',
   [PlantType.PumpedStorage]: 'tool.plant-pumped',
+  [PlantType.HydrogenPlant]: 'tool.plant-hydrogen',
   [PlantType.FireStation]: 'tool.plant-fire',
   [PlantType.PoliceStation]: 'tool.plant-police',
   [PlantType.LogisticsDepot]: 'tool.plant-depot',

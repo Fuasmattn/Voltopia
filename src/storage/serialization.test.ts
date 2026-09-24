@@ -69,6 +69,13 @@ describe('save game JSON export/import', () => {
     expect(restored.pumpedStorageEnergy).toBe(42);
   });
 
+  it('round-trips the stored hydrogen', () => {
+    const save = makeSave();
+    save.hydrogenEnergy = 1234;
+    const restored = saveFromJson(saveToJson(save));
+    expect(restored.hydrogenEnergy).toBe(1234);
+  });
+
   it('accepts exports without the terrain layer', () => {
     const save = makeSave();
     const restored = saveFromJson(saveToJson(save));

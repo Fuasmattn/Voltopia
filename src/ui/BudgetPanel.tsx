@@ -24,6 +24,7 @@ const PLANT_LABEL: Record<PlantType, TranslationKey | null> = {
   [PlantType.Park]: 'tool.plant-park',
   [PlantType.RunOfRiver]: 'tool.plant-hydro',
   [PlantType.PumpedStorage]: 'tool.plant-pumped',
+  [PlantType.HydrogenPlant]: 'tool.plant-hydrogen',
   [PlantType.FireStation]: 'tool.plant-fire',
   [PlantType.PoliceStation]: 'tool.plant-police',
   [PlantType.LogisticsDepot]: 'tool.plant-depot',
@@ -51,7 +52,7 @@ const EXPENSE_COLORS: Record<string, string> = {
   import: 'var(--hud-negative)',
 };
 
-const INCOME_COLORS = { tax: 'var(--hud-positive)', export: '#3f9d63' };
+const INCOME_COLORS = { tax: 'var(--hud-positive)', export: '#3f9d63', hydrogen: '#54b8c9' };
 
 interface Slice {
   key: string;
@@ -130,6 +131,12 @@ export function BudgetPanel({ budget }: { budget: BudgetStats }) {
       label: t('budget.export'),
       value: perDay(budget.gridExportRevenue),
       color: INCOME_COLORS.export,
+    },
+    {
+      key: 'hydrogen',
+      label: t('budget.hydrogen'),
+      value: perDay(budget.hydrogenRevenue),
+      color: INCOME_COLORS.hydrogen,
     },
   ].filter((slice) => slice.value > 0);
 

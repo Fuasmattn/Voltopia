@@ -859,3 +859,99 @@ describe('service stations', () => {
     expect(state.layers.plantType[at(5, 5)]).toBe(PlantType.BusDepot);
   });
 });
+
+describe('hydrogen plants', () => {
+  it('census counts hydrogen plants and they are supply sources', () => {
+    const state = makeState();
+    state.money = 1e9;
+    placePlant(state, at(5, 5), PlantType.HydrogenPlant);
+    expect(censusPlants(state).hydrogenPlants).toBe(1);
+    addBuilding(state, at(6, 5), Zone.Residential, 1);
+    energyStep(state, { chargingDemand: 0 });
+    expect(state.layers.supplied[at(6, 5)]).not.toBe(SupplyStatus.NotConnected);
+  });
+
+  it('electrolyses only the surplus the export link cannot take', () => {
+    const state = makeState();
+    state.money = 1e9;
+    placePlant(state, at(5, 5), PlantType.SolarFarm);
+    placePlant(state, at(6, 5), PlantType.HydrogenPlant);
+    setNoonClearSky(state);
+    energyStep(state, { chargingDemand: 0 });
+    // Export still comes first; only the would-be curtailment is electrolysed.
+    const surplus = BALANCE.energy.solarPeakOutput;
+    const beyondExport = surplus - BALANCE.market.exportCapacity;
+    expect(state.lastEnergy.gridExport).toBeCloseTo(BALANCE.market.exportCapacity, 3);
+    expect(state.lastEnergy.electrolysis).toBeCloseTo(beyondExport, 3);
+    expect(state.hydrogenEnergy).toBeCloseTo(beyondExport * BALANCE.hydrogen.chargeEfficiency, 3);
+    expect(state.lastEnergy.curtailment).toBeCloseTo(0, 3);
+    expect(state.lastEnergy.hydrogenSold).toBe(0);
+  });
+
+  it('sells hydrogen once the tanks are full instead of curtailing', () => {
+    const state = makeState();
+    state.money = 1e9;
+    placePlant(state, at(5, 5), PlantType.SolarFarm);
+    placePlant(state, at(6, 5), PlantType.HydrogenPlant);
+    setNoonClearSky(state);
+    state.hydrogenEnergy = BALANCE.hydrogen.capacity;
+    energyStep(state, { chargingDemand: 0 });
+    const beyondExport = BALANCE.energy.solarPeakOutput - BALANCE.market.exportCapacity;
+    expect(state.lastEnergy.electrolysis).toBeCloseTo(beyondExport, 3);
+    expect(state.lastEnergy.hydrogenSold).toBeCloseTo(
+      beyondExport * BALANCE.hydrogen.chargeEfficiency,
+      3,
+    );
+    expect(state.hydrogenEnergy).toBe(BALANCE.hydrogen.capacity);
+    expect(state.lastEnergy.curtailment).toBeCloseTo(0, 3);
+  });
+
+  it('the electrolyser input is capped by its power limit', () => {
+    const state = makeState();
+    state.money = 1e9;
+    for (let i = 0; i < 3; i++) placePlant(state, at(5 + i, 5), PlantType.SolarFarm);
+    placePlant(state, at(5, 6), PlantType.HydrogenPlant);
+    setNoonClearSky(state);
+    energyStep(state, { chargingDemand: 0 });
+    const beyondExport = 3 * BALANCE.energy.solarPeakOutput - BALANCE.market.exportCapacity;
+    expect(state.lastEnergy.electrolysis).toBeCloseTo(BALANCE.hydrogen.electrolyserPowerLimit, 3);
+    expect(state.lastEnergy.curtailment).toBeCloseTo(
+      beyondExport - BALANCE.hydrogen.electrolyserPowerLimit,
+      3,
+    );
+  });
+
+  it('re-electrifies hydrogen in a deficit before dispatching biogas', () => {
+    const state = makeState();
+    state.money = 1e9;
+    placePlant(state, at(5, 5), PlantType.HydrogenPlant);
+    placePlant(state, at(6, 5), PlantType.BiogasPlant);
+    addBuilding(state, at(7, 5), Zone.Commercial, 3);
+    state.tick = TICKS_PER_DAY / 2;
+    state.weather.cloudCover = 1;
+    state.weather.windSpeed = 0;
+    state.hydrogenEnergy = 1_000;
+    energyStep(state, { chargingDemand: 0 });
+    const shortfall = state.lastEnergy.buildingConsumption - state.lastEnergy.rooftop;
+    expect(shortfall).toBeGreaterThan(0);
+    expect(state.lastEnergy.fuelCell).toBeCloseTo(shortfall, 3);
+    expect(state.hydrogenEnergy).toBeCloseTo(1_000 - shortfall, 3);
+    expect(state.lastEnergy.biogas).toBe(0);
+    expect(state.lastEnergy.deficit).toBe(0);
+  });
+
+  it('the fuel cell is capped by its power limit, biogas covers the rest', () => {
+    const state = makeState();
+    state.money = 1e9;
+    placePlant(state, at(5, 5), PlantType.HydrogenPlant);
+    placePlant(state, at(6, 5), PlantType.BiogasPlant);
+    state.tick = 0; // midnight, no solar
+    state.weather.windSpeed = 0;
+    state.hydrogenEnergy = 1_000;
+    const demand = BALANCE.hydrogen.fuelCellPowerLimit + 50;
+    energyStep(state, { chargingDemand: demand });
+    expect(state.lastEnergy.fuelCell).toBeCloseTo(BALANCE.hydrogen.fuelCellPowerLimit, 3);
+    expect(state.lastEnergy.biogas).toBeCloseTo(50, 3);
+    expect(state.lastEnergy.deficit).toBe(0);
+  });
+});

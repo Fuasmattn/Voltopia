@@ -74,6 +74,18 @@ describe('economyStep', () => {
     );
   });
 
+  it('sold hydrogen earns revenue', () => {
+    const state = createSimState(1, SIZE);
+    state.lastEnergy.hydrogenSold = 30;
+    const before = state.money;
+    const breakdown = economyStep(state, 0, 0);
+    expect(breakdown.hydrogenRevenue).toBeCloseTo(
+      30 * BALANCE.hydrogen.saleRevenuePerEnergyUnit,
+      6,
+    );
+    expect(state.money).toBeCloseTo(before + breakdown.hydrogenRevenue, 6);
+  });
+
   it('charges upkeep per power line tile alongside road upkeep', () => {
     const state = createSimState(1, SIZE);
     buildPowerLines(state, [at(1, 1), at(2, 1)]);

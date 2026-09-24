@@ -49,6 +49,7 @@ export const PlantType = {
   PoliceStation: 10,
   LogisticsDepot: 11,
   BusDepot: 12,
+  HydrogenPlant: 13,
 } as const;
 export type PlantType = (typeof PlantType)[keyof typeof PlantType];
 
@@ -136,8 +137,23 @@ export interface EnergyHistoryPoint {
 }
 
 export interface EnergyStats {
-  generation: { solar: number; wind: number; biogas: number; rooftop: number; hydro: number };
-  consumption: { buildings: number; charging: number; heating: number; cooling: number };
+  generation: {
+    solar: number;
+    wind: number;
+    biogas: number;
+    rooftop: number;
+    hydro: number;
+    /** Fuel-cell output re-electrified from stored hydrogen. */
+    hydrogen: number;
+  };
+  consumption: {
+    buildings: number;
+    charging: number;
+    heating: number;
+    cooling: number;
+    /** Surplus electricity consumed by electrolysers (stored or sold). */
+    electrolysis: number;
+  };
   /** Absolute stored energy across all batteries. */
   storedEnergy: number;
   /** Total installed battery capacity. */
@@ -146,6 +162,12 @@ export interface EnergyStats {
   pumpedStoredEnergy: number;
   /** Installed pumped storage capacity. */
   pumpedCapacity: number;
+  /** Hydrogen stored across all hydrogen plants (third pool). */
+  hydrogenStoredEnergy: number;
+  /** Installed hydrogen tank capacity. */
+  hydrogenCapacity: number;
+  /** Hydrogen sold this tick because the tanks were full. */
+  hydrogenSold: number;
   /** Dispatchable biogas output available per tick (0 without a plant). */
   biogasCapacity: number;
   /** Generation that had to be curtailed this tick (storage full, no demand). */
@@ -216,6 +238,8 @@ export interface DemandStats {
 export interface BudgetStats {
   taxIncome: number;
   gridExportRevenue: number;
+  /** Revenue from hydrogen sold while the tanks were full. */
+  hydrogenRevenue: number;
   gridUpkeep: number;
   /** Total plant upkeep (sum over plantUpkeepByType). */
   plantUpkeep: number;
@@ -492,6 +516,8 @@ export interface SaveGame {
   riverFlow?: number;
   /** Energy stored in pumped storage plants (absent in older saves). */
   pumpedStorageEnergy?: number;
+  /** Hydrogen stored in hydrogen plants (absent in older saves). */
+  hydrogenEnergy?: number;
   /** Day number on which year 1 started (absent in older saves → the save's current day). */
   seasonOriginDay?: number;
   /** Snow cover 0..1 (absent in older saves → 0). */

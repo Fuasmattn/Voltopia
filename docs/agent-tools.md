@@ -63,7 +63,7 @@ game this way (see the e2e test "agent tools drive the game").
 - Coordinates are `{ x, y }`, 0-based; `x` grows east, `y` grows south.
 - Zones: `residential`, `commercial`, `retail`. Plants: `solar`, `wind`,
   `battery`, `biogas`, `charging_hub`, `park`, `run_of_river`,
-  `pumped_storage`, `logistics_depot`, `bus_depot`.
+  `pumped_storage`, `hydrogen`, `logistics_depot`, `bus_depot`.
 - Write tools resolve to `{ ok: true, ... }` or
   `{ ok: false, error: '<code>', message: '<English text>' }`. The codes
   are the simulation's own rejection codes (`notEnoughMoney`,
