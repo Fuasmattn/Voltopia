@@ -1,4 +1,4 @@
-import { BALANCE } from '../shared/constants.ts';
+import { BALANCE, TICKS_PER_DAY } from '../shared/constants.ts';
 import { tileIndex } from '../shared/grid.ts';
 import { Rng } from '../shared/rng.ts';
 import { Terrain } from '../shared/types.ts';
@@ -94,4 +94,41 @@ function depthProfile(
 
 function smoothstep(t: number): number {
   return t * t * (3 - 2 * t);
+}
+
+const HOURS_PER_DAY = 24;
+
+/** Angular phase of one tidal constituent at a tick. */
+function tidePhase(tick: number, periodHours: number): number {
+  const periodTicks = (periodHours / HOURS_PER_DAY) * TICKS_PER_DAY;
+  return (2 * Math.PI * tick) / periodTicks;
+}
+
+/**
+ * Water level, -1 (low water) .. 1 (high water). Two constituents — the
+ * lunar (12.42 h) and the solar (12.00 h) semidiurnal tide — whose beat
+ * produces spring and neap tides every ~7.4 in-game days without any
+ * extra envelope. A pure function of the tick: deterministic, nothing to
+ * persist.
+ */
+export function tideLevel(tick: number): number {
+  const { lunarPeriodHours, solarPeriodHours, solarWeight } = BALANCE.sea.tide;
+  const lunar = Math.cos(tidePhase(tick, lunarPeriodHours));
+  const solar = Math.cos(tidePhase(tick, solarPeriodHours));
+  return (lunar + solarWeight * solar) / (1 + solarWeight);
+}
+
+/**
+ * Tidal current strength, 0..1 — what a tidal plant's output scales
+ * with. The current runs a quarter period ahead of the level: slack at
+ * high and low water, strongest at mid-tide, so there are four
+ * generation peaks per day. (The exact derivative would weight the terms
+ * by 1/period as well; the two periods differ by 3 %, which would only
+ * rescale solarWeight.)
+ */
+export function tideFactor(tick: number): number {
+  const { lunarPeriodHours, solarPeriodHours, solarWeight } = BALANCE.sea.tide;
+  const lunar = Math.sin(tidePhase(tick, lunarPeriodHours));
+  const solar = Math.sin(tidePhase(tick, solarPeriodHours));
+  return Math.abs(lunar + solarWeight * solar) / (1 + solarWeight);
 }

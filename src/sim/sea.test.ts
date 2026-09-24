@@ -1,9 +1,10 @@
 import { describe, expect, it } from 'vitest';
-import { BALANCE } from '../shared/constants.ts';
+import { BALANCE, TICKS_PER_DAY } from '../shared/constants.ts';
 import { Terrain } from '../shared/types.ts';
 import { createSimState, type SimState } from './state.ts';
 import { generateTerrain } from './terrain.ts';
 import { generateWater } from './water.ts';
+import { tideFactor, tideLevel } from './sea.ts';
 
 /** A generated map: elevation and water (river, lake, sea) but no zoning. */
 function generatedState(seed: number, size: number): SimState {
@@ -95,3 +96,57 @@ describe('sea generation', () => {
     expect(a).not.toEqual(c);
   });
 });
+
+describe('tide clock', () => {
+  it('stays in range', () => {
+    for (let tick = 0; tick < 20 * TICKS_PER_DAY; tick += 7) {
+      expect(tideLevel(tick)).toBeGreaterThanOrEqual(-1);
+      expect(tideLevel(tick)).toBeLessThanOrEqual(1);
+      expect(tideFactor(tick)).toBeGreaterThanOrEqual(0);
+      expect(tideFactor(tick)).toBeLessThanOrEqual(1);
+    }
+  });
+
+  it('is slack at high water', () => {
+    // Tick 0: both constituents peak — spring high water, no current.
+    expect(tideLevel(0)).toBeCloseTo(1, 5);
+    expect(tideFactor(0)).toBeCloseTo(0, 5);
+  });
+
+  it('peaks about four times a day', () => {
+    let peaks = 0;
+    const days = 10;
+    for (let tick = 1; tick < days * TICKS_PER_DAY - 1; tick++) {
+      const previous = tideFactor(tick - 1);
+      const current = tideFactor(tick);
+      const next = tideFactor(tick + 1);
+      if (current > previous && current >= next) peaks++;
+    }
+    // Peaks come every ~6.21 in-game hours → ~3.9 per day.
+    expect(peaks).toBeGreaterThanOrEqual(37);
+    expect(peaks).toBeLessThanOrEqual(41);
+  });
+
+  it('runs through spring and neap tides', () => {
+    const springMax = dailyMax(0);
+    // Half a beat period later (~7.39 days) the constituents cancel.
+    const neapMax = dailyMax(Math.round(7.39 * TICKS_PER_DAY));
+    expect(springMax).toBeGreaterThan(0.98);
+    expect(neapMax).toBeLessThan(0.62);
+    expect(neapMax).toBeGreaterThan(0.5);
+  });
+
+  it('is a pure function of the tick', () => {
+    expect(tideFactor(1234)).toBe(tideFactor(1234));
+    expect(tideLevel(1234)).toBe(tideLevel(1234));
+  });
+});
+
+/** Highest current factor over the in-game day starting at `startTick`. */
+function dailyMax(startTick: number): number {
+  let max = 0;
+  for (let tick = startTick; tick < startTick + TICKS_PER_DAY; tick++) {
+    max = Math.max(max, tideFactor(tick));
+  }
+  return max;
+}
