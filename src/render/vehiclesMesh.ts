@@ -2,9 +2,13 @@ import * as THREE from 'three';
 import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
 import { TICK_MS } from '../shared/constants.ts';
 import type { VehicleState } from '../shared/types.ts';
-import { VehicleKind } from '../shared/types.ts';
+import { Terrain, VehicleKind } from '../shared/types.ts';
 import type { RenderEnvironment } from './renderer.ts';
 import type { ElevationField } from './elevationField.ts';
+
+/** Half wheelbase, in tiles: how far ahead/behind the carriageway is
+ *  sampled to pitch a vehicle along the slope it drives on. */
+const PITCH_SAMPLE = 0.15;
 
 const MAX_VEHICLES = 256;
 const MAX_VANS = 64;
@@ -59,12 +63,15 @@ export class VehiclesMesh {
   private readonly matrix = new THREE.Matrix4();
   private readonly position = new THREE.Vector3();
   private readonly quaternion = new THREE.Quaternion();
+  private readonly pitchQuaternion = new THREE.Quaternion();
   private readonly up = new THREE.Vector3(0, 1, 0);
+  private readonly pitchAxis = new THREE.Vector3(0, 0, 1);
   private readonly unitScale = new THREE.Vector3(1, 1, 1);
 
   constructor(
     scene: THREE.Scene,
     private readonly elevation: ElevationField,
+    private readonly terrainAt: (index: number) => Terrain,
   ) {
     this.mesh = new THREE.InstancedMesh(
       createCarGeometry(),
@@ -165,8 +172,17 @@ export class VehiclesMesh {
       const x = jump ? target.x : source.x + (target.x - source.x) * blend;
       const y = jump ? target.y : source.y + (target.y - source.y) * blend;
       const angle = jump ? target.angle : lerpAngle(source.angle, target.angle, blend);
-      this.position.set(x, 0.03 + this.elevation.surfaceY(x, y), y);
+      this.position.set(x, 0.03 + this.roadY(x, y), y);
       this.quaternion.setFromAxisAngle(this.up, -angle);
+      // Pitch along the heading so the vehicle hugs a sloped carriageway
+      // instead of floating at one end and clipping at the other.
+      const dirX = Math.cos(angle);
+      const dirY = Math.sin(angle);
+      const ahead = this.roadY(x + dirX * PITCH_SAMPLE, y + dirY * PITCH_SAMPLE);
+      const behind = this.roadY(x - dirX * PITCH_SAMPLE, y - dirY * PITCH_SAMPLE);
+      const pitch = Math.atan2(ahead - behind, 2 * PITCH_SAMPLE);
+      this.pitchQuaternion.setFromAxisAngle(this.pitchAxis, pitch);
+      this.quaternion.multiply(this.pitchQuaternion);
       this.matrix.compose(this.position, this.quaternion, this.unitScale);
       switch (target.kind) {
         case VehicleKind.Van:
@@ -189,6 +205,20 @@ export class VehiclesMesh {
     this.vans.instanceMatrix.needsUpdate = true;
     this.buses.instanceMatrix.needsUpdate = true;
     this.headlights.instanceMatrix.needsUpdate = true;
+  }
+
+  /**
+   * Height of the carriageway at a continuous tile position: the ground
+   * surface on land, but the flat bridge deck (the bank-level top corner)
+   * over a river — vehicles must not dive into the carved channel.
+   */
+  private roadY(x: number, y: number): number {
+    const size = this.elevation.gridSize;
+    const tx = Math.min(size - 1, Math.max(0, Math.floor(x)));
+    const tz = Math.min(size - 1, Math.max(0, Math.floor(y)));
+    const index = tz * size + tx;
+    if (this.terrainAt(index) === Terrain.River) return this.elevation.maxCornerY(index);
+    return this.elevation.surfaceY(x, y);
   }
 }
 
