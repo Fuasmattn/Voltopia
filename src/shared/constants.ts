@@ -424,8 +424,13 @@ export const BALANCE = {
   deliveries: {
     /** Vans stationed at one depot. */
     vansPerDepot: 3,
-    /** Shops one tour visits at most. */
-    stopsPerTour: 5,
+    /**
+     * Shops one tour visits at most. Tuned down from 5 by the headless
+     * balance probe: at 5 stops a single depot still served 30 shops
+     * across a whole shopping street, so a second depot was never worth
+     * building.
+     */
+    stopsPerTour: 3,
     /** Route cost from the depot a stop must be within (tiles on empty streets). */
     maxRouteTiles: 60,
     /** Hours of the in-game day in which tours may start. */
