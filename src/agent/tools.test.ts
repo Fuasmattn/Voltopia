@@ -104,6 +104,7 @@ describe('agent tools: reading', () => {
       'get_lifetime_stats',
       'build_road',
       'build_power_line',
+      'build_bus_stop',
       'paint_zone',
       'place_plant',
       'bulldoze',
@@ -374,5 +375,36 @@ describe('agent tools: building', () => {
     const info = await call('inspect_tile', { x, y: y + 1 });
     expect(info).toMatchObject({ ok: true, plant: 'logistics_depot' });
     expect(info.depot).toMatchObject({ vansTotal: BALANCE.deliveries.vansPerDepot });
+  });
+
+  it('marks bus stops, places a bus depot and reports transit', async () => {
+    const { call, engine } = createHarness();
+    const { x, y } = findLand(engine);
+    await call('build_road', { from: { x, y }, to: { x: x + 5, y } });
+    const stops = await call('build_bus_stop', { from: { x: x + 1, y }, to: { x: x + 4, y } });
+    expect(stops).toMatchObject({ ok: true, tiles: 4 });
+    expect(engine.state.layers.busStop[tileIndex(x + 4, y, SIZE)]).toBe(1);
+    const offRoad = await call('build_bus_stop', { from: { x, y: y + 2 } });
+    expect(offRoad).toMatchObject({ ok: false, error: 'needsRoadTile' });
+    const depot = await call('place_plant', { plant: 'bus_depot', x, y: y + 1 });
+    expect(depot).toMatchObject({ ok: true });
+    expect(engine.state.layers.plantType[tileIndex(x, y + 1, SIZE)]).toBe(PlantType.BusDepot);
+    await call('advance_time', { ticks: 1 });
+    const overview = await call('get_game_overview');
+    expect(overview.transit).toMatchObject({ stops: 4, stopsServed: 4, depots: 1 });
+    const map = await call('get_map', { layer: 'transit', origin: { x, y }, width: 6, height: 2 });
+    expect((map.rows as string[])[0]).toBe('+oooo+');
+    expect((map.rows as string[])[1]).toBe('T.....');
+    const found = await call('find_tiles', { kind: 'bus_stop' });
+    expect(found.total).toBe(4);
+    const info = await call('inspect_tile', { x: x + 1, y });
+    expect(info).toMatchObject({
+      ok: true,
+      busStop: true,
+      stopState: 'served',
+      transitCovered: true,
+    });
+    const depotInfo = await call('inspect_tile', { x, y: y + 1 });
+    expect(depotInfo.busDepot).toMatchObject({ busesTotal: BALANCE.transit.busesPerDepot });
   });
 });

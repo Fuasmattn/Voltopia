@@ -11,6 +11,7 @@ import { lShapedPath, neighbors4, rectTiles, tileIndex, tileX, tileY } from '../
 import type { SimCommand } from '../shared/messages.ts';
 import {
   PlantType,
+  StopState,
   SupplyStatus,
   Terrain,
   TileType,
@@ -84,6 +85,7 @@ export const PLANT_NAMES = {
   run_of_river: PlantType.RunOfRiver,
   pumped_storage: PlantType.PumpedStorage,
   logistics_depot: PlantType.LogisticsDepot,
+  bus_depot: PlantType.BusDepot,
 } as const;
 export type PlantName = keyof typeof PLANT_NAMES;
 
@@ -114,6 +116,11 @@ const SUPPLY_NAME: Record<SupplyStatus, string> = {
   [SupplyStatus.Undersupplied]: 'undersupplied',
   [SupplyStatus.Supplied]: 'supplied',
 };
+const STOP_STATE_NAME: Record<StopState, string> = {
+  [StopState.Served]: 'served',
+  [StopState.Due]: 'due',
+  [StopState.Unserved]: 'unserved',
+};
 
 const PLANT_TOOL_KEY: Record<PlantName, TranslationKey> = {
   solar: 'tool.plant-solar',
@@ -125,6 +132,7 @@ const PLANT_TOOL_KEY: Record<PlantName, TranslationKey> = {
   run_of_river: 'tool.plant-hydro',
   pumped_storage: 'tool.plant-pumped',
   logistics_depot: 'tool.plant-depot',
+  bus_depot: 'tool.plant-busdepot',
 };
 
 const PLANT_PLACEMENT: Record<PlantName, string> = {
@@ -138,9 +146,11 @@ const PLANT_PLACEMENT: Record<PlantName, string> = {
   pumped_storage: 'an empty land tile with a lake tile as direct (4-)neighbour',
   logistics_depot:
     'an empty land tile with a road as direct (4-)neighbour; vans serve shops within route reach',
+  bus_depot:
+    'an empty land tile with a road as direct (4-)neighbour; buses serve bus stops within route reach',
 };
 
-export const MAP_LAYERS = ['overview', 'terrain', 'supply', 'density', 'power'] as const;
+export const MAP_LAYERS = ['overview', 'terrain', 'supply', 'density', 'power', 'transit'] as const;
 export type MapLayer = (typeof MAP_LAYERS)[number];
 
 export const FIND_KINDS = [
@@ -154,6 +164,7 @@ export const FIND_KINDS = [
   'building',
   'not_connected_building',
   'undersupplied_building',
+  'bus_stop',
 ] as const;
 export type FindKind = (typeof FIND_KINDS)[number];
 
@@ -310,7 +321,7 @@ function isLakeShore(tiles: TileMirror, index: number): boolean {
 
 function overviewGlyph(tiles: TileMirror, i: number): string {
   const terrain = tiles.terrain[i];
-  if (tiles.tileType[i] === TileType.Road) return '+';
+  if (tiles.tileType[i] === TileType.Road) return tiles.busStop[i] !== 0 ? 'o' : '+';
   if (tiles.tileType[i] === TileType.Plant) {
     const glyph: Record<PlantName, string> = {
       solar: 'V',
@@ -322,6 +333,7 @@ function overviewGlyph(tiles: TileMirror, i: number): string {
       run_of_river: 'F',
       pumped_storage: 'U',
       logistics_depot: 'D',
+      bus_depot: 'T',
     };
     const name = PLANT_NAME_BY_TYPE.get(tiles.plantType[i] as PlantType);
     return name && name !== 'none' ? glyph[name] : '?';
@@ -338,10 +350,11 @@ function overviewGlyph(tiles: TileMirror, i: number): string {
 }
 
 const OVERVIEW_LEGEND =
-  '. empty land, ~ river, # lake, + road (or bridge), = power line on empty land, ' +
+  '. empty land, ~ river, # lake, + road (or bridge), o road with a bus stop, ' +
+  '= power line on empty land, ' +
   'r/c/s zoned but unbuilt (residential/commercial/retail), R/C/S building, ' +
   'plants: V solar, W wind, B battery, G biogas, H charging hub, P park, ' +
-  'F run-of-river, U pumped storage, D logistics depot. ' +
+  'F run-of-river, U pumped storage, D logistics depot, T bus depot. ' +
   'Roads may also carry a power line (see the power layer).';
 
 function layerGlyph(tiles: TileMirror, i: number, layer: MapLayer): string {
@@ -370,6 +383,24 @@ function layerGlyph(tiles: TileMirror, i: number, layer: MapLayer): string {
       if (terrain === Terrain.Lake) return '#';
       return '.';
     }
+    case 'transit': {
+      if (tiles.tileType[i] === TileType.Plant) {
+        return tiles.plantType[i] === PlantType.BusDepot ? 'T' : 'P';
+      }
+      if (tiles.tileType[i] === TileType.Road) {
+        if (tiles.busStop[i] !== 0) {
+          return tiles.stopState[i] === StopState.Served
+            ? 'o'
+            : tiles.stopState[i] === StopState.Due
+              ? 'd'
+              : 'x';
+        }
+        return tiles.transitCover[i] !== 0 ? '+' : '-';
+      }
+      if (terrain === Terrain.River) return '~';
+      if (terrain === Terrain.Lake) return '#';
+      return '.';
+    }
   }
 }
 
@@ -382,6 +413,9 @@ const LAYER_LEGEND: Record<MapLayer, string> = {
   density: '. no building, 1-3 building density level, ~ river, # lake',
   power:
     '. nothing, = power line (over land, road or water), + road without line, P plant, ~ river, # lake',
+  transit:
+    'o served bus stop, d stop due for a bus, x unserved stop, + road covered by a served stop, ' +
+    '- road not covered, T bus depot, P other plant, ~ river, # lake, . other',
 };
 
 // ---------------------------------------------------------------------------
@@ -471,6 +505,14 @@ export function createAgentTools(ctx: AgentContext): AgentTool[] {
             vansDriving: s.deliveries.driving,
             depots: s.deliveries.depots,
           },
+          transit: {
+            riderShare: round(s.transit.riderShare, 2),
+            riders: s.transit.riders,
+            busesDriving: s.transit.driving,
+            stops: s.transit.stops,
+            stopsServed: s.transit.stopsServed,
+            depots: s.transit.depots,
+          },
           taxRate: s.taxRate,
           maxTaxRate: BALANCE.tax.maxRate,
           smartCharging: s.smartCharging,
@@ -513,6 +555,9 @@ export function createAgentTools(ctx: AgentContext): AgentTool[] {
             'Winter (short days, cold) adds an electric heating load; insulation halves it.',
             'Home EV charging peaks in the evening; charging hubs shift it to midday.',
             'Roads across the river are bridges (pricier); lines across water are crossings (pricier).',
+            'Bus stops marked on roads plus a bus depot put electric buses on the roads; a commuter ' +
+              `with a served stop within ${BALANCE.transit.stopRadius} tiles of home and of work ` +
+              'leaves the car at home.',
           ],
           costs: {
             roadPerTile: costs.roadPerTile,
@@ -521,11 +566,13 @@ export function createAgentTools(ctx: AgentContext): AgentTool[] {
             powerLineWaterPerTile: costs.powerLineWaterPerTile,
             zonePerTile: costs.zonePerTile,
             insulation: costs.insulation,
+            busStop: costs.busStop,
           },
           upkeepPerTick: {
             roadPerTile: BALANCE.upkeepPerTick.roadPerTile,
             powerLinePerTile: BALANCE.upkeepPerTick.powerLinePerTile,
             biogasFuelCostPerEnergyUnit: BALANCE.upkeepPerTick.biogasFuelCostPerEnergyUnit,
+            busStop: BALANCE.upkeepPerTick.busStop,
           },
           plants: (Object.keys(PLANT_NAMES) as PlantName[]).map((name) => {
             const type = PLANT_NAMES[name];
@@ -573,8 +620,8 @@ export function createAgentTools(ctx: AgentContext): AgentTool[] {
       name: 'get_map',
       description:
         'ASCII map of the grid (or a window of it), one character per tile, rows from north to ' +
-        'south. Choose a layer: overview (default), terrain, supply, density or power. The result ' +
-        'includes the legend. Row i of "rows" is y = origin.y + i; character j is x = origin.x + j.',
+        'south. Choose a layer: overview (default), terrain, supply, density, power or transit. The ' +
+        'result includes the legend. Row i of "rows" is y = origin.y + i; character j is x = origin.x + j.',
       inputSchema: {
         type: 'object',
         properties: {
@@ -607,8 +654,8 @@ export function createAgentTools(ctx: AgentContext): AgentTool[] {
       name: 'inspect_tile',
       description:
         'Everything about one tile: terrain, road, power line, zone, building density, plant, ' +
-        'supply status, plus live figures (upkeep, tax, consumption, generation, storage, ' +
-        'residents, jobs, demand) and the reasons the tile is not growing.',
+        'supply status, bus stop and coverage, plus live figures (upkeep, tax, consumption, ' +
+        'generation, storage, residents, jobs, demand) and the reasons the tile is not growing.',
       inputSchema: {
         type: 'object',
         properties: { x: { type: 'integer' }, y: { type: 'integer' } },
@@ -638,7 +685,7 @@ export function createAgentTools(ctx: AgentContext): AgentTool[] {
       description:
         'Coordinates of tiles matching a kind: empty_land, river, lake_shore (land next to the ' +
         'lake, for pumped storage), road, power_line, plant, zoned_empty, building, ' +
-        'not_connected_building, undersupplied_building. Optionally nearest to a point first.',
+        'not_connected_building, undersupplied_building, bus_stop. Optionally nearest to a point first.',
       inputSchema: {
         type: 'object',
         properties: {
@@ -723,6 +770,20 @@ export function createAgentTools(ctx: AgentContext): AgentTool[] {
       },
     },
     {
+      name: 'build_bus_stop',
+      description:
+        'Mark bus stops along an L-shaped path (or explicit tiles). Only road tiles take a stop; ' +
+        'tiles that already have one are kept and not charged. A path with no road tile at all ' +
+        'is rejected (needsRoadTile). Stops need a bus depot in route reach to be served.',
+      inputSchema: PATH_SCHEMA,
+      async execute(input) {
+        const path = readPathTiles(input, tiles);
+        const before = requireStats(ctx).money;
+        const outcome = await ctx.sendCommand({ type: 'buildBusStop', tiles: path });
+        return outcomeResult(outcome, { tiles: path.length, ...spent(ctx, before) });
+      },
+    },
+    {
       name: 'paint_zone',
       description:
         'Zone every empty land tile in a rectangle as residential, commercial or retail. ' +
@@ -751,8 +812,8 @@ export function createAgentTools(ctx: AgentContext): AgentTool[] {
       name: 'place_plant',
       description:
         'Place a plant on one tile: solar, wind, battery, biogas, charging_hub, park, ' +
-        'run_of_river (river tile), pumped_storage (land tile next to the lake), logistics_depot. ' +
-        'See get_build_catalog for costs and roles.',
+        'run_of_river (river tile), pumped_storage (land tile next to the lake), logistics_depot, ' +
+        'bus_depot. See get_build_catalog for costs and roles.',
       inputSchema: {
         type: 'object',
         properties: {
@@ -990,6 +1051,12 @@ function plantFigures(type: PlantType): Record<string, number> {
         vans: BALANCE.deliveries.vansPerDepot,
         routeReachTiles: BALANCE.deliveries.maxRouteTiles,
       };
+    case PlantType.BusDepot:
+      return {
+        buses: BALANCE.transit.busesPerDepot,
+        routeReachTiles: BALANCE.transit.maxRouteTiles,
+        stopRadius: BALANCE.transit.stopRadius,
+      };
     default:
       return {};
   }
@@ -1018,6 +1085,11 @@ function liveFigures(info: TileInfo): Record<string, unknown> {
     deliveryState: info.deliveryState,
     deliveryAgeDays: round(info.deliveryAgeTicks / TICKS_PER_DAY, 2),
     depot: info.depot,
+    busStop: info.busStop,
+    stopState: STOP_STATE_NAME[info.stopState],
+    stopAgeHours: round((info.stopAgeTicks / TICKS_PER_DAY) * 24, 1),
+    transitCovered: info.transitCovered,
+    busDepot: info.busDepot,
   };
 }
 
@@ -1045,6 +1117,8 @@ function matchesKind(tiles: TileMirror, i: number, kind: FindKind): boolean {
       return tiles.density[i] > 0 && tiles.supplied[i] === SupplyStatus.NotConnected;
     case 'undersupplied_building':
       return tiles.density[i] > 0 && tiles.supplied[i] === SupplyStatus.Undersupplied;
+    case 'bus_stop':
+      return tiles.busStop[i] !== 0;
   }
 }
 

@@ -14,12 +14,12 @@ exist. Enable it locally:
    relaunch Chrome (a full relaunch, not just a new tab).
 2. Load the game from `http://localhost:5173` or the HTTPS deployment
    (secure context required; `127.0.0.1` over plain HTTP does not count).
-3. DevTools → _Application_ → _WebMCP_: _Available Tools_ lists the 20
+3. DevTools → _Application_ → _WebMCP_: _Available Tools_ lists the 21
    tools and lets you invoke them.
 
 Sanity check in the console: `document.modelContext` must be an object
 (undefined means the flag is off), and
-`(await document.modelContext.getTools()).length` is 20.
+`(await document.modelContext.getTools()).length` is 21.
 
 The app registers its tools with `document.modelContext` on boot
 (falling back to the deprecated `navigator.modelContext`). Any WebMCP
@@ -63,39 +63,40 @@ game this way (see the e2e test "agent tools drive the game").
 - Coordinates are `{ x, y }`, 0-based; `x` grows east, `y` grows south.
 - Zones: `residential`, `commercial`, `retail`. Plants: `solar`, `wind`,
   `battery`, `biogas`, `charging_hub`, `park`, `run_of_river`,
-  `pumped_storage`, `logistics_depot`.
+  `pumped_storage`, `logistics_depot`, `bus_depot`.
 - Write tools resolve to `{ ok: true, ... }` or
   `{ ok: false, error: '<code>', message: '<English text>' }`. The codes
   are the simulation's own rejection codes (`notEnoughMoney`,
   `tileOccupied`, `needsRiverTile`, `needsLakeShore`, `cannotBuildOnWater`,
-  `needsLineSite`, `alreadyInsulated`, `nothingToUndo`) plus
-  `invalidInput` and `unknownTool`.
+  `needsLineSite`, `alreadyInsulated`, `nothingToUndo`, `needsRoadTile`)
+  plus `invalidInput` and `unknownTool`.
 - Bad input never throws; it comes back as `invalidInput`.
 
 ## Tools
 
-| Tool                 | Kind  | Purpose                                                                                                                                                                          |
-| -------------------- | ----- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `get_game_overview`  | read  | Funds, population, jobs, happiness, demand, clock, season, weather, energy summary, budget, deliveries, goals, counts                                                            |
-| `get_build_catalog`  | read  | Static rules: costs, upkeep, plant roles and placement, supply radius                                                                                                            |
-| `get_energy_report`  | read  | Full energy stats incl. the last day's history                                                                                                                                   |
-| `get_map`            | read  | ASCII map (whole grid or a window) — layers `overview`, `terrain`, `supply`, `density`, `power`                                                                                  |
-| `inspect_tile`       | read  | Every field of one tile plus live figures and growth blockers (incl. delivery state and depot fleet)                                                                             |
-| `find_tiles`         | read  | Tiles by kind (`empty_land`, `river`, `lake_shore`, `road`, `power_line`, `plant`, `zoned_empty`, `building`, `not_connected_building`, `undersupplied_building`), nearest-first |
-| `get_lifetime_stats` | read  | One sample per in-game day                                                                                                                                                       |
-| `build_road`         | write | L-shaped path `from`→`to` (horizontal leg first) or explicit `tiles`                                                                                                             |
-| `build_power_line`   | write | Same shape as `build_road`                                                                                                                                                       |
-| `paint_zone`         | write | Rectangle `from`→`to` with `zone`                                                                                                                                                |
-| `place_plant`        | write | `plant` at `x`, `y`                                                                                                                                                              |
-| `bulldoze`           | write | Rectangle `from`→`to`                                                                                                                                                            |
-| `undo`               | write | Revert and refund the last build action                                                                                                                                          |
-| `set_speed`          | write | 0 (pause), 1, 3                                                                                                                                                                  |
-| `set_tax_rate`       | write | 0 … 0.3                                                                                                                                                                          |
-| `set_smart_charging` | write | `enabled: boolean`                                                                                                                                                               |
-| `buy_insulation`     | write | One-off heating upgrade                                                                                                                                                          |
-| `advance_time`       | write | Run `ticks` or `days` (max 3 days), then return a summary; fast-forwards a paused game and restores the speed                                                                    |
-| `save_game`          | write | Write the autosave now                                                                                                                                                           |
-| `start_new_city`     | write | New city (`size` 48/64/96, `difficulty`, `seed`); reloads the page                                                                                                               |
+| Tool                 | Kind  | Purpose                                                                                                                                                                                      |
+| -------------------- | ----- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `get_game_overview`  | read  | Funds, population, jobs, happiness, demand, clock, season, weather, energy summary, budget, deliveries, transit, goals, counts                                                               |
+| `get_build_catalog`  | read  | Static rules: costs, upkeep, plant roles and placement, supply radius                                                                                                                        |
+| `get_energy_report`  | read  | Full energy stats incl. the last day's history                                                                                                                                               |
+| `get_map`            | read  | ASCII map (whole grid or a window) — layers `overview`, `terrain`, `supply`, `density`, `power`, `transit`                                                                                   |
+| `inspect_tile`       | read  | Every field of one tile plus live figures and growth blockers (incl. delivery state and depot fleet, bus stop state and coverage, bus depot fleet)                                           |
+| `find_tiles`         | read  | Tiles by kind (`empty_land`, `river`, `lake_shore`, `road`, `power_line`, `plant`, `zoned_empty`, `building`, `not_connected_building`, `undersupplied_building`, `bus_stop`), nearest-first |
+| `get_lifetime_stats` | read  | One sample per in-game day                                                                                                                                                                   |
+| `build_road`         | write | L-shaped path `from`→`to` (horizontal leg first) or explicit `tiles`                                                                                                                         |
+| `build_power_line`   | write | Same shape as `build_road`                                                                                                                                                                   |
+| `build_bus_stop`     | write | Same shape as `build_road`; marks stops on road tiles                                                                                                                                        |
+| `paint_zone`         | write | Rectangle `from`→`to` with `zone`                                                                                                                                                            |
+| `place_plant`        | write | `plant` at `x`, `y`                                                                                                                                                                          |
+| `bulldoze`           | write | Rectangle `from`→`to`                                                                                                                                                                        |
+| `undo`               | write | Revert and refund the last build action                                                                                                                                                      |
+| `set_speed`          | write | 0 (pause), 1, 3                                                                                                                                                                              |
+| `set_tax_rate`       | write | 0 … 0.3                                                                                                                                                                                      |
+| `set_smart_charging` | write | `enabled: boolean`                                                                                                                                                                           |
+| `buy_insulation`     | write | One-off heating upgrade                                                                                                                                                                      |
+| `advance_time`       | write | Run `ticks` or `days` (max 3 days), then return a summary; fast-forwards a paused game and restores the speed                                                                                |
+| `save_game`          | write | Write the autosave now                                                                                                                                                                       |
+| `start_new_city`     | write | New city (`size` 48/64/96, `difficulty`, `seed`); reloads the page                                                                                                                           |
 
 A typical loop: `get_build_catalog` once, then repeat `get_game_overview`
 → `get_map` / `find_tiles` → build → `advance_time` → check

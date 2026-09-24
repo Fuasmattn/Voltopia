@@ -26,6 +26,9 @@ export interface MirroredTile {
   plantType: PlantType;
   roadMask: number;
   powerLine: number;
+  busStop: number;
+  stopState: number;
+  transitCover: number;
 }
 
 export class TileMirror {
@@ -38,6 +41,9 @@ export class TileMirror {
   readonly plantType: Uint8Array;
   readonly roadMask: Uint8Array;
   readonly powerLine: Uint8Array;
+  readonly busStop: Uint8Array;
+  readonly stopState: Uint8Array;
+  readonly transitCover: Uint8Array;
   /** Number of diffs applied so far (0 = nothing received yet). */
   updates = 0;
 
@@ -52,6 +58,9 @@ export class TileMirror {
     this.plantType = new Uint8Array(count);
     this.roadMask = new Uint8Array(count);
     this.powerLine = new Uint8Array(count);
+    this.busStop = new Uint8Array(count);
+    this.stopState = new Uint8Array(count);
+    this.transitCover = new Uint8Array(count);
   }
 
   applyDiffs(diffs: TileDiff[]): void {
@@ -66,6 +75,9 @@ export class TileMirror {
       this.plantType[i] = diff.plantType;
       this.roadMask[i] = diff.roadMask;
       this.powerLine[i] = diff.powerLine;
+      this.busStop[i] = diff.busStop;
+      this.stopState[i] = diff.stopState;
+      this.transitCover[i] = diff.transitCover;
     }
     this.updates += diffs.length;
   }
@@ -88,6 +100,9 @@ export class TileMirror {
       plantType: this.plantType[index] as PlantType,
       roadMask: this.roadMask[index],
       powerLine: this.powerLine[index],
+      busStop: this.busStop[index],
+      stopState: this.stopState[index],
+      transitCover: this.transitCover[index],
     };
   }
 }
