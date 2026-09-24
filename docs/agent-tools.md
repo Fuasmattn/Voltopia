@@ -63,20 +63,23 @@ game this way (see the e2e test "agent tools drive the game").
 - Coordinates are `{ x, y }`, 0-based; `x` grows east, `y` grows south.
 - Zones: `residential`, `commercial`, `retail`. Plants: `solar`, `wind`,
   `battery`, `biogas`, `charging_hub`, `park`, `run_of_river`,
-  `pumped_storage`, `hydrogen`, `logistics_depot`, `bus_depot`.
+  `pumped_storage`, `hydrogen`, `tidal`, `logistics_depot`, `bus_depot`.
+  `tidal` must stand on an empty **sea** tile touching land (a coastal
+  tile); its output follows the tide and rises in narrow water and at
+  the river mouth — see `get_build_catalog` for the exact figures.
 - Write tools resolve to `{ ok: true, ... }` or
   `{ ok: false, error: '<code>', message: '<English text>' }`. The codes
   are the simulation's own rejection codes (`notEnoughMoney`,
-  `tileOccupied`, `needsRiverTile`, `needsLakeShore`, `cannotBuildOnWater`,
-  `needsLineSite`, `alreadyInsulated`, `nothingToUndo`, `needsRoadTile`)
-  plus `invalidInput` and `unknownTool`.
+  `tileOccupied`, `needsRiverTile`, `needsLakeShore`, `needsSeaTile`,
+  `needsCoast`, `cannotBuildOnWater`, `needsLineSite`, `alreadyInsulated`,
+  `nothingToUndo`, `needsRoadTile`) plus `invalidInput` and `unknownTool`.
 - Bad input never throws; it comes back as `invalidInput`.
 
 ## Tools
 
 | Tool                 | Kind  | Purpose                                                                                                                                                                                      |
 | -------------------- | ----- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `get_game_overview`  | read  | Funds, population, jobs, happiness, demand, clock, season, weather, energy summary, budget, deliveries, transit, goals, counts                                                               |
+| `get_game_overview`  | read  | Funds, population, jobs, happiness, demand, clock, season, weather, tide (level, current factor, rising), energy summary, budget, deliveries, transit, goals, counts                         |
 | `get_build_catalog`  | read  | Static rules: costs, upkeep, plant roles and placement, supply radius                                                                                                                        |
 | `get_energy_report`  | read  | Full energy stats incl. the last day's history                                                                                                                                               |
 | `get_map`            | read  | ASCII map (whole grid or a window) — layers `overview`, `terrain`, `supply`, `density`, `power`, `transit`                                                                                   |

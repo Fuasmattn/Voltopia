@@ -56,6 +56,7 @@ const en = {
   'tool.plant-hydro': 'Run-of-river plant',
   'tool.plant-pumped': 'Pumped storage',
   'tool.plant-hydrogen': 'Hydrogen plant',
+  'tool.plant-tidal': 'Tidal plant',
   'tool.plant-forest': 'Plant woods',
   'inspector.forest': 'Woods',
   'inspector.forest.mature': 'mature · felling {fee} ⌁',
@@ -100,6 +101,10 @@ const en = {
   'tool.plant-pumped.desc': 'Large storage on a lake shore. Pumps up on surplus.',
   'tool.plant-hydrogen.desc':
     'Electrolyses surplus the grid cannot take into hydrogen, re-electrifies it in a lull and sells the overflow once the tank is full.',
+  'tool.plant-tidal.desc':
+    'Built on the coast, generating from the tidal current: two high waters a day, four generation ' +
+    'peaks and four slack-water gaps in between. Fully predictable, but drifts against the sun. ' +
+    'Narrow water and the river mouth run faster.',
   'tool.plant-forest.desc':
     'Plant saplings by the patch. They grow over a few days, raise happiness nearby — and slow the wind for turbines standing in them.',
   'tool.bulldoze.desc': 'Clears roads, zones and plants. Drag to clear an area.',
@@ -500,6 +505,7 @@ const de: Record<TranslationKey, string> = {
   'tool.plant-hydro': 'Laufwasserkraftwerk',
   'tool.plant-pumped': 'Pumpspeicher',
   'tool.plant-hydrogen': 'Wasserstoffanlage',
+  'tool.plant-tidal': 'Gezeitenkraftwerk',
   'tool.plant-forest': 'Wald pflanzen',
   'inspector.forest': 'Wald',
   'inspector.forest.mature': 'ausgewachsen · Rodung {fee} ⌁',
@@ -545,6 +551,10 @@ const de: Record<TranslationKey, string> = {
   'tool.plant-pumped.desc': 'Großer Speicher am Seeufer. Pumpt bei Überschuss hoch.',
   'tool.plant-hydrogen.desc':
     'Elektrolysiert Überschuss, den das Netz nicht aufnimmt, zu Wasserstoff, verstromt ihn in der Flaute und verkauft den Überlauf bei vollem Tank.',
+  'tool.plant-tidal.desc':
+    'An der Küste gebaut, erzeugt Strom aus der Gezeitenströmung: zwei Hochwasser am Tag ergeben ' +
+    'vier Erzeugungsspitzen und vier Flauten dazwischen. Genau vorhersehbar, wandert aber gegen die ' +
+    'Sonne. Enge Fahrwasser und die Flussmündung strömen schneller.',
   'tool.plant-forest.desc':
     'Pflanzt Setzlinge flächenweise. Sie wachsen über einige Tage, heben die Zufriedenheit in der Nähe — und bremsen den Wind für Turbinen, die darin stehen.',
   'tool.bulldoze.desc': 'Entfernt Straßen, Gebiete und Anlagen. Ziehen räumt eine Fläche.',

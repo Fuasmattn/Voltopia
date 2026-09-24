@@ -1,9 +1,10 @@
 import { describe, expect, it } from 'vitest';
 import { BALANCE, TICKS_PER_DAY } from '../shared/constants.ts';
-import { tileIndex } from '../shared/grid.ts';
+import { tileIndex, tileX, tileY } from '../shared/grid.ts';
 import type { SimCommand, SimEvent } from '../shared/messages.ts';
 import { PlantType, Terrain, TileType, Zone, type GlobalStats } from '../shared/types.ts';
 import { SimEngine } from '../sim/engine.ts';
+import { isCoastalSea } from '../sim/sea.ts';
 import { slopeCostMultiplier } from '../sim/state.ts';
 import { TileMirror } from './tileMirror.ts';
 import {
@@ -98,6 +99,15 @@ function findLand(engine: SimEngine, minX = 2): { x: number; y: number } {
     }
   }
   throw new Error('no land block');
+}
+
+/** Any sea tile with a land 4-neighbour — where a tidal plant may stand. */
+function findCoastalSeaTile(engine: SimEngine): { x: number; y: number } {
+  const { size } = engine.state;
+  for (let i = 0; i < size * size; i++) {
+    if (isCoastalSea(engine.state, i)) return { x: tileX(i, size), y: tileY(i, size) };
+  }
+  throw new Error('no coastal sea tile');
 }
 
 describe('agent tools: reading', () => {
@@ -432,5 +442,15 @@ describe('agent tools: building', () => {
       stopState: null,
       stopAgeHours: null,
     });
+  });
+
+  it('places a tidal plant on the coast', async () => {
+    const { call, engine } = createHarness();
+    const tile = findCoastalSeaTile(engine);
+    const result = await call('place_plant', { plant: 'tidal', x: tile.x, y: tile.y });
+    expect(result).toMatchObject({ ok: true });
+    expect(engine.state.layers.plantType[tileIndex(tile.x, tile.y, SIZE)]).toBe(
+      PlantType.TidalPlant,
+    );
   });
 });

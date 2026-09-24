@@ -85,6 +85,7 @@ export const PLANT_NAMES = {
   run_of_river: PlantType.RunOfRiver,
   pumped_storage: PlantType.PumpedStorage,
   hydrogen: PlantType.HydrogenPlant,
+  tidal: PlantType.TidalPlant,
   logistics_depot: PlantType.LogisticsDepot,
   bus_depot: PlantType.BusDepot,
 } as const;
@@ -134,6 +135,7 @@ const PLANT_TOOL_KEY: Record<PlantName, TranslationKey> = {
   run_of_river: 'tool.plant-hydro',
   pumped_storage: 'tool.plant-pumped',
   hydrogen: 'tool.plant-hydrogen',
+  tidal: 'tool.plant-tidal',
   logistics_depot: 'tool.plant-depot',
   bus_depot: 'tool.plant-busdepot',
 };
@@ -149,6 +151,8 @@ const PLANT_PLACEMENT: Record<PlantName, string> = {
   pumped_storage: 'an empty land tile with a lake tile as direct (4-)neighbour',
   hydrogen:
     'any empty land tile; electrolyses surplus beyond the export link, re-electrifies in a lull, sells overflow',
+  tidal:
+    'an empty sea tile touching land; output follows the tide and rises in narrow water and at the river mouth',
   logistics_depot:
     'an empty land tile with a road as direct (4-)neighbour; vans serve shops within route reach',
   bus_depot:
@@ -340,6 +344,7 @@ function overviewGlyph(tiles: TileMirror, i: number): string {
       hydrogen: 'Y',
       logistics_depot: 'D',
       bus_depot: 'T',
+      tidal: 'X',
     };
     const name = PLANT_NAME_BY_TYPE.get(tiles.plantType[i] as PlantType);
     return name && name !== 'none' ? glyph[name] : '?';
@@ -360,7 +365,7 @@ const OVERVIEW_LEGEND =
   '= power line on empty land, ' +
   'r/c/s zoned but unbuilt (residential/commercial/retail), R/C/S building, ' +
   'plants: V solar, W wind, B battery, G biogas, H charging hub, P park, ' +
-  'F run-of-river, U pumped storage, D logistics depot, T bus depot. ' +
+  'F run-of-river, U pumped storage, X tidal, D logistics depot, T bus depot. ' +
   'Roads may also carry a power line (see the power layer).';
 
 function layerGlyph(tiles: TileMirror, i: number, layer: MapLayer): string {
@@ -474,6 +479,7 @@ export function createAgentTools(ctx: AgentContext): AgentTool[] {
             riverFlow: round(s.weather.riverFlow, 2),
             snowpack: round(s.weather.snowpack, 2),
           },
+          tide: s.tide,
           energyPerTick: {
             generation: {
               solar: round(e.generation.solar),
@@ -832,7 +838,7 @@ export function createAgentTools(ctx: AgentContext): AgentTool[] {
       description:
         'Place a plant on one tile: solar, wind, battery, biogas, charging_hub, park, ' +
         'run_of_river (river tile), pumped_storage (land tile next to the lake), hydrogen, ' +
-        'logistics_depot, bus_depot. See get_build_catalog for costs and roles.',
+        'tidal (coastal sea tile), logistics_depot, bus_depot. See get_build_catalog for costs and roles.',
       inputSchema: {
         type: 'object',
         properties: {
@@ -1084,6 +1090,8 @@ function plantFigures(type: PlantType): Record<string, number> {
       return { maxOutputPerTick: e.biogasMaxOutput };
     case PlantType.RunOfRiver:
       return { peakOutputPerTick: e.hydroPeakOutput };
+    case PlantType.TidalPlant:
+      return { peakOutputPerTick: e.tidalPeakOutput };
     case PlantType.Battery:
       return { capacity: e.batteryCapacity, powerLimitPerTick: e.batteryPowerLimit };
     case PlantType.PumpedStorage:
