@@ -24,6 +24,7 @@ export const Terrain = {
   Land: 0,
   River: 1,
   Lake: 2,
+  Sea: 3,
 } as const;
 export type Terrain = (typeof Terrain)[keyof typeof Terrain];
 

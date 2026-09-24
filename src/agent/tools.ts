@@ -106,6 +106,7 @@ const TERRAIN_NAME: Record<Terrain, string> = {
   [Terrain.Land]: 'land',
   [Terrain.River]: 'river',
   [Terrain.Lake]: 'lake',
+  [Terrain.Sea]: 'sea',
 };
 const TILE_TYPE_NAME: Record<TileType, string> = {
   [TileType.Empty]: 'empty',

@@ -262,6 +262,46 @@ export const BALANCE = {
     minFlowFactor: 0.4,
   },
 
+  sea: {
+    /** Depth of the coastal band in tiles, per column (seeded noise). */
+    depthRange: [3, 7] as const,
+    /** Noise cell size along the coast, in tiles (large = long smooth bays). */
+    depthCellSize: 10,
+    /** The band never shrinks below this depth. */
+    minDepth: 2,
+    /** Extra depth at the river mouth, tapering over estuaryTaper columns. */
+    estuaryWidening: 3,
+    estuaryTaper: 6,
+    /** The sea never covers more than this share of the map. */
+    maxSeaFraction: 0.12,
+    /** Chebyshev radius in which buildings count as having a sea view. */
+    coastRadius: 4,
+    /** Max happiness bonus when every building has the sea in reach. */
+    coastBonus: 0.05,
+    /** Two tidal constituents; their beat produces spring and neap tides. */
+    tide: {
+      /** Lunar semidiurnal (M2) period in in-game hours. */
+      lunarPeriodHours: 12.42,
+      /** Solar semidiurnal (S2) period in in-game hours. */
+      solarPeriodHours: 12.0,
+      /** Weight of the solar constituent; sets the neap depth to (1-w)/(1+w). */
+      solarWeight: 0.29,
+    },
+    tidal: {
+      /** Output bonus at full narrowness (all 8 neighbours are land). */
+      currentBonus: 0.6,
+      /** Extra bonus when a river tile lies within estuaryRadius. */
+      estuaryBonus: 0.35,
+      estuaryRadius: 2,
+      /** Cap on the combined site factor. */
+      maxSiteFactor: 2.0,
+    },
+    /** Wind turbine output bonus offshore (free wind, no shelter). */
+    offshoreWindBonus: 0.35,
+    /** Construction cost multiplier for building on a sea tile. */
+    offshoreCostFactor: 1.5,
+  },
+
   terrain: {
     /** Highest elevation level; levels run 0..maxLevel. */
     maxLevel: 7,
