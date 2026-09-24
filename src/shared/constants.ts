@@ -203,6 +203,12 @@ export const BALANCE = {
     tiltLevels: 3,
     /** Box-blur passes over the raw height field. */
     smoothingPasses: 2,
+    /** Height (in levels) above which the terrain steepens into cliffs. */
+    cliffLevel: 3,
+    /** Vertical stretch of the field above cliffLevel; makes mountain
+     *  flanks exceed maxBuildSlope so tooSteep is a real constraint
+     *  (1 disables). */
+    cliffFactor: 5,
     /** Required fraction of land tiles with slope <= maxBuildSlope. */
     minBuildableFraction: 0.7,
     /** Extra blur passes tried before the flatten fallback kicks in. */

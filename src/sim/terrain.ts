@@ -40,6 +40,20 @@ export function generateTerrain(state: SimState): void {
   }
 
   for (let pass = 0; pass < cfg.smoothingPasses; pass++) boxBlur(field, size);
+
+  // Stretch the highlands: everything above cliffLevel rises cliffFactor
+  // times faster, so mountain flanks exceed maxBuildSlope and tooSteep
+  // becomes a real constraint. The smooth value noise alone never jumps
+  // two levels between neighbouring tiles, leaving tooSteep inert, while
+  // the lowlands (where the city grows) stay as gentle as before.
+  if (cfg.cliffFactor > 1) {
+    for (let i = 0; i < field.length; i++) {
+      if (field[i] > cfg.cliffLevel) {
+        field[i] = cfg.cliffLevel + cfg.cliffFactor * (field[i] - cfg.cliffLevel);
+      }
+    }
+  }
+
   const { elevation } = state.layers;
   quantize(field, elevation, cfg.maxLevel);
 

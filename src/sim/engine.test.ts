@@ -140,6 +140,8 @@ describe('SimEngine basics', () => {
     expect(event.stats.energy.biogasCapacity).toBe(0);
 
     engine.state.money = 1e9;
+    // Flatten the generated relief so cliffs can't reject the fixed tile.
+    engine.state.layers.elevation.fill(0);
     engine.applyCommand({
       type: 'placePlant',
       tile: tileIndex(2, 2, 16),

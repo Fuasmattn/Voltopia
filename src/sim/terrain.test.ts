@@ -70,3 +70,24 @@ describe('generateTerrain', () => {
     }
   });
 });
+
+describe('steep terrain matters', () => {
+  it('a meaningful share of tiles is too steep to build on', () => {
+    // tooSteep is a real mechanic only if cliffs actually occur: across
+    // seeds and sizes, 1.5%..12% of tiles must exceed maxBuildSlope
+    // (the buildable-land guarantee above bounds the other side).
+    for (const size of SIZES) {
+      let steep = 0;
+      let total = 0;
+      for (const seed of [11, 22, 33, 44]) {
+        const state = createSimState(seed, size);
+        generateTerrain(state);
+        steep += size * size - buildableFraction(state.layers.elevation, size) * size * size;
+        total += size * size;
+      }
+      const share = steep / total;
+      expect(share, `size ${size}`).toBeGreaterThan(0.015);
+      expect(share, `size ${size}`).toBeLessThan(0.12);
+    }
+  });
+});

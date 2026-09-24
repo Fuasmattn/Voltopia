@@ -71,14 +71,18 @@ function createHarness(seed = 11): {
 }
 
 function findLand(engine: SimEngine, minX = 2): { x: number; y: number } {
-  const { terrain } = engine.state.layers;
+  const { terrain, elevation } = engine.state.layers;
   for (let y = 2; y < SIZE - 2; y++) {
     for (let x = minX; x < SIZE - 2; x++) {
-      // A 6x3 all-land block gives room for road + zone tests.
+      // A 6x3 all-land block gives room for road + zone tests. The
+      // one-tile margin around it must be land at the same level, so no
+      // tile is sloped (slope surcharges would skew cost expectations).
       let ok = true;
-      for (let dy = 0; dy < 3 && ok; dy++) {
-        for (let dx = 0; dx < 6; dx++) {
-          if (terrain[tileIndex(x + dx, y + dy, SIZE)] !== Terrain.Land) {
+      const level = elevation[tileIndex(x, y, SIZE)];
+      for (let dy = -1; dy < 4 && ok; dy++) {
+        for (let dx = -1; dx < 7; dx++) {
+          const index = tileIndex(x + dx, y + dy, SIZE);
+          if (terrain[index] !== Terrain.Land || elevation[index] !== level) {
             ok = false;
             break;
           }
