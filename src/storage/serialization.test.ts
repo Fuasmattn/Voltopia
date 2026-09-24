@@ -151,6 +151,16 @@ describe('save game JSON export/import', () => {
     expect(saveFromJson(saveToJson(makeSave())).summerTicks).toBeUndefined();
   });
 
+  it('round-trips free-flow progress', () => {
+    const save = makeSave();
+    save.freeFlowTicks = 1234;
+    expect(saveFromJson(saveToJson(save)).freeFlowTicks).toBe(1234);
+  });
+
+  it('accepts exports without free-flow progress', () => {
+    expect(saveFromJson(saveToJson(makeSave())).freeFlowTicks).toBeUndefined();
+  });
+
   it('accepts exports without season fields', () => {
     const restored = saveFromJson(saveToJson(makeSave()));
     expect(restored.seasonOriginDay).toBeUndefined();

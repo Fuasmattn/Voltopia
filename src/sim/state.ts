@@ -157,6 +157,7 @@ export interface SimState {
     exportedTotal: number;
     winterTicks: number;
     summerTicks: number;
+    freeFlowTicks: number;
   };
   /** Monotonic id source for vehicles (not persisted). */
   nextVehicleId: number;
@@ -260,7 +261,13 @@ export function createSimState(
     lastDemand: { residential: 0, commercial: 0, retail: 0 },
     lastServices: { fire: 0, police: 0 },
     goalsAchieved: new Set(),
-    goalProgress: { cleanDayTicks: 0, exportedTotal: 0, winterTicks: 0, summerTicks: 0 },
+    goalProgress: {
+      cleanDayTicks: 0,
+      exportedTotal: 0,
+      winterTicks: 0,
+      summerTicks: 0,
+      freeFlowTicks: 0,
+    },
     nextVehicleId: 1,
     commuteCongestion: 1,
     lifetime: {
@@ -522,6 +529,7 @@ export function serializeState(state: SimState): SaveGame {
     insulation: state.insulation,
     winterTicks: state.goalProgress.winterTicks,
     summerTicks: state.goalProgress.summerTicks,
+    freeFlowTicks: state.goalProgress.freeFlowTicks,
     layers: {
       tileType: copyBuffer(layers.tileType),
       roadMask: copyBuffer(layers.roadMask),
@@ -562,6 +570,7 @@ export function deserializeState(save: SaveGame): SimState {
   state.insulation = save.insulation ?? false;
   state.goalProgress.winterTicks = save.winterTicks ?? 0;
   state.goalProgress.summerTicks = save.summerTicks ?? 0;
+  state.goalProgress.freeFlowTicks = save.freeFlowTicks ?? 0;
   // Saves from before seasons start their year on the day they are loaded.
   state.seasonOriginDay = Math.floor(save.seasonOriginDay ?? save.tick / TICKS_PER_DAY);
   state.season = seasonState({

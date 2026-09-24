@@ -269,6 +269,12 @@ export interface TileInfo {
   policeCovered: boolean;
   /** For fire/police stations: connected to the grid and covering its ring. */
   stationActive: boolean;
+  /** Road class of a road tile (Street for everything else). */
+  roadClass: RoadClass;
+  /** Smoothed traffic load 0..255 (0 off-road). */
+  trafficLoad: number;
+  /** Cars per lane this tile holds (0 off-road). */
+  laneCapacity: number;
   growthBlockers: GrowthBlocker[];
   /** Elevation level 0..7 of this tile. */
   elevation: number;
@@ -305,6 +311,12 @@ export interface GlobalStats {
   insulation: boolean;
   /** Share of buildings with fire / police coverage, 0..1. */
   services: { fire: number; police: number };
+  /** Commute health: mean commute time over free flow, cars on the road, avenue share of roads. */
+  traffic: {
+    congestion: number;
+    driving: number;
+    avenueShare: number;
+  };
   goals: GoalState[];
   counts: TileCounts;
   /** Per-tick budget breakdown for the budget panel. */
@@ -381,6 +393,8 @@ export interface SaveGame {
   winterTicks?: number;
   /** Consecutive deficit-free summer ticks so far (absent in older saves → 0). */
   summerTicks?: number;
+  /** Consecutive flowing-commute ticks so far (absent in older saves → 0). */
+  freeFlowTicks?: number;
   /** Raw copies of the tile layers. */
   layers: {
     tileType: ArrayBuffer;

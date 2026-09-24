@@ -10,7 +10,7 @@
 import { BALANCE, TICKS_PER_DAY } from '../shared/constants.ts';
 import { neighbors4, tileX, tileY } from '../shared/grid.ts';
 import type { GrowthBlocker, TileInfo } from '../shared/types.ts';
-import { PlantType, SupplyStatus, Terrain, TileType, Zone } from '../shared/types.ts';
+import { PlantType, RoadClass, SupplyStatus, Terrain, TileType, Zone } from '../shared/types.ts';
 import { policeTaxFactor } from './economy.ts';
 import {
   buildingConsumption,
@@ -29,6 +29,7 @@ import {
   slopeAt,
   type SimState,
 } from './state.ts';
+import { laneCapacity } from './traffic.ts';
 import { currentSolarFactor, currentWindFactor, riverFlowFactor } from './weather.ts';
 
 /** Generation of one plant tile this tick, and at ideal conditions. */
@@ -255,6 +256,11 @@ export function inspectTile(state: SimState, index: number): TileInfo | null {
     fireCovered: isBuilding && (layers.services[index] & SERVICE_FIRE) !== 0,
     policeCovered: isBuilding && (layers.services[index] & SERVICE_POLICE) !== 0,
     stationActive: tileType === TileType.Plant && isStation(plant) && connected,
+    roadClass: (tileType === TileType.Road
+      ? layers.roadClass[index]
+      : RoadClass.Street) as RoadClass,
+    trafficLoad: tileType === TileType.Road ? layers.trafficLoad[index] : 0,
+    laneCapacity: tileType === TileType.Road ? laneCapacity(state, index) : 0,
     growthBlockers: growthBlockers(state, index, connected),
     elevation,
     slope,

@@ -190,6 +190,7 @@ describe('SimEngine basics', () => {
     expect(first.stats.energy.consumption.cooling).toBe(0);
     expect(first.stats.services).toEqual({ fire: 1, police: 1 });
     expect(first.stats.counts.avenueTiles).toBe(0);
+    expect(first.stats.traffic).toEqual({ congestion: 1, driving: 0, avenueShare: 0 });
     expect(first.stats.budget.avenueTiles).toBe(0);
     expect(first.stats.budget.avenueUpkeep).toBe(0);
     expect(first.diffs[0].services).toBe(0);

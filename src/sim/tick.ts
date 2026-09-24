@@ -10,7 +10,7 @@ import { happinessStep } from './happiness.ts';
 import { countPowerLineTiles } from './powerLines.ts';
 import { seasonState } from './seasons.ts';
 import { recomputeServices, serviceCoverage } from './services.ts';
-import { chargingDemand, vehiclesStep } from './vehicles.ts';
+import { chargingDemand, drivingVehicles, vehiclesStep } from './vehicles.ts';
 import { updateWeather } from './weather.ts';
 import {
   countPopulationAndJobs,
@@ -129,6 +129,7 @@ function countTiles(state: SimState): {
 export function buildStats(state: SimState): GlobalStats {
   const { population, jobs } = countPopulationAndJobs(state);
   const e = state.lastEnergy;
+  const counts = countTiles(state);
   return {
     seed: state.seed,
     tick: state.tick,
@@ -172,8 +173,13 @@ export function buildStats(state: SimState): GlobalStats {
     smartCharging: state.smartCharging,
     insulation: state.insulation,
     services: { ...state.lastServices },
+    traffic: {
+      congestion: state.commuteCongestion,
+      driving: drivingVehicles(state).length,
+      avenueShare: counts.roadTiles > 0 ? counts.avenueTiles / counts.roadTiles : 0,
+    },
     goals: goalStates(state),
-    counts: countTiles(state),
+    counts,
     budget: buildBudget(state),
     inspected: state.inspectedTile >= 0 ? inspectTile(state, state.inspectedTile) : null,
   };

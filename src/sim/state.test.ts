@@ -250,6 +250,21 @@ describe('save round trip', () => {
     expect(deserializeState(save).goalProgress.summerTicks).toBe(0);
   });
 
+  it('persists free-flow progress', () => {
+    const state = makeState();
+    state.goalProgress.freeFlowTicks = 777;
+    const restored = deserializeState(serializeState(state));
+    expect(restored.goalProgress.freeFlowTicks).toBe(777);
+  });
+
+  it('starts a save without free-flow progress at zero', () => {
+    const state = makeState();
+    state.goalProgress.freeFlowTicks = 500;
+    const save = serializeState(state);
+    delete save.freeFlowTicks;
+    expect(deserializeState(save).goalProgress.freeFlowTicks).toBe(0);
+  });
+
   it('starts a save without season data on the first spring day', () => {
     const state = makeState();
     state.tick = TICKS_PER_DAY * 37 + 100;

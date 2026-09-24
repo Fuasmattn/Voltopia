@@ -189,4 +189,39 @@ describe('goals', () => {
     goalsStep(state);
     expect(state.goalsAchieved.has('safeCity')).toBe(false);
   });
+
+  function bigCity() {
+    const state = createSimState(1, SIZE);
+    const homes = Math.ceil(
+      BALANCE.traffic.goalMinPopulation / BALANCE.growth.populationByDensity[3],
+    );
+    for (let i = 0; i < homes; i++) {
+      state.layers.zone[at(i % SIZE, 1 + Math.floor(i / SIZE))] = Zone.Residential;
+      state.layers.density[at(i % SIZE, 1 + Math.floor(i / SIZE))] = 3;
+    }
+    return state;
+  }
+
+  it('freeFlow needs a whole day of flowing commutes in a big city', () => {
+    const state = bigCity();
+    state.commuteCongestion = BALANCE.traffic.flowing - 0.01;
+    for (let t = 0; t < TICKS_PER_DAY - 1; t++) goalsStep(state);
+    expect(state.goalsAchieved.has('freeFlow')).toBe(false);
+    goalsStep(state);
+    expect(state.goalsAchieved.has('freeFlow')).toBe(true);
+  });
+
+  it('a slow tick resets the free-flow streak; small cities never count', () => {
+    const state = bigCity();
+    state.commuteCongestion = 1;
+    for (let t = 0; t < 100; t++) goalsStep(state);
+    expect(state.goalProgress.freeFlowTicks).toBe(100);
+    state.commuteCongestion = BALANCE.traffic.flowing + 0.01;
+    goalsStep(state);
+    expect(state.goalProgress.freeFlowTicks).toBe(0);
+    const small = createSimState(1, SIZE);
+    small.commuteCongestion = 1;
+    goalsStep(small);
+    expect(small.goalProgress.freeFlowTicks).toBe(0);
+  });
 });

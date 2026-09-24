@@ -2,6 +2,7 @@
 import { describe, expect, it } from 'vitest';
 import { BALANCE, TICKS_PER_DAY } from '../shared/constants.ts';
 import { neighbors4, tileIndex } from '../shared/grid.ts';
+import { RoadClass } from '../shared/types.ts';
 import { economyStep } from './economy.ts';
 import { buildingConsumption, placePlant } from './energy.ts';
 import { inspectTile } from './inspect.ts';
@@ -268,5 +269,23 @@ describe('services in the inspector', () => {
     placePlant(state, at(11, 10), PlantType.WindTurbine);
     info = inspectTile(state, at(10, 10))!;
     expect(info.consumption).toBe(BALANCE.services.stationConsumption);
+  });
+});
+
+describe('traffic in the inspector', () => {
+  it('reports class, load and lane capacity of a road tile', () => {
+    const state = createSimState(1, SIZE);
+    state.layers.elevation.fill(0);
+    buildRoads(state, [at(2, 2)]);
+    buildRoads(state, [at(3, 2)], true);
+    state.layers.trafficLoad[at(3, 2)] = 200;
+    const street = inspectTile(state, at(2, 2))!;
+    const avenue = inspectTile(state, at(3, 2))!;
+    expect(street.roadClass).toBe(RoadClass.Street);
+    expect(street.laneCapacity).toBe(BALANCE.vehicles.maxPerRoadTile);
+    expect(avenue.roadClass).toBe(RoadClass.Avenue);
+    expect(avenue.laneCapacity).toBe(BALANCE.vehicles.avenueMaxPerTile);
+    expect(avenue.trafficLoad).toBe(200);
+    expect(inspectTile(state, at(9, 9))!.laneCapacity).toBe(0);
   });
 });

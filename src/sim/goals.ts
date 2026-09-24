@@ -16,6 +16,7 @@ export const GOAL_IDS = [
   'winterResilience',
   'summerResilience',
   'safeCity',
+  'freeFlow',
 ] as const;
 export type GoalId = (typeof GOAL_IDS)[number];
 
@@ -67,6 +68,14 @@ export function goalsStep(state: SimState): void {
     progress.summerTicks = 0;
   }
 
+  // A whole day of flowing commutes, for a real city.
+  const { flowing, goalMinPopulation } = BALANCE.traffic;
+  if (population >= goalMinPopulation && state.commuteCongestion <= flowing) {
+    progress.freeFlowTicks++;
+  } else {
+    progress.freeFlowTicks = 0;
+  }
+
   const achieved = state.goalsAchieved;
   if (!achieved.has('firstPower') && hasPowerInfrastructure(state)) {
     achieved.add('firstPower');
@@ -112,6 +121,9 @@ export function goalsStep(state: SimState): void {
     state.lastServices.police >= goalCoverage
   ) {
     achieved.add('safeCity');
+  }
+  if (!achieved.has('freeFlow') && progress.freeFlowTicks >= TICKS_PER_DAY) {
+    achieved.add('freeFlow');
   }
 }
 
