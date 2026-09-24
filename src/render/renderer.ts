@@ -49,6 +49,8 @@ export interface RenderEnvironment {
   windFactor: number;
   /** Battery state of charge 0..1. */
   stateOfCharge: number;
+  /** Tide water level, -1 (low water) .. 1 (high water). */
+  tideLevel: number;
   /** Global zone demand, -1..1 each (drives the demand overlay). */
   demand: { residential: number; commercial: number; retail: number };
   /** Year phase 0..1 (0 = first spring day). */
@@ -363,6 +365,7 @@ export class GameRenderer {
         stats.energy.storageCapacity > 0
           ? stats.energy.storedEnergy / stats.energy.storageCapacity
           : 0,
+      tideLevel: stats.tide.level,
       demand: stats.demand,
       phase: stats.season.phase,
       temperature: stats.season.temperature,
