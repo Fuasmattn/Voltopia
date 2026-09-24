@@ -31,9 +31,12 @@ function floodWater(state: SimState, start: number): Set<number> {
  * The river's axis, found from River tiles alone. Generic "any water at
  * this edge" is unreliable once the sea is in play: the sea band spans
  * the full lateral range of the map edge it claims, so it spills a few
- * tiles into the two perpendicular edges at the corners. River tiles
- * never do that (their lateral position stays within `edgeMargin` of
- * every edge), so they identify the axis unambiguously.
+ * tiles into the two perpendicular edges at the corners — both north AND
+ * south (or west AND east) always end up with some water once a sea
+ * exists, regardless of axis. River tiles never do that (their lateral
+ * position stays within `edgeMargin` of every edge), so they identify the
+ * axis unambiguously. The sole axis-detection helper; `edgeWaterTiles`
+ * below reuses it instead of guessing from water presence.
  */
 function riverAxisVertical(state: SimState): boolean {
   const { size, layers } = state;
@@ -56,7 +59,12 @@ function edgeWaterTiles(state: SimState): { a: number[]; b: number[] } {
     if (isWater(state, tileIndex(0, i, size))) west.push(tileIndex(0, i, size));
     if (isWater(state, tileIndex(size - 1, i, size))) east.push(tileIndex(size - 1, i, size));
   }
-  return north.length > 0 ? { a: north, b: south } : { a: west, b: east };
+  // Pick the pair on the river's real axis — NOT "whichever pair has any
+  // water", which is always both once the sea exists (see riverAxisVertical
+  // above). One side of the true pair is the genuine upstream river edge
+  // (a few tiles), the other is the downstream edge the sea fully claims;
+  // together they still verify the whole channel is connected end to end.
+  return riverAxisVertical(state) ? { a: north, b: south } : { a: west, b: east };
 }
 
 const SEEDS = Array.from({ length: 25 }, (_, i) => i * 7919 + 1);
@@ -184,7 +192,12 @@ describe('generateWater', () => {
           // exit, each border flowing water — normally a river tile, but a
           // lake close enough to the coast can have its downstream river
           // segment entirely absorbed into the sea band, so it borders the
-          // sea directly instead.
+          // sea directly instead. Both halves accept Sea here deliberately,
+          // for simplicity: this test doesn't track which half is actually
+          // upstream vs downstream (only "nearer along = 0" vs "nearer
+          // along = size - 1"), and in practice only the downstream half
+          // can ever border Sea — the sea sits on a single edge, far from
+          // the upstream half on the opposite side of the lake.
           const touchesFlow = (tile: number): boolean =>
             neighbors4(tile, size).some(
               (n) =>
