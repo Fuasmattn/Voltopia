@@ -8,6 +8,7 @@ const SECTIONS: Array<{ title: TranslationKey; body: TranslationKey }> = [
   { title: 'help.grid.title', body: 'help.grid.body' },
   { title: 'help.water.title', body: 'help.water.body' },
   { title: 'help.terrain.title', body: 'help.terrain.body' },
+  { title: 'help.nature.title', body: 'help.nature.body' },
   { title: 'help.seasons.title', body: 'help.seasons.body' },
   { title: 'help.ev.title', body: 'help.ev.body' },
   { title: 'help.traffic.title', body: 'help.traffic.body' },

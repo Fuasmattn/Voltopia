@@ -18,6 +18,7 @@ import { MinimapLayer } from './minimapLayer.ts';
 import { WeatherFx } from './weatherFx.ts';
 import { IconsMesh } from './iconsMesh.ts';
 import type { OverlayMode } from '../shared/types.ts';
+import { ForestMesh } from './forestMesh.ts';
 import { ZoneTilesMesh } from './zoneTilesMesh.ts';
 import { WaterMesh } from './waterMesh.ts';
 
@@ -120,6 +121,8 @@ export class GameRenderer {
   private readonly roadsMesh: RoadsMesh;
   /** Per-tile terrain, tracked from diffs so tools can price bridges vs. roads. */
   private readonly terrain: Uint8Array;
+  /** Per-tile forest stage, tracked from diffs so tools can price felling. */
+  private readonly forest: Uint8Array;
   /** Per-tile world height of whatever stands there, tracked from diffs. */
   private readonly tileHeights: Float32Array;
   private readonly hoverMarker: THREE.Mesh;
@@ -165,6 +168,7 @@ export class GameRenderer {
     this.gridSize = gridSize;
     this.callbacks = callbacks;
     this.terrain = new Uint8Array(gridSize * gridSize);
+    this.forest = new Uint8Array(gridSize * gridSize);
     this.tileHeights = new Float32Array(gridSize * gridSize);
 
     const { scene, lights } = createScene();
@@ -181,6 +185,7 @@ export class GameRenderer {
 
     this.addDiffLayer(new WaterMesh(scene, gridSize, this.elevation));
     this.roadsMesh = new RoadsMesh(scene, gridSize, this.elevation);
+    this.addDiffLayer(new ForestMesh(scene, gridSize, this.elevation));
     this.addDiffLayer(this.roadsMesh);
     this.addDiffLayer(new PowerLinesMesh(scene, gridSize, this.elevation));
     this.addDiffLayer(new ZoneTilesMesh(scene, gridSize, this.elevation));
@@ -306,6 +311,7 @@ export class GameRenderer {
     let selectionChanged = false;
     for (const diff of diffs) {
       this.terrain[diff.index] = diff.terrain;
+      this.forest[diff.index] = diff.forest;
       this.tileHeights[diff.index] = contentHeight(diff);
       if (diff.index === this.selectedIndex) selectionChanged = true;
     }
@@ -317,6 +323,11 @@ export class GameRenderer {
   /** Terrain of the given tile, tracked from diffs (build tools price bridges vs. roads). */
   terrainAt(index: number): Terrain {
     return this.terrain[index] as Terrain;
+  }
+
+  /** Forest growth stage of the tile (0 = none), for build tool cost previews. */
+  forestAt(index: number): number {
+    return this.forest[index];
   }
 
   /** RoadClass of the tile (-1 no road, 0 street, 1 avenue), for build tool cost previews. */

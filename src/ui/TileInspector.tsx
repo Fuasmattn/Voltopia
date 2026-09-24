@@ -6,7 +6,7 @@
  * peak (with the current load-profile factor), generation, and — for zoned
  * tiles — demand and the reasons it is not growing.
  */
-import { TICKS_PER_DAY } from '../shared/constants.ts';
+import { BALANCE, TICKS_PER_DAY } from '../shared/constants.ts';
 import {
   DeliveryState,
   MAX_DELIVERY_AGE,
@@ -21,6 +21,11 @@ import {
   type TileInfo,
 } from '../shared/types.ts';
 import { useI18n, type TranslationKey } from './i18n.tsx';
+
+/** What felling the woods on a tile of this growth stage costs. */
+function fellingFee(stage: number): number {
+  return stage * BALANCE.forest.fellingCostPerStage;
+}
 
 const PLANT_LABEL: Record<PlantType, TranslationKey | null> = {
   [PlantType.None]: null,
@@ -163,7 +168,7 @@ export function TileInspector({ info, onClose }: { info: TileInfo; onClose: () =
         </button>
       </header>
 
-      {(info.terrain === Terrain.Land || info.terrainBonus > 1) && (
+      {(info.terrain === Terrain.Land || info.terrainBonus > 1 || info.forest > 0) && (
         <section>
           <h3>{t('inspector.terrain')}</h3>
           {info.terrain === Terrain.Land && (
@@ -179,6 +184,18 @@ export function TileInspector({ info, onClose }: { info: TileInfo; onClose: () =
               value={`+${Math.round((info.terrainBonus - 1) * 100)} %`}
               tone="positive"
               testId="inspect-terrain-bonus"
+            />
+          )}
+          {info.forest > 0 && (
+            <Row
+              label={t('inspector.forest')}
+              value={t(
+                info.forest >= BALANCE.forest.maxStage
+                  ? 'inspector.forest.mature'
+                  : 'inspector.forest.growing',
+                { fee: fellingFee(info.forest) },
+              )}
+              testId="inspect-forest"
             />
           )}
           {info.terrain === Terrain.Land && info.slope > 1 && (

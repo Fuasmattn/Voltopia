@@ -28,6 +28,7 @@ export type ToolId =
   | 'plant-hydro'
   | 'plant-pumped'
   | 'plant-hydrogen'
+  | 'plant-forest'
   | 'bulldoze';
 
 const ZONE_BY_TOOL: Partial<Record<ToolId, Zone>> = {
@@ -50,6 +51,7 @@ export const TOOL_HOTKEYS: Record<string, ToolId> = {
   '0': 'plant-hub',
   b: 'bulldoze',
   p: 'plant-park',
+  w: 'plant-forest',
   h: 'plant-hydro',
   u: 'plant-pumped',
   y: 'plant-hydrogen',
@@ -134,6 +136,11 @@ export function useTools(
     const slopeFactorAt = (index: number): number =>
       (rendererRef.current?.slopeAt(index) ?? 0) > 0 ? BALANCE.terrain.slopeCostFactor : 1;
 
+    // Mirrors the sim's felling fee (src/sim/forest.ts): building on woods
+    // fells them, charged per growth stage on top of the build price.
+    const fellingCostAt = (index: number): number =>
+      (rendererRef.current?.forestAt(index) ?? 0) * BALANCE.forest.fellingCostPerStage;
+
     // Mirrors the sim's per-tile pricing (src/sim/roads.ts, powerLines.ts):
     // river tiles are bridges; lines over river or lake are crossings.
     // Falls back to the land price when the renderer isn't mounted yet.
@@ -155,7 +162,8 @@ export function useTools(
             Math.round(
               (water ? BALANCE.costs.powerLineWaterPerTile : BALANCE.costs.powerLinePerTile) *
                 factor,
-            )
+            ) +
+            fellingCostAt(index)
           );
         }
         const river = terrain === Terrain.River;
@@ -173,7 +181,7 @@ export function useTools(
               ? full - (river ? BALANCE.costs.bridgePerTile : BALANCE.costs.roadPerTile)
               : full;
         }
-        return sum + Math.round(base * factor);
+        return sum + Math.round(base * factor) + (base > 0 ? fellingCostAt(index) : 0);
       }, 0);
       setCostPreview({ tiles: tiles.length, cost });
     };
@@ -182,10 +190,21 @@ export function useTools(
     // tile is rounded individually after applying the slope surcharge.
     const showZoneCost = (tiles: number[]): void => {
       const cost = tiles.reduce(
-        (sum, index) => sum + Math.round(BALANCE.costs.zonePerTile * slopeFactorAt(index)),
+        (sum, index) =>
+          sum + Math.round(BALANCE.costs.zonePerTile * slopeFactorAt(index)) + fellingCostAt(index),
         0,
       );
       setCostPreview({ tiles: tiles.length, cost });
+    };
+
+    /** Mirrors src/sim/forest.ts: one flat price per plantable tile. */
+    const showForestCost = (tiles: number[]): void => {
+      const renderer = rendererRef.current;
+      const plantable = tiles.filter((index) => (renderer?.forestAt(index) ?? 0) === 0);
+      setCostPreview({
+        tiles: plantable.length,
+        cost: plantable.length * BALANCE.forest.plantCost,
+      });
     };
 
     const callbacks: RendererCallbacks = {};
@@ -251,6 +270,30 @@ export function useTools(
         }
         if (path.length > 0) {
           send({ type: 'paintZone', tiles: path, zone });
+          sound.play('build');
+        }
+        clearPreview();
+      };
+    } else if (tool === 'plant-forest') {
+      // Painted in rectangles like a zone: woods come by the patch.
+      callbacks.onBuildStart = (tile) => {
+        anchor = tile;
+        path = [tile.index];
+        rendererRef.current?.setPreviewTiles(path);
+        showForestCost(path);
+      };
+      callbacks.onBuildDrag = (tile) => {
+        if (!anchor) return;
+        path = rectTiles(anchor.x, anchor.y, tile.x, tile.y, gridSize);
+        rendererRef.current?.setPreviewTiles(path);
+        showForestCost(path);
+      };
+      callbacks.onBuildEnd = (tile) => {
+        if (anchor && tile) {
+          path = rectTiles(anchor.x, anchor.y, tile.x, tile.y, gridSize);
+        }
+        if (path.length > 0) {
+          send({ type: 'plantForest', tiles: path });
           sound.play('build');
         }
         clearPreview();

@@ -149,6 +149,7 @@ export interface UndoEntry {
     variant: number;
     plantType: number;
     busStop: number;
+    forest: number;
   }>;
 }
 
@@ -166,6 +167,8 @@ export interface TileLayers {
   terrain: Uint8Array;
   /** Elevation level 0..7, generated per map. Immutable afterwards. */
   elevation: Uint8Array;
+  /** Forest growth stage per tile: 0 = none, 1..BALANCE.forest.maxStage. */
+  forest: Uint8Array;
   /** Power line mask per tile (0 = none, else LINE_PRESENT | connection bits). */
   powerLine: Uint8Array;
   /** 1 when the tile is within lineSupplyRadius of an energised line or supply plant. Derived, not persisted. */
@@ -325,6 +328,7 @@ export function createTileLayers(size: number): TileLayers {
     plantType: new Uint8Array(tiles),
     terrain: new Uint8Array(tiles),
     elevation: new Uint8Array(tiles),
+    forest: new Uint8Array(tiles),
     powerLine: new Uint8Array(tiles),
     energized: new Uint8Array(tiles),
     services: new Uint8Array(tiles),
@@ -462,6 +466,7 @@ export function snapshotTile(state: SimState, index: number): UndoEntry['tiles']
     variant: layers.variant[index],
     plantType: layers.plantType[index],
     busStop: layers.busStop[index],
+    forest: layers.forest[index],
   };
 }
 
@@ -495,6 +500,7 @@ export function collectDiffs(state: SimState): TileDiff[] {
       plantType: layers.plantType[index] as TileDiff['plantType'],
       terrain: layers.terrain[index] as TileDiff['terrain'],
       elevation: layers.elevation[index],
+      forest: layers.forest[index],
       deliveryState: deliveryStateOfAge(layers.deliveryAge[index]),
       busStop: layers.busStop[index],
       stopState:
@@ -721,6 +727,7 @@ export function serializeState(state: SimState): SaveGame {
       terrain: copyBuffer(layers.terrain),
       powerLine: copyBuffer(layers.powerLine),
       elevation: copyBuffer(layers.elevation),
+      forest: copyBuffer(layers.forest),
       roadClass: copyBuffer(layers.roadClass),
       busStop: copyBuffer(layers.busStop),
     },
@@ -771,6 +778,7 @@ export function deserializeState(save: SaveGame): SimState {
     grantLegacyNetwork(state);
   }
   if (save.layers.elevation) state.layers.elevation.set(new Uint8Array(save.layers.elevation));
+  if (save.layers.forest) state.layers.forest.set(new Uint8Array(save.layers.forest));
   if (save.layers.roadClass) state.layers.roadClass.set(new Uint8Array(save.layers.roadClass));
   if (save.layers.busStop) state.layers.busStop.set(new Uint8Array(save.layers.busStop));
   state.lakeLevel = computeLakeLevel(state);

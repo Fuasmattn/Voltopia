@@ -71,7 +71,7 @@ function createHarness(seed = 11): {
 }
 
 function findLand(engine: SimEngine, minX = 2): { x: number; y: number } {
-  const { terrain, elevation } = engine.state.layers;
+  const { terrain, elevation, forest } = engine.state.layers;
   for (let y = 2; y < SIZE - 2; y++) {
     for (let x = minX; x < SIZE - 2; x++) {
       // A 6x3 all-land block gives room for road + zone tests. The
@@ -88,7 +88,13 @@ function findLand(engine: SimEngine, minX = 2): { x: number; y: number } {
           }
         }
       }
-      if (ok) return { x, y };
+      if (ok) {
+        // Clear any woods so felling fees don't skew the cost checks either.
+        for (let dy = -1; dy < 4; dy++) {
+          for (let dx = -1; dx < 7; dx++) forest[tileIndex(x + dx, y + dy, SIZE)] = 0;
+        }
+        return { x, y };
+      }
     }
   }
   throw new Error('no land block');
@@ -116,6 +122,7 @@ describe('agent tools: reading', () => {
       'set_speed',
       'set_tax_rate',
       'set_smart_charging',
+      'plant_forest',
       'set_market_trading',
       'buy_insulation',
       'advance_time',
@@ -340,6 +347,11 @@ describe('agent tools: building', () => {
     expect(engine.state.smartCharging).toBe(true);
     expect(await call('set_market_trading', { enabled: true })).toMatchObject({ ok: true });
     expect(engine.state.marketTrading).toBe(true);
+    const wood = findLand(engine, 12);
+    expect(
+      await call('plant_forest', { from: wood, to: { x: wood.x + 1, y: wood.y } }),
+    ).toMatchObject({ ok: true, tiles: 2 });
+    expect(engine.state.layers.forest[tileIndex(wood.x, wood.y, SIZE)]).toBe(1);
     expect(await call('buy_insulation')).toMatchObject({
       ok: true,
       spent: BALANCE.costs.insulation,

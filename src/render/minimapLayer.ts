@@ -4,6 +4,7 @@ import type { DiffLayer } from './renderer.ts';
 
 const COLORS = {
   ground: '#8fb573',
+  forest: '#3f6b3c',
   road: '#5a6068',
   avenue: '#8b929c',
   river: '#4d8fc4',
@@ -87,6 +88,7 @@ export class MinimapLayer implements DiffLayer {
     }
     if (diff.density > 0) return COLORS.building[diff.zone] ?? COLORS.ground;
     if (diff.powerLine !== 0) return COLORS.powerLine;
+    if (diff.forest > 0) return this.shade(COLORS.forest, this.elevations[diff.index]);
     if (diff.zone !== Zone.None) {
       return this.shade(COLORS.zoned[diff.zone] ?? COLORS.ground, this.elevations[diff.index]);
     }

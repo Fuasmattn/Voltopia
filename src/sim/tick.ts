@@ -7,6 +7,7 @@ import { energyStep } from './energy.ts';
 import { goalsStep, goalStates } from './goals.ts';
 import { inspectTile } from './inspect.ts';
 import { computeDemand, decayStep, growthStep } from './growth.ts';
+import { forestShare, forestStep } from './forest.ts';
 import { happinessStep } from './happiness.ts';
 import { countPowerLineTiles } from './powerLines.ts';
 import { seasonState } from './seasons.ts';
@@ -58,6 +59,7 @@ export function stepTick(state: SimState): void {
   state.lastDemand = computeDemand(state);
   growthStep(state, state.lastDemand);
   decayStep(state);
+  forestStep(state);
   const { population, jobs } = countPopulationAndJobs(state);
   economyStep(state, population, jobs);
   happinessStep(state, population);
@@ -196,6 +198,7 @@ export function buildStats(state: SimState): GlobalStats {
     marketTrading: state.marketTrading,
     insulation: state.insulation,
     services: { ...state.lastServices },
+    forestShare: forestShare(state),
     traffic: {
       congestion: state.commuteCongestion,
       driving: drivingVehicleCount(state),

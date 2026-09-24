@@ -76,6 +76,7 @@ const CATEGORIES: Category[] = [
     buttons: [
       { id: 'plant-hub', icon: '🔌', cost: BALANCE.costs.plant[PlantType.ChargingHub] },
       { id: 'plant-park', icon: '🌳', cost: BALANCE.costs.plant[PlantType.Park] },
+      { id: 'plant-forest', icon: '🌲', cost: BALANCE.forest.plantCost, perTile: true },
       { id: 'plant-fire', icon: '🚒', cost: BALANCE.costs.plant[PlantType.FireStation] },
       { id: 'plant-police', icon: '🚓', cost: BALANCE.costs.plant[PlantType.PoliceStation] },
       { id: 'plant-depot', icon: '🚚', cost: BALANCE.costs.plant[PlantType.LogisticsDepot] },

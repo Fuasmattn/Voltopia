@@ -83,6 +83,15 @@ describe('save game JSON export/import', () => {
     expect(saveFromJson(saveToJson(makeSave())).marketTrading).toBeUndefined();
   });
 
+  it('round-trips the optional forest layer', () => {
+    const save = makeSave();
+    const forest = new Uint8Array(save.size * save.size).fill(2);
+    save.layers.forest = forest.buffer as ArrayBuffer;
+    const restored = saveFromJson(saveToJson(save));
+    expect(new Uint8Array(restored.layers.forest!)).toEqual(forest);
+    expect(saveFromJson(saveToJson(makeSave())).layers.forest).toBeUndefined();
+  });
+
   it('accepts exports without the terrain layer', () => {
     const save = makeSave();
     const restored = saveFromJson(saveToJson(save));

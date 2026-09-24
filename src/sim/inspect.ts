@@ -297,6 +297,7 @@ export function inspectTile(state: SimState, index: number): TileInfo | null {
     growthBlockers: growthBlockers(state, index, connected),
     elevation,
     slope,
+    forest: layers.forest[index],
     terrainBonus,
   };
 }

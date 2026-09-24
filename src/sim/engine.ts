@@ -19,6 +19,7 @@ import {
 } from './state.ts';
 import { generateTerrain } from './terrain.ts';
 import { buildStats, stepTick } from './tick.ts';
+import { generateForest, plantForest } from './forest.ts';
 import { generateWater } from './water.ts';
 
 /**
@@ -46,6 +47,7 @@ export class SimEngine {
           this.state = createSimState(command.seed, command.size, command.startingMoney);
           generateTerrain(this.state);
           generateWater(this.state);
+          generateForest(this.state);
         }
         return [];
       case 'setSpeed':
@@ -87,6 +89,8 @@ export class SimEngine {
         return this.toEvents(undoLastAction(state));
       case 'paintZone':
         return this.toEvents(paintZones(state, command.tiles, command.zone));
+      case 'plantForest':
+        return this.toEvents(plantForest(state, command.tiles));
       case 'placePlant':
         return this.toEvents(placePlant(state, command.tile, command.plant));
       case 'buyInsulation':

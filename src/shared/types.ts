@@ -407,6 +407,8 @@ export interface TileInfo {
   elevation: number;
   /** Largest level difference to a neighbour (>= 2 is unbuildable). */
   slope: number;
+  /** Forest growth stage on this tile: 0 = none, 1..maxStage. */
+  forest: number;
   /** Terrain bonus factor on this tile's plant output/capacity (1 = none). */
   terrainBonus: number;
 }
@@ -440,6 +442,8 @@ export interface GlobalStats {
   insulation: boolean;
   /** Share of buildings with fire / police coverage, 0..1. */
   services: { fire: number; police: number };
+  /** Share of the land that is wooded, weighted by growth stage (0..1). */
+  forestShare: number;
   /** Commute health: mean commute time over free flow, cars on the road, avenue share of roads. */
   traffic: {
     congestion: number;
@@ -486,6 +490,8 @@ export interface TileDiff {
   terrain: Terrain;
   /** Elevation level 0..7 (immutable after map generation). */
   elevation: number;
+  /** Forest growth stage on this tile: 0 = none, 1..maxStage. */
+  forest: number;
   /** DeliveryState of a retail building (0 elsewhere). */
   deliveryState: number;
   /** 1 when a bus stop is marked on this road tile. */
@@ -565,5 +571,7 @@ export interface SaveGame {
     roadClass?: ArrayBuffer;
     /** Bus stop layer; absent in saves from before transit. */
     busStop?: ArrayBuffer;
+    /** Forest layer; absent in saves from before woods (treeless map). */
+    forest?: ArrayBuffer;
   };
 }

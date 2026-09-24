@@ -533,6 +533,7 @@ export function createAgentTools(ctx: AgentContext): AgentTool[] {
           maxTaxRate: BALANCE.tax.maxRate,
           smartCharging: s.smartCharging,
           marketTrading: s.marketTrading,
+          forestShare: round(s.forestShare, 3),
           insulation: s.insulation,
           goals: s.goals.map((goal) => ({
             id: goal.id,
@@ -924,6 +925,17 @@ export function createAgentTools(ctx: AgentContext): AgentTool[] {
           throw new ToolInputError('"enabled" must be boolean');
         const outcome = await ctx.sendCommand({ type: 'setSmartCharging', enabled: input.enabled });
         return outcomeResult(outcome, { smartCharging: input.enabled });
+      },
+    },
+    {
+      name: 'plant_forest',
+      description: `Plant woods on a rectangle of empty land (${BALANCE.forest.plantCost} per tile). Saplings grow over a few days, raise happiness nearby, and slow the wind for turbines standing in them.`,
+      inputSchema: { ...RECT_SCHEMA, required: ['from'] },
+      async execute(input) {
+        const rect = readRectTiles(input, tiles);
+        const before = requireStats(ctx).money;
+        const outcome = await ctx.sendCommand({ type: 'plantForest', tiles: rect });
+        return outcomeResult(outcome, { tiles: rect.length, ...spent(ctx, before) });
       },
     },
     {

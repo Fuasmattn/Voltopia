@@ -38,6 +38,7 @@ describe('TileMirror', () => {
         tileType: TileType.Road,
         roadMask: 0,
         roadClass: 0,
+        forest: 0,
         trafficLoad: 0,
         powerLine: 0,
         zone: Zone.None,

@@ -92,6 +92,16 @@ export function CityVitals({ stats }: { stats: GlobalStats }) {
           <span className="hud-stat-label">{t('hud.transit')}</span>
         </div>
       )}
+      {stats.forestShare > 0 && (
+        <div
+          className="hud-stat"
+          data-testid="nature"
+          title={t('hud.nature.title', { share: Math.round(stats.forestShare * 100) })}
+        >
+          <span className="hud-stat-value">🌲 {Math.round(stats.forestShare * 100)}%</span>
+          <span className="hud-stat-label">{t('hud.nature')}</span>
+        </div>
+      )}
       <DemandBars demand={stats.demand} />
     </div>
   );

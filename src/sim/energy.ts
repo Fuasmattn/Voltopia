@@ -1,5 +1,6 @@
 import { BALANCE, TICKS_PER_HISTORY_SAMPLE } from '../shared/constants.ts';
 import { PlantType, Zone } from '../shared/types.ts';
+import { clearForest, fellingCost, windForestFactor } from './forest.ts';
 import { isSupplySource, recomputeGrid } from './powerGrid.ts';
 import type { BuildResult } from './roads.ts';
 import { coolingDegree, heatingDegree } from './seasons.ts';
@@ -46,7 +47,9 @@ export function placePlant(state: SimState, tile: number, plant: PlantType): Bui
   if (plant === PlantType.None) return { rejected: 'noPlantSelected' };
   const rejection = buildRejection(state, tile, BuildIntent.Plant, plant);
   if (rejection) return { rejected: rejection };
-  const cost = Math.round(BALANCE.costs.plant[plant] * slopeCostMultiplier(state, tile));
+  const cost =
+    Math.round(BALANCE.costs.plant[plant] * slopeCostMultiplier(state, tile)) +
+    fellingCost(state, tile);
   if (cost > state.money) {
     return { rejected: 'notEnoughMoney' };
   }
@@ -57,6 +60,7 @@ export function placePlant(state: SimState, tile: number, plant: PlantType): Bui
   layers.tileType[tile] = TileType.Plant;
   layers.zone[tile] = Zone.None;
   layers.plantType[tile] = plant;
+  clearForest(state, tile);
   markDirty(state, tile);
   bumpGridVersion(state);
   state.undoStack.push(undo);
@@ -114,7 +118,10 @@ export function censusPlants(state: SimState): PlantCensus {
         break;
       case PlantType.WindTurbine:
         census.windTurbines++;
-        census.windCapacity += 1 + BALANCE.terrain.windBonusPerLevel * state.layers.elevation[i];
+        // Height helps, sheltering woods hurt (turbulence and lower wind).
+        census.windCapacity +=
+          (1 + BALANCE.terrain.windBonusPerLevel * state.layers.elevation[i]) *
+          windForestFactor(state, i);
         break;
       case PlantType.Battery:
         census.batteries++;

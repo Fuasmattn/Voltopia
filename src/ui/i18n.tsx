@@ -56,6 +56,12 @@ const en = {
   'tool.plant-hydro': 'Run-of-river plant',
   'tool.plant-pumped': 'Pumped storage',
   'tool.plant-hydrogen': 'Hydrogen plant',
+  'tool.plant-forest': 'Plant woods',
+  'inspector.forest': 'Woods',
+  'inspector.forest.mature': 'mature · felling {fee} ⌁',
+  'inspector.forest.growing': 'growing · felling {fee} ⌁',
+  'hud.nature': 'nature',
+  'hud.nature.title': '{share} % of the land is wooded',
   'tool.bulldoze': 'Bulldozer',
   'tool.undo': 'Undo',
   'tool.undo.title': 'Undo last build action',
@@ -94,6 +100,8 @@ const en = {
   'tool.plant-pumped.desc': 'Large storage on a lake shore. Pumps up on surplus.',
   'tool.plant-hydrogen.desc':
     'Electrolyses surplus the grid cannot take into hydrogen, re-electrifies it in a lull and sells the overflow once the tank is full.',
+  'tool.plant-forest.desc':
+    'Plant saplings by the patch. They grow over a few days, raise happiness nearby — and slow the wind for turbines standing in them.',
   'tool.bulldoze.desc': 'Clears roads, zones and plants. Drag to clear an area.',
   'tool.undo.desc': 'Undo the last build action.',
 
@@ -225,6 +233,9 @@ const en = {
   'help.icons.title': 'Warning icons',
   'help.icons.body':
     'A red bolt above a building means it is not connected to any plant; an orange bolt means the grid cannot cover its demand right now.',
+  'help.nature.title': 'Woods and nature',
+  'help.nature.body':
+    'Every map starts with woodland. Building through it fells the trees for a fee that scales with how grown they are, so a road through the forest costs more than one over open land — the bulldozer clears bare woods for the same fee. Woods within five tiles of a building raise happiness, on top of parks. You can plant new woods by the patch (🌲); saplings take a few in-game days to mature. The catch: trees slow the wind, so a turbine standing in closed forest loses up to 30 % of its output. Plant the woods where people live, keep them clear of your wind park.',
   'help.terrain.title': 'Hills and slopes',
   'help.terrain.body':
     'Every map has hills. Steep slopes cannot be built on, and building on a gentle slope costs extra. Wind turbines generate more on high ground, run-of-river plants gain from a drop in the river, and pumped storage stores more the higher it sits above the lake.',
@@ -485,6 +496,12 @@ const de: Record<TranslationKey, string> = {
   'tool.plant-hydro': 'Laufwasserkraftwerk',
   'tool.plant-pumped': 'Pumpspeicher',
   'tool.plant-hydrogen': 'Wasserstoffanlage',
+  'tool.plant-forest': 'Wald pflanzen',
+  'inspector.forest': 'Wald',
+  'inspector.forest.mature': 'ausgewachsen · Rodung {fee} ⌁',
+  'inspector.forest.growing': 'wächst · Rodung {fee} ⌁',
+  'hud.nature': 'Natur',
+  'hud.nature.title': '{share} % des Landes sind bewaldet',
   'tool.bulldoze': 'Abriss',
   'tool.undo': 'Rückgängig',
   'tool.undo.title': 'Letzte Bauaktion rückgängig machen',
@@ -524,6 +541,8 @@ const de: Record<TranslationKey, string> = {
   'tool.plant-pumped.desc': 'Großer Speicher am Seeufer. Pumpt bei Überschuss hoch.',
   'tool.plant-hydrogen.desc':
     'Elektrolysiert Überschuss, den das Netz nicht aufnimmt, zu Wasserstoff, verstromt ihn in der Flaute und verkauft den Überlauf bei vollem Tank.',
+  'tool.plant-forest.desc':
+    'Pflanzt Setzlinge flächenweise. Sie wachsen über einige Tage, heben die Zufriedenheit in der Nähe — und bremsen den Wind für Turbinen, die darin stehen.',
   'tool.bulldoze.desc': 'Entfernt Straßen, Gebiete und Anlagen. Ziehen räumt eine Fläche.',
   'tool.undo.desc': 'Macht die letzte Bauaktion rückgängig.',
 
@@ -655,6 +674,9 @@ const de: Record<TranslationKey, string> = {
   'help.icons.title': 'Warnsymbole',
   'help.icons.body':
     'Ein roter Blitz über einem Gebäude bedeutet: nicht an eine Anlage angeschlossen. Ein oranger Blitz: das Netz kann den Bedarf gerade nicht decken.',
+  'help.nature.title': 'Wald und Natur',
+  'help.nature.body':
+    'Jede Karte startet mit Wald. Wer hindurchbaut, rodet ihn gegen eine Gebühr, die mit dem Wuchs steigt — eine Straße durch den Wald kostet also mehr als über offenes Land; die Planierraupe rodet reinen Wald zum selben Preis. Wald im Umkreis von fünf Feldern um ein Gebäude hebt die Zufriedenheit, zusätzlich zu Parks. Neuen Wald pflanzt du flächenweise (🌲); Setzlinge brauchen ein paar Spieltage bis zur Reife. Der Haken: Bäume bremsen den Wind, eine Turbine im geschlossenen Wald verliert bis zu 30 % Leistung. Pflanze den Wald dort, wo Menschen wohnen, und halte ihn vom Windpark fern.',
   'help.terrain.title': 'Hügel und Hänge',
   'help.terrain.body':
     'Jede Karte hat Hügel. Steilhänge sind nicht bebaubar, Bauen am Hang kostet einen Aufschlag. Windräder erzeugen auf Anhöhen mehr, Laufwasserkraft profitiert vom Gefälle des Flusses, und Pumpspeicher speichern umso mehr, je höher sie über dem See liegen.',

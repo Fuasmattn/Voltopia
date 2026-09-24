@@ -1,6 +1,7 @@
 import { BALANCE } from '../shared/constants.ts';
 import { tileX, tileY } from '../shared/grid.ts';
 import { PlantType, SupplyStatus, TileType } from '../shared/types.ts';
+import { forestCoverage } from './forest.ts';
 import type { SimState } from './state.ts';
 
 /** Share (0..1) of buildings that have a park within the park radius. */
@@ -57,6 +58,8 @@ export function happinessStep(state: SimState, population: number): void {
     Math.max(0, state.taxRate - BALANCE.tax.happinessNeutralRate) * config.taxPenaltyWeight;
   const supplyPenalty = troubledShare * config.undersupplyPenaltyWeight;
   const parkBonus = parkCoverage(state) * config.parksAndLightsBonus;
+  // Woods in reach are worth their own bonus on top of parks.
+  const forestBonus = forestCoverage(state) * BALANCE.forest.coverBonus;
   const commutePenalty = Math.min(
     config.commuteMaxPenalty,
     Math.max(0, state.commuteCongestion - config.commuteCongestionThreshold) *
@@ -72,7 +75,13 @@ export function happinessStep(state: SimState, population: number): void {
     1,
     Math.max(
       0,
-      config.base + parkBonus - taxPenalty - supplyPenalty - commutePenalty - policePenalty,
+      config.base +
+        parkBonus +
+        forestBonus -
+        taxPenalty -
+        supplyPenalty -
+        commutePenalty -
+        policePenalty,
     ),
   );
   state.happiness += (target - state.happiness) * config.smoothing;

@@ -1,5 +1,6 @@
 import { BALANCE } from '../shared/constants.ts';
 import type { Zone } from '../shared/types.ts';
+import { clearForest, fellingCost } from './forest.ts';
 import type { BuildResult } from './roads.ts';
 import {
   BuildIntent,
@@ -23,7 +24,10 @@ export function paintZones(state: SimState, tiles: number[], zone: Zone): BuildR
   if (paintable.length === 0) return {};
 
   const cost = paintable.reduce(
-    (sum, index) => sum + Math.round(BALANCE.costs.zonePerTile * slopeCostMultiplier(state, index)),
+    (sum, index) =>
+      sum +
+      Math.round(BALANCE.costs.zonePerTile * slopeCostMultiplier(state, index)) +
+      fellingCost(state, index),
     0,
   );
   if (cost > state.money) {
@@ -38,6 +42,7 @@ export function paintZones(state: SimState, tiles: number[], zone: Zone): BuildR
   state.money -= cost;
   for (const index of paintable) {
     layers.zone[index] = zone;
+    clearForest(state, index);
     markDirty(state, index);
   }
   state.undoStack.push(undo);

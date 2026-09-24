@@ -3,6 +3,7 @@ import { DIRECTIONS, inBounds, tileIndex, tileX, tileY } from '../shared/grid.ts
 import { RoadClass, Terrain } from '../shared/types.ts';
 import { clearPowerLines } from './powerLines.ts';
 import { clearBusStops } from './transit.ts';
+import { clearForest, fellingCost } from './forest.ts';
 import {
   BuildIntent,
   bumpGridVersion,
@@ -60,7 +61,9 @@ export function buildRoads(state: SimState, tiles: number[], avenue = false): Bu
 
   const cost = buildable.reduce(
     (sum, index) =>
-      sum + Math.round(roadPrice(state, index, avenue) * slopeCostMultiplier(state, index)),
+      sum +
+      Math.round(roadPrice(state, index, avenue) * slopeCostMultiplier(state, index)) +
+      fellingCost(state, index),
     0,
   );
   if (cost > state.money) {
@@ -80,6 +83,7 @@ export function buildRoads(state: SimState, tiles: number[], avenue = false): Bu
     layers.zone[index] = Zone.None;
     layers.density[index] = 0;
     layers.variant[index] = 0;
+    clearForest(state, index);
     markDirty(state, index);
   }
   for (const index of affected) recomputeRoadMask(state, index);
@@ -115,13 +119,32 @@ export function bulldozeTiles(state: SimState, tiles: number[]): BuildResult {
         layers.zone[index] !== Zone.None ||
         layers.density[index] !== 0),
   );
-  if (lineTiles.length === 0 && stopTiles.length === 0 && clearable.length === 0) return {};
+  // Bare woodland is cleared by the bulldozer too, for the felling fee —
+  // but only where there is nothing else to remove first.
+  const woodTiles = tiles.filter(
+    (index) =>
+      layers.forest[index] !== 0 && layers.powerLine[index] === 0 && layers.busStop[index] === 0,
+  );
+  if (
+    lineTiles.length === 0 &&
+    stopTiles.length === 0 &&
+    clearable.length === 0 &&
+    woodTiles.length === 0
+  ) {
+    return {};
+  }
 
-  const affected = withNeighbors(state, [...lineTiles, ...stopTiles, ...clearable]);
+  const felling = woodTiles.reduce((sum, index) => sum + fellingCost(state, index), 0);
+  if (felling > state.money) return { rejected: 'notEnoughMoney' };
+
+  const affected = withNeighbors(state, [...lineTiles, ...stopTiles, ...clearable, ...woodTiles]);
   const undo: UndoEntry = {
-    moneyDelta: 0,
+    // Positive: undoing refunds what the felling cost (see buildRoads).
+    moneyDelta: felling,
     tiles: [...affected].map((index) => snapshotTile(state, index)),
   };
+  state.money -= felling;
+  for (const index of woodTiles) clearForest(state, index);
 
   if (lineTiles.length > 0) clearPowerLines(state, lineTiles);
   if (stopTiles.length > 0) clearBusStops(state, stopTiles);
@@ -161,6 +184,7 @@ export function undoLastAction(state: SimState): BuildResult {
     layers.density[tile.index] = tile.density;
     layers.variant[tile.index] = tile.variant;
     layers.plantType[tile.index] = tile.plantType;
+    layers.forest[tile.index] = tile.forest;
     markDirty(state, tile.index);
   }
   bumpGridVersion(state);

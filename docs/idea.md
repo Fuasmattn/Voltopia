@@ -184,10 +184,9 @@ Collected 2026-09-24; roughly in the order we want to build them.
   gets a moving spot price driven by weather/time of the neighbouring
   region, a price chart, and storage arbitrage (charge cheap, sell
   dear).
-- **Forests & nature**: forest tiles (natural + plantable) with
-  CO2/happiness value, a felling malus, conflicts like "wind park in
-  the forest?", maybe a nature-value overlay. Pairs well with cliffs —
-  unbuildable no longer means useless.
+- **Forests & nature** (done): woodland tiles (generated + plantable in
+  3 growth stages) raise happiness in reach, cost a felling fee when
+  built through, and slow the wind for turbines standing in them.
 - **Sea edge & tidal power**: one seed-chosen map edge becomes sea;
   tidal plants generate on a deterministic ~12.4 h cycle — predictable,
   unlike wind and solar.

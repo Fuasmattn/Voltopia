@@ -1,6 +1,7 @@
 import { BALANCE } from '../shared/constants.ts';
 import { DIRECTIONS, inBounds, LINE_PRESENT, tileIndex, tileX, tileY } from '../shared/grid.ts';
 import type { BuildResult } from './roads.ts';
+import { clearForest, fellingCost } from './forest.ts';
 import {
   BuildIntent,
   buildRejection,
@@ -62,7 +63,10 @@ export function buildPowerLines(state: SimState, tiles: number[]): BuildResult {
     return { rejected: buildRejection(state, blocked, BuildIntent.PowerLine) ?? undefined };
   }
 
-  const cost = buildable.reduce((sum, index) => sum + powerLineTileCost(state, index), 0);
+  const cost = buildable.reduce(
+    (sum, index) => sum + powerLineTileCost(state, index) + fellingCost(state, index),
+    0,
+  );
   if (cost > state.money) {
     return { rejected: 'notEnoughMoney' };
   }
@@ -76,6 +80,8 @@ export function buildPowerLines(state: SimState, tiles: number[]): BuildResult {
   state.money -= cost;
   for (const index of buildable) {
     layers.powerLine[index] = LINE_PRESENT;
+    // Lines cut a swath through the woods they cross.
+    clearForest(state, index);
     markDirty(state, index);
   }
   for (const index of affected) recomputePowerLineMask(state, index);

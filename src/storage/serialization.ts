@@ -122,7 +122,14 @@ export function saveFromJson(text: string): SaveGame {
     }
     layers[name] = buffer;
   }
-  const optionalLayers = ['terrain', 'powerLine', 'elevation', 'roadClass', 'busStop'] as const;
+  const optionalLayers = [
+    'terrain',
+    'powerLine',
+    'elevation',
+    'roadClass',
+    'busStop',
+    'forest',
+  ] as const;
   for (const name of optionalLayers) {
     const encoded = parsed.layers[name];
     if (typeof encoded !== 'string') continue;

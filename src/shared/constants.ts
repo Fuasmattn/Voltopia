@@ -206,6 +206,32 @@ export const BALANCE = {
     saleRevenuePerEnergyUnit: 0.08,
   },
 
+  forest: {
+    /** Growth stages of a wooded tile: 1 sapling .. maxStage mature. */
+    maxStage: 3,
+    /** Value-noise cell size of the generated woods, in tiles. */
+    noiseCellSize: 9,
+    /** Noise level above which generated land starts out wooded
+     *  (measured: ~20 % of the land, in a handful of coherent patches). */
+    noiseThreshold: 0.7,
+    /** Cost of planting one sapling tile. */
+    plantCost: 60,
+    /** Felling cost per growth stage, charged when building on woods. */
+    fellingCostPerStage: 45,
+    /** Ticks one growth stage takes (also the sweep period). */
+    growthIntervalTicks: 2 * TICKS_PER_DAY,
+    /** Chebyshev radius in which buildings count as having woods nearby. */
+    coverRadius: 5,
+    /** Max happiness bonus when every building has woods in reach. */
+    coverBonus: 0.06,
+    /** Wind turbines: radius scanned for sheltering woods... */
+    windPenaltyRadius: 2,
+    /** ...output lost per fully grown wooded tile in it... */
+    windPenaltyPerTile: 0.0125,
+    /** ...capped here (a turbine in closed forest). */
+    maxWindPenalty: 0.3,
+  },
+
   water: {
     /** River entry/exit stay this many tiles away from map corners. */
     edgeMargin: 4,

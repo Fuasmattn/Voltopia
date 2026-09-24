@@ -36,6 +36,7 @@ type SimCommandBody =
   | { type: 'setTaxRate'; rate: number }
   | { type: 'setSmartCharging'; enabled: boolean }
   | { type: 'setMarketTrading'; enabled: boolean }
+  | { type: 'plantForest'; tiles: number[] }
   | { type: 'buyInsulation' }
   /** Select a tile for the inspector (null clears it). */
   | { type: 'inspectTile'; tile: number | null }
