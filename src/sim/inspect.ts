@@ -10,15 +10,7 @@
 import { BALANCE, TICKS_PER_DAY } from '../shared/constants.ts';
 import { neighbors4, tileX, tileY } from '../shared/grid.ts';
 import type { GrowthBlocker, TileInfo } from '../shared/types.ts';
-import {
-  PlantType,
-  RoadClass,
-  StopState,
-  SupplyStatus,
-  Terrain,
-  TileType,
-  Zone,
-} from '../shared/types.ts';
+import { PlantType, RoadClass, SupplyStatus, Terrain, TileType, Zone } from '../shared/types.ts';
 import { deliveryState, depotInfo, isShopSupplied } from './deliveries.ts';
 import { policeTaxFactor } from './economy.ts';
 import {
@@ -36,10 +28,10 @@ import {
   pumpedHeadAt,
   riverDropAt,
   slopeAt,
-  stopStateOfAge,
   type SimState,
 } from './state.ts';
 import { laneCapacity } from './traffic.ts';
+import { busDepotInfo, isBusStop, stopState } from './transit.ts';
 import { currentSolarFactor, currentWindFactor, riverFlowFactor } from './weather.ts';
 
 /** Generation of one plant tile this tick, and at ideal conditions. */
@@ -155,6 +147,7 @@ function ringRadius(state: SimState, index: number, connected: boolean): number 
     if (isSupplySource(plant)) return BALANCE.energy.lineSupplyRadius;
     return 0;
   }
+  if (isBusStop(state, index)) return BALANCE.transit.stopRadius;
   // A dead line (not reached from any plant) supplies nothing.
   if (powerLine[index] !== 0 && connected) return BALANCE.energy.lineSupplyRadius;
   return 0;
@@ -206,7 +199,8 @@ export function inspectTile(state: SimState, index: number): TileInfo | null {
 
   const upkeepPerTick =
     tileType === TileType.Road
-      ? BALANCE.upkeepPerTick.roadPerTile
+      ? BALANCE.upkeepPerTick.roadPerTile +
+        (layers.busStop[index] !== 0 ? BALANCE.upkeepPerTick.busStop : 0)
       : tileType === TileType.Plant
         ? (BALANCE.upkeepPerTick.plant[plant] ?? 0)
         : 0;
@@ -278,15 +272,14 @@ export function inspectTile(state: SimState, index: number): TileInfo | null {
       tileType === TileType.Plant && plant === PlantType.LogisticsDepot
         ? depotInfo(state, index)
         : null,
-    busStop: tileType === TileType.Road && layers.busStop[index] !== 0,
-    stopState:
-      tileType === TileType.Road && layers.busStop[index] !== 0
-        ? stopStateOfAge(layers.stopAge[index])
-        : StopState.Served,
-    stopAgeTicks:
-      tileType === TileType.Road && layers.busStop[index] !== 0 ? layers.stopAge[index] : 0,
-    transitCovered: tileType === TileType.Road && layers.transitCover[index] !== 0,
-    busDepot: null,
+    busStop: isBusStop(state, index),
+    stopState: stopState(state, index),
+    stopAgeTicks: isBusStop(state, index) ? layers.stopAge[index] : 0,
+    transitCovered: tileType === TileType.Road && layers.transitCover[index] === 1,
+    busDepot:
+      tileType === TileType.Plant && plant === PlantType.BusDepot
+        ? busDepotInfo(state, index)
+        : null,
     growthBlockers: growthBlockers(state, index, connected),
     elevation,
     slope,

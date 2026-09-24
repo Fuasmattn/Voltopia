@@ -18,6 +18,7 @@ export const GOAL_IDS = [
   'safeCity',
   'freeFlow',
   'wellStocked',
+  'modalShift',
 ] as const;
 export type GoalId = (typeof GOAL_IDS)[number];
 
@@ -86,6 +87,14 @@ export function goalsStep(state: SimState): void {
     progress.wellStockedTicks = 0;
   }
 
+  // A whole day with a real share of commuters on the bus, for a real city.
+  const { goalRiderShare, goalMinPopulation: transitMinPopulation } = BALANCE.transit;
+  if (population >= transitMinPopulation && state.lastTransit.riderShare >= goalRiderShare) {
+    progress.transitTicks++;
+  } else {
+    progress.transitTicks = 0;
+  }
+
   const achieved = state.goalsAchieved;
   if (!achieved.has('firstPower') && hasPowerInfrastructure(state)) {
     achieved.add('firstPower');
@@ -137,6 +146,9 @@ export function goalsStep(state: SimState): void {
   }
   if (!achieved.has('wellStocked') && progress.wellStockedTicks >= TICKS_PER_DAY) {
     achieved.add('wellStocked');
+  }
+  if (!achieved.has('modalShift') && progress.transitTicks >= TICKS_PER_DAY) {
+    achieved.add('modalShift');
   }
 }
 

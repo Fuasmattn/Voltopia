@@ -7,7 +7,7 @@ import { buildRoads } from './roads.ts';
 import { findRoadPath } from './routing.ts';
 import { createSimState, TileType, VanPhase, VehiclePhase, type SimState } from './state.ts';
 import { updateTrafficLoad } from './traffic.ts';
-import { chargingDemand, drivingVehicles, vehiclesStep } from './vehicles.ts';
+import { chargingDemand, drivingVehicles, isRider, vehiclesStep } from './vehicles.ts';
 
 const SIZE = 24;
 const at = (x: number, y: number) => tileIndex(x, y, SIZE);
@@ -731,5 +731,60 @@ describe('vans in the commuter step', () => {
     let total = 0;
     for (const count of occupancy.values()) total += count;
     expect(total).toBe(1);
+  });
+});
+
+describe('riders', () => {
+  /** Cover every road tile of the commuter town as if served stops were everywhere. */
+  function coverAll(state: SimState): void {
+    for (let i = 0; i < state.layers.tileType.length; i++) {
+      state.layers.transitCover[i] = state.layers.tileType[i] === TileType.Road ? 1 : 0;
+    }
+  }
+
+  it('a commuter covered at home and at work stays parked and counts as a rider', () => {
+    const state = commuterTown(3, 200);
+    coverAll(state);
+    setHour(state, BALANCE.vehicles.commute.morningStartHour);
+    stepVehicles(state); // spawn fleet
+    runHours(state, 4);
+    expect(drivingVehicles(state)).toHaveLength(0);
+    expect(state.vehicles.every((v) => v.phase === VehiclePhase.ParkedHome)).toBe(true);
+    expect(state.vehicles.every((v) => isRider(state, v))).toBe(true);
+    // Riders record no commute: the congestion ratio stays at 1.
+    expect(state.commuteCongestion).toBe(1);
+    // Still riders after midnight, before the next decision.
+    setHour(state, 26);
+    stepVehicles(state);
+    expect(state.vehicles.every((v) => isRider(state, v))).toBe(true);
+  });
+
+  it('coverage at one end only means driving', () => {
+    const state = commuterTown(3, 200);
+    setHour(state, BALANCE.vehicles.commute.morningStartHour);
+    stepVehicles(state);
+    for (const v of state.vehicles) state.layers.transitCover[v.homeRoad] = 1;
+    runHours(state, 4);
+    expect(
+      drivingVehicles(state).length +
+        state.vehicles.filter((v) => v.phase === VehiclePhase.ParkedWork).length,
+    ).toBe(state.vehicles.length);
+    expect(state.vehicles.some((v) => isRider(state, v))).toBe(false);
+  });
+
+  it('a rider drives again the morning after coverage is lost', () => {
+    const state = commuterTown(3, 200);
+    coverAll(state);
+    setHour(state, BALANCE.vehicles.commute.morningStartHour);
+    stepVehicles(state);
+    runHours(state, 4);
+    expect(state.vehicles.every((v) => isRider(state, v))).toBe(true);
+    state.layers.transitCover.fill(0);
+    setHour(state, 24 + BALANCE.vehicles.commute.morningStartHour);
+    runHours(state, 4);
+    expect(state.vehicles.some((v) => isRider(state, v))).toBe(false);
+    expect(state.vehicles.filter((v) => v.phase === VehiclePhase.ParkedWork)).toHaveLength(
+      state.vehicles.length,
+    );
   });
 });

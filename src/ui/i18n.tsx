@@ -304,6 +304,8 @@ const en = {
   'goal.freeFlow.body': 'A whole day of commutes under 1.15× free flow (300+ residents).',
   'goal.wellStocked.title': 'Well stocked',
   'goal.wellStocked.body': 'A whole day with 95% of shops supplied (20+ shops).',
+  'goal.modalShift.title': 'Modal shift',
+  'goal.modalShift.body': 'A whole day with 30% of commuters on the bus (300+ residents).',
 
   // Budget panel and tile inspector.
   'budget.title': 'Budget',
@@ -697,6 +699,8 @@ const de: Record<TranslationKey, string> = {
     'Ein ganzer Tag mit Pendelzeiten unter dem 1,15-fachen der freien Fahrt (ab 300 Einwohnern).',
   'goal.wellStocked.title': 'Gut versorgt',
   'goal.wellStocked.body': 'Einen ganzen Tag lang 95 % der Läden beliefert (ab 20 Läden).',
+  'goal.modalShift.title': 'Verkehrswende',
+  'goal.modalShift.body': 'Einen ganzen Tag lang 30 % der Pendler im Bus (ab 300 Einwohnern).',
 
   // Budget-Panel und Kachel-Inspektor.
   'budget.title': 'Budget',

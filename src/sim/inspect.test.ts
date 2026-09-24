@@ -2,7 +2,7 @@
 import { describe, expect, it } from 'vitest';
 import { BALANCE, TICKS_PER_DAY } from '../shared/constants.ts';
 import { neighbors4, tileIndex } from '../shared/grid.ts';
-import { DeliveryState, RoadClass } from '../shared/types.ts';
+import { DeliveryState, RoadClass, StopState } from '../shared/types.ts';
 import { syncFleet } from './deliveries.ts';
 import { economyStep } from './economy.ts';
 import { buildingConsumption, placePlant } from './energy.ts';
@@ -11,6 +11,7 @@ import { buildPowerLines } from './powerLines.ts';
 import { buildRoads, bulldozeTiles } from './roads.ts';
 import { SERVICE_FIRE, SERVICE_POLICE } from './services.ts';
 import { createSimState, PlantType, SupplyStatus, Terrain, Zone } from './state.ts';
+import { buildBusStops, syncBusFleet } from './transit.ts';
 import { paintZones } from './zones.ts';
 
 const SIZE = 32;
@@ -326,5 +327,48 @@ describe('deliveries in the inspector', () => {
       shopsInReach: 1,
     });
     expect(info.upkeepPerTick).toBe(BALANCE.upkeepPerTick.plant[PlantType.LogisticsDepot]);
+  });
+
+  it('reports a bus stop, its service state, coverage and ring', () => {
+    const state = createSimState(1, SIZE);
+    buildRoads(state, [at(4, 5), at(5, 5), at(6, 5)]);
+    buildBusStops(state, [at(5, 5)]);
+    state.layers.transitCover[at(5, 5)] = 1;
+    const stop = inspectTile(state, at(5, 5))!;
+    expect(stop.busStop).toBe(true);
+    expect(stop.stopState).toBe(StopState.Served);
+    expect(stop.stopAgeTicks).toBe(0);
+    expect(stop.transitCovered).toBe(true);
+    expect(stop.ringRadius).toBe(BALANCE.transit.stopRadius);
+    expect(stop.upkeepPerTick).toBeCloseTo(
+      BALANCE.upkeepPerTick.roadPerTile + BALANCE.upkeepPerTick.busStop,
+      9,
+    );
+    state.layers.stopAge[at(5, 5)] = BALANCE.transit.serviceWindowDays * TICKS_PER_DAY + 1;
+    expect(inspectTile(state, at(5, 5))!.stopState).toBe(StopState.Unserved);
+    const plain = inspectTile(state, at(4, 5))!;
+    expect(plain.busStop).toBe(false);
+    expect(plain.ringRadius).toBe(0);
+    expect(plain.busDepot).toBeNull();
+  });
+
+  it("reports a bus depot's fleet and the stops in reach", () => {
+    const state = createSimState(1, SIZE);
+    buildRoads(
+      state,
+      Array.from({ length: 10 }, (_, i) => at(i + 2, 10)),
+    );
+    placePlant(state, at(2, 9), PlantType.BusDepot);
+    buildBusStops(state, [at(6, 10)]);
+    syncBusFleet(state);
+    state.buses[0].charging = true;
+    const info = inspectTile(state, at(2, 9))!;
+    expect(info.busDepot).toEqual({
+      busesTotal: BALANCE.transit.busesPerDepot,
+      busesDriving: 0,
+      busesCharging: 1,
+      stopsInReach: 1,
+    });
+    expect(info.upkeepPerTick).toBe(BALANCE.upkeepPerTick.plant[PlantType.BusDepot]);
   });
 });

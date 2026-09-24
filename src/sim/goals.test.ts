@@ -263,4 +263,44 @@ describe('goals', () => {
       expect(state.goalProgress.wellStockedTicks).toBe(0);
     });
   });
+
+  describe('modalShift', () => {
+    it('needs a big city and a whole day of riders', () => {
+      const state = bigCity();
+      state.lastTransit = {
+        riderShare: BALANCE.transit.goalRiderShare,
+        riders: 30,
+        driving: 1,
+        stops: 8,
+        stopsServed: 8,
+        depots: 1,
+      };
+      for (let t = 0; t < TICKS_PER_DAY - 1; t++) goalsStep(state);
+      expect(state.goalsAchieved.has('modalShift')).toBe(false);
+      goalsStep(state);
+      expect(state.goalsAchieved.has('modalShift')).toBe(true);
+    });
+
+    it('a low share or a small city resets the streak', () => {
+      const state = bigCity();
+      state.lastTransit = {
+        riderShare: 0.5,
+        riders: 30,
+        driving: 1,
+        stops: 8,
+        stopsServed: 8,
+        depots: 1,
+      };
+      for (let t = 0; t < 50; t++) goalsStep(state);
+      expect(state.goalProgress.transitTicks).toBe(50);
+      state.lastTransit.riderShare = BALANCE.transit.goalRiderShare - 0.01;
+      goalsStep(state);
+      expect(state.goalProgress.transitTicks).toBe(0);
+      state.lastTransit.riderShare = 0.5;
+      const small = createSimState(1, SIZE);
+      small.lastTransit = { ...state.lastTransit };
+      goalsStep(small);
+      expect(small.goalProgress.transitTicks).toBe(0);
+    });
+  });
 });

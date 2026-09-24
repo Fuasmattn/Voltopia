@@ -236,10 +236,14 @@ export function surplusAvailable(state: SimState): boolean {
  * drains the battery, plugging in at home (evenings) or at a nearby
  * charging hub (workdays) recharges it — the charging load on the grid
  * emerges from what the fleet actually does. Congestion: at most a few
- * vehicles fit on a road tile; followers wait, so queues form. Returns
- * this tick's lane occupancy map; the caller must pass it on to both
- * `deliveriesStep` (so vans queue behind cars) and `updateTrafficLoad`
- * (see `tick.ts`).
+ * vehicles fit on a road tile; followers wait, so queues form. Riders —
+ * commuters covered by a served bus stop at both home and work — decide
+ * once a day at the morning departure moment to leave the car parked
+ * instead; they record no commute and never enter the traffic load, so
+ * the charging peak and the traffic load fall with the rider share.
+ * Returns this tick's lane occupancy map; the caller must pass it on to
+ * both `deliveriesStep` (so vans queue behind cars) and
+ * `updateTrafficLoad` (see `tick.ts`).
  */
 export function vehiclesStep(state: SimState): Map<number, number> {
   const { population, jobs } = countPopulationAndJobs(state);
@@ -283,7 +287,7 @@ export function vehiclesStep(state: SimState): Map<number, number> {
     });
   }
 
-  const { tileType } = state.layers;
+  const { tileType, transitCover } = state.layers;
   const step = BALANCE.vehicles.speedTilesPerSecond / TICK_RATE;
   const ticksIntoDay = state.tick % TICKS_PER_DAY;
   const morningDeparture = ticksAtHour(BALANCE.vehicles.commute.morningStartHour);
@@ -319,8 +323,16 @@ export function vehiclesStep(state: SimState): Map<number, number> {
       case VehiclePhase.ParkedHome: {
         const departAt = morningDeparture + vehicle.departureOffset;
         if (vehicle.workRoad >= 0 && ticksIntoDay >= departAt && ticksIntoDay < eveningDeparture) {
+          const day = Math.floor(state.tick / TICKS_PER_DAY);
+          // Decided to ride today: the car stays parked all day.
+          if (vehicle.riderDay === day) break;
+          if (transitCover[vehicle.homeRoad] === 1 && transitCover[vehicle.workRoad] === 1) {
+            vehicle.riderDay = day;
+            break;
+          }
           const path = findRoadPath(state, vehicle.homeRoad, vehicle.workRoad);
           if (path) {
+            vehicle.riderDay = -1;
             vehicle.path = path;
             vehicle.pathIndex = 0;
             vehicle.phase = VehiclePhase.ToWork;
