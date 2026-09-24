@@ -226,6 +226,7 @@ export function useTools(
           sound.play('build');
         }
         clearPreview();
+        if (stop) rendererRef.current?.setHoverRadius(BALANCE.transit.stopRadius);
       };
     } else if (ZONE_BY_TOOL[tool] !== undefined) {
       const zone = ZONE_BY_TOOL[tool]!;
