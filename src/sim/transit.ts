@@ -1,9 +1,18 @@
-import { BALANCE } from '../shared/constants.ts';
+import { BALANCE, TICK_RATE, TICKS_PER_DAY } from '../shared/constants.ts';
 import { tileIndex, tileX, tileY } from '../shared/grid.ts';
 import { MAX_STOP_AGE, PlantType, StopState } from '../shared/types.ts';
+import type { BusDepotInfo, TransitStats } from '../shared/types.ts';
 import { depotRoadTile } from './deliveries.ts';
+import { isTileConnected } from './energy.ts';
+import { findRoadPath, roadDistances } from './routing.ts';
 import type { BuildResult } from './roads.ts';
-import { roadDistances } from './routing.ts';
+import {
+  advanceAlongPath,
+  isRider,
+  surplusAvailable,
+  ticksAtHour,
+  vehicleTile,
+} from './vehicles.ts';
 import {
   BusPhase,
   markDirty,
@@ -257,4 +266,184 @@ export function planBusTour(state: SimState, bus: Bus, claimed: Set<number>): nu
   }
   ordered.push(bus.depotRoad);
   return ordered;
+}
+
+/**
+ * A depot can charge whenever its tile is energised — like home charging
+ * of cars, this ignores a city-wide deficit; the bus's load feeds the
+ * deficit like every other load instead of being gated by it.
+ */
+function depotPowered(state: SimState, depot: number): boolean {
+  return isTileConnected(state, depot);
+}
+
+function decideBusCharging(state: SimState, bus: Bus, surplus: boolean): boolean {
+  if (bus.charge >= 1 || !depotPowered(state, bus.depot)) return false;
+  if (!state.smartCharging) return true;
+  return surplus || bus.charge < BALANCE.vehicles.smartChargeFloor;
+}
+
+/**
+ * Route the bus to stops[0], skipping stops that became unreachable. A
+ * bus that cannot even reach its depot is marked lost and removed by the
+ * next syncBusFleet.
+ */
+function routeToNextStop(state: SimState, bus: Bus): void {
+  const from = vehicleTile(state, bus);
+  while (bus.stops.length > 0) {
+    const path = findRoadPath(state, from, bus.stops[0]);
+    if (path) {
+      bus.path = path;
+      bus.pathIndex = 0;
+      bus.phase = BusPhase.Driving;
+      return;
+    }
+    bus.stops.shift();
+  }
+  bus.depot = -1;
+  bus.path = [];
+  bus.pathIndex = 0;
+}
+
+/** The bus pulled in: the stop is served right now. */
+function halt(state: SimState, bus: Bus): void {
+  const tile = vehicleTile(state, bus);
+  if (!isBusStop(state, tile)) return;
+  const before = stopStateOfAge(state.layers.stopAge[tile]);
+  state.layers.stopAge[tile] = 0;
+  if (before !== StopState.Served) markDirty(state, tile);
+}
+
+function arrive(state: SimState, bus: Bus): void {
+  if (bus.stops.length <= 1) {
+    // Last stop is always the depot road.
+    bus.stops = [];
+    bus.phase = BusPhase.AtDepot;
+    bus.dwellTicks = BALANCE.transit.turnaroundTicks;
+    bus.x = tileX(bus.depotRoad, state.size) + 0.5;
+    bus.y = tileY(bus.depotRoad, state.size) + 0.5;
+    return;
+  }
+  halt(state, bus);
+  bus.phase = BusPhase.Boarding;
+  bus.dwellTicks = BALANCE.transit.dwellTicks;
+}
+
+/**
+ * Public transit: keep the fleets in sync, age the stops, charge at the
+ * depot, dispatch tours inside the operating window, drive on the shared
+ * lanes, halt at every stop, then rebuild the coverage layer. Runs after
+ * vehiclesStep and deliveriesStep with their lane occupancy map so cars,
+ * vans and buses queue behind each other.
+ */
+export function transitStep(state: SimState, occupancy: Map<number, number>): void {
+  syncBusFleet(state);
+  const dueSoon = ageStops(state);
+  if (state.buses.length > 0) {
+    const c = BALANCE.transit;
+    const step = (BALANCE.vehicles.speedTilesPerSecond / TICK_RATE) * c.speedFactor;
+    const ticksIntoDay = state.tick % TICKS_PER_DAY;
+    const inWindow =
+      ticksIntoDay >= ticksAtHour(c.windowStartHour) && ticksIntoDay < ticksAtHour(c.windowEndHour);
+    const surplus = surplusAvailable(state);
+    const claimed = claimedBusStops(state);
+
+    for (const bus of state.buses) {
+      bus.charging = false;
+      switch (bus.phase) {
+        case BusPhase.AtDepot: {
+          if (bus.dwellTicks > 0) bus.dwellTicks--;
+          bus.charging = decideBusCharging(state, bus, surplus);
+          if (bus.charging) bus.charge = Math.min(1, bus.charge + c.chargeRatePerTick);
+          if (dueSoon > 0 && bus.dwellTicks === 0 && inWindow && bus.charge >= c.minTripCharge) {
+            const stops = planBusTour(state, bus, claimed);
+            if (stops.length > 0) {
+              for (const stop of stops) if (stop !== bus.depotRoad) claimed.add(stop);
+              bus.stops = stops;
+              bus.charging = false;
+              routeToNextStop(state, bus);
+            }
+          }
+          break;
+        }
+        case BusPhase.Driving: {
+          const result = advanceAlongPath(state, bus, step, occupancy);
+          if (result === 'arrived') arrive(state, bus);
+          else if (result === 'lost') {
+            bus.stops.shift();
+            routeToNextStop(state, bus);
+          }
+          break;
+        }
+        case BusPhase.Boarding: {
+          bus.dwellTicks--;
+          if (bus.dwellTicks <= 0) {
+            bus.stops.shift();
+            routeToNextStop(state, bus);
+          }
+          break;
+        }
+      }
+    }
+  }
+  updateCoverage(state);
+}
+
+/** Buses on the road (parked ones are not rendered). */
+export function drivingBuses(state: SimState): Bus[] {
+  return state.buses.filter((b) => b.phase !== BusPhase.AtDepot);
+}
+
+export function drivingBusCount(state: SimState): number {
+  let count = 0;
+  for (const b of state.buses) if (b.phase !== BusPhase.AtDepot) count++;
+  return count;
+}
+
+/** City-wide transit figures for stats and the goal. */
+export function transitStats(state: SimState): TransitStats {
+  const { tileType } = state.layers;
+  let stops = 0;
+  let stopsServed = 0;
+  for (let i = 0; i < tileType.length; i++) {
+    if (!isBusStop(state, i)) continue;
+    stops++;
+    if (isStopServed(state, i)) stopsServed++;
+  }
+  let riders = 0;
+  let commuters = 0;
+  for (const vehicle of state.vehicles) {
+    if (vehicle.workRoad < 0) continue;
+    commuters++;
+    if (isRider(state, vehicle)) riders++;
+  }
+  return {
+    riderShare: commuters > 0 ? riders / commuters : 0,
+    riders,
+    driving: drivingBusCount(state),
+    stops,
+    stopsServed,
+    depots: busDepotTiles(state).length,
+  };
+}
+
+/** Fleet and reach of one depot for the inspector. */
+export function busDepotInfo(state: SimState, depot: number): BusDepotInfo {
+  let busesTotal = 0;
+  let busesDriving = 0;
+  let busesCharging = 0;
+  for (const bus of state.buses) {
+    if (bus.depot !== depot) continue;
+    busesTotal++;
+    if (bus.phase !== BusPhase.AtDepot) busesDriving++;
+    if (bus.charging) busesCharging++;
+  }
+  const road = depotRoadTile(state, depot);
+  let stopsInReach = 0;
+  if (road >= 0) {
+    for (const tile of roadDistances(state, road, BALANCE.transit.maxRouteTiles).keys()) {
+      if (isBusStop(state, tile)) stopsInReach++;
+    }
+  }
+  return { busesTotal, busesDriving, busesCharging, stopsInReach };
 }

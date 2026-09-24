@@ -3,6 +3,7 @@ import { neighbors4, tileIndex, tileX, tileY } from '../shared/grid.ts';
 import { PlantType, RoadClass, Zone } from '../shared/types.ts';
 import { findRoadPath } from './routing.ts';
 import {
+  BusPhase,
   countPopulationAndJobs,
   TileType,
   VanPhase,
@@ -47,7 +48,7 @@ export function ticksAtHour(hour: number): number {
   return Math.floor((hour / 24) * TICKS_PER_DAY);
 }
 
-/** Anything that drives along a road path: commuter cars and delivery vans. */
+/** Anything that drives along a road path: commuter cars, delivery vans and buses. */
 export interface Mover {
   x: number;
   y: number;
@@ -205,6 +206,12 @@ export function laneOccupancy(state: SimState): Map<number, number> {
   for (const van of state.vans) {
     if (van.phase === VanPhase.Driving) {
       const lane = vehicleLane(state, van);
+      occupancy.set(lane, (occupancy.get(lane) ?? 0) + 1);
+    }
+  }
+  for (const bus of state.buses) {
+    if (bus.phase === BusPhase.Driving) {
+      const lane = vehicleLane(state, bus);
       occupancy.set(lane, (occupancy.get(lane) ?? 0) + 1);
     }
   }
@@ -430,6 +437,16 @@ export function drivingVehicles(state: SimState): Vehicle[] {
   );
 }
 
+/**
+ * Riding the bus: the commuter decided so this morning (or yesterday and
+ * has not been re-decided yet, i.e. between midnight and the morning
+ * departure). Driving commuters carry riderDay -1.
+ */
+export function isRider(state: SimState, vehicle: Vehicle): boolean {
+  if (vehicle.riderDay < 0) return false;
+  return vehicle.riderDay >= Math.floor(state.tick / TICKS_PER_DAY) - 1;
+}
+
 /** Count of vehicles currently on the road, without allocating an array. */
 export function drivingVehicleCount(state: SimState): number {
   let count = 0;
@@ -440,16 +457,20 @@ export function drivingVehicleCount(state: SimState): number {
 }
 
 /**
- * Charging demand for this tick: cars plugged in at home or a hub plus
- * vans plugged in at their depot, each times its charger power.
+ * Charging demand for this tick: cars plugged in at home or a hub, vans
+ * plugged in at their depot, and buses plugged in at theirs, each times
+ * its charger power.
  */
 export function chargingDemand(state: SimState): number {
   let cars = 0;
   for (const vehicle of state.vehicles) if (vehicle.charging) cars++;
   let vans = 0;
   for (const van of state.vans) if (van.charging) vans++;
+  let buses = 0;
+  for (const bus of state.buses) if (bus.charging) buses++;
   return (
     cars * BALANCE.vehicles.chargingEnergyPerVehicle +
-    vans * BALANCE.deliveries.chargingEnergyPerVan
+    vans * BALANCE.deliveries.chargingEnergyPerVan +
+    buses * BALANCE.transit.chargingEnergyPerBus
   );
 }

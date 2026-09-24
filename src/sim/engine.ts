@@ -7,7 +7,7 @@ import { buyInsulation } from './economy.ts';
 import { drivingVans } from './deliveries.ts';
 import { placePlant } from './energy.ts';
 import { buildPowerLines } from './powerLines.ts';
-import { buildBusStops } from './transit.ts';
+import { buildBusStops, drivingBuses } from './transit.ts';
 import { drivingVehicles } from './vehicles.ts';
 import { paintZones } from './zones.ts';
 import {
@@ -147,6 +147,13 @@ export class SimEngine {
       angle: v.angle,
       kind: VehicleKind.Van,
     }));
-    return [...cars, ...vans];
+    const buses = drivingBuses(this.state).map((v) => ({
+      id: v.id,
+      x: v.x,
+      y: v.y,
+      angle: v.angle,
+      kind: VehicleKind.Bus,
+    }));
+    return [...cars, ...vans, ...buses];
   }
 }

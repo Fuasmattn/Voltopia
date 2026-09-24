@@ -3,7 +3,7 @@ import { BALANCE, TICKS_PER_DAY } from '../shared/constants.ts';
 import { tileIndex } from '../shared/grid.ts';
 import { PlantType, Terrain, VehicleKind, Zone } from '../shared/types.ts';
 import { SimEngine } from './engine.ts';
-import { TileType, VanPhase } from './state.ts';
+import { BusPhase, TileType, VanPhase } from './state.ts';
 import { timeOfDay, dayNumber } from './tick.ts';
 import { placePlant } from './energy.ts';
 import { buildPowerLines } from './powerLines.ts';
@@ -193,6 +193,19 @@ describe('SimEngine basics', () => {
     expect(first.stats.counts.avenueTiles).toBe(0);
     expect(first.stats.traffic).toEqual({ congestion: 1, driving: 0, avenueShare: 0 });
     expect(first.stats.deliveries).toEqual({ suppliedShare: 1, shops: 0, driving: 0, depots: 0 });
+    expect(first.stats.transit).toEqual({
+      riderShare: 0,
+      riders: 0,
+      driving: 0,
+      stops: 0,
+      stopsServed: 0,
+      depots: 0,
+    });
+    expect(first.stats.budget.busStops).toBe(0);
+    expect(first.stats.budget.busStopUpkeep).toBe(0);
+    expect(first.diffs[0].busStop).toBe(0);
+    expect(first.diffs[0].stopState).toBe(0);
+    expect(first.diffs[0].transitCover).toBe(0);
     expect(first.stats.counts.depots).toBe(0);
     expect(first.stats.budget.avenueTiles).toBe(0);
     expect(first.stats.budget.avenueUpkeep).toBe(0);
@@ -236,6 +249,36 @@ describe('SimEngine basics', () => {
     expect(vans).toEqual([{ id: 5, x: 2.5, y: 3.5, angle: 0, kind: VehicleKind.Van }]);
     // syncFleet topped the fleet up to vansPerDepot; the parked ones are not rendered.
     expect(engine.state.vans).toHaveLength(BALANCE.deliveries.vansPerDepot);
+  });
+
+  it('driving buses are sent to the renderer with kind Bus', () => {
+    const engine = new SimEngine(1, 24);
+    const depot = tileIndex(2, 2, 24);
+    const road = tileIndex(2, 3, 24);
+    engine.state.layers.tileType[depot] = TileType.Plant;
+    engine.state.layers.plantType[depot] = PlantType.BusDepot;
+    engine.state.layers.tileType[road] = TileType.Road;
+    engine.state.buses.push({
+      id: 8,
+      depot,
+      depotRoad: road,
+      x: 2.5,
+      y: 3.5,
+      angle: 0,
+      phase: BusPhase.Boarding,
+      stops: [road],
+      path: [],
+      pathIndex: 0,
+      charge: 1,
+      charging: false,
+      waitTicks: 0,
+      dwellTicks: 50,
+    });
+    const event = engine.tick();
+    if (event.type !== 'tick') throw new Error('expected tick');
+    const buses = event.vehicles.filter((v) => v.kind === VehicleKind.Bus);
+    expect(buses).toEqual([{ id: 8, x: 2.5, y: 3.5, angle: 0, kind: VehicleKind.Bus }]);
+    expect(engine.state.buses).toHaveLength(BALANCE.transit.busesPerDepot);
   });
 
   it('reports the cooling load in stats on a hot summer afternoon', () => {

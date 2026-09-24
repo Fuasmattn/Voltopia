@@ -12,6 +12,7 @@ import { countPowerLineTiles } from './powerLines.ts';
 import { seasonState } from './seasons.ts';
 import { recomputeServices, serviceCoverage } from './services.ts';
 import { updateTrafficLoad } from './traffic.ts';
+import { transitStep, transitStats } from './transit.ts';
 import { chargingDemand, drivingVehicleCount, vehiclesStep } from './vehicles.ts';
 import { updateWeather } from './weather.ts';
 import {
@@ -47,6 +48,8 @@ export function stepTick(state: SimState): void {
   const occupancy = vehiclesStep(state);
   deliveriesStep(state, occupancy);
   state.lastDeliveries = deliveryStats(state);
+  transitStep(state, occupancy);
+  state.lastTransit = transitStats(state);
   updateTrafficLoad(state, occupancy);
   energyStep(state, { chargingDemand: chargingDemand(state) });
   recomputeServices(state);
