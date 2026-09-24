@@ -59,6 +59,10 @@ export class SimEngine {
         state.smartCharging = command.enabled;
         state.statsDirty = true;
         return [];
+      case 'setMarketTrading':
+        state.marketTrading = command.enabled;
+        state.statsDirty = true;
+        return [];
       case 'inspectTile':
         state.inspectedTile = command.tile ?? -1;
         return [];

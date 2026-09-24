@@ -134,6 +134,8 @@ export interface EnergyHistoryPoint {
   consumption: number;
   /** Combined state of charge of batteries and pumped storage, 0..1. */
   stateOfCharge: number;
+  /** Average spot price factor over the sample window. */
+  price: number;
 }
 
 export interface EnergyStats {
@@ -168,6 +170,12 @@ export interface EnergyStats {
   hydrogenCapacity: number;
   /** Hydrogen sold this tick because the tanks were full. */
   hydrogenSold: number;
+  /** Spot price factor this tick (1 = the base link prices). */
+  spotPrice: number;
+  /** Stored energy sold into the link by market trading this tick. */
+  tradeSell: number;
+  /** Cheap energy bought into storage by market trading this tick. */
+  tradeBuy: number;
   /** Dispatchable biogas output available per tick (0 without a plant). */
   biogasCapacity: number;
   /** Generation that had to be curtailed this tick (storage full, no demand). */
@@ -426,6 +434,8 @@ export interface GlobalStats {
   speed: Speed;
   /** Whether smart charging (charging follows surplus) is enabled. */
   smartCharging: boolean;
+  /** Whether storage trades on the spot market (sell dear, buy cheap). */
+  marketTrading: boolean;
   /** Whether the building insulation upgrade has been bought. */
   insulation: boolean;
   /** Share of buildings with fire / police coverage, 0..1. */
@@ -518,6 +528,8 @@ export interface SaveGame {
   pumpedStorageEnergy?: number;
   /** Hydrogen stored in hydrogen plants (absent in older saves). */
   hydrogenEnergy?: number;
+  /** Whether storage trades on the spot market (absent in older saves). */
+  marketTrading?: boolean;
   /** Day number on which year 1 started (absent in older saves → the save's current day). */
   seasonOriginDay?: number;
   /** Snow cover 0..1 (absent in older saves → 0). */

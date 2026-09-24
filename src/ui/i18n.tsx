@@ -119,6 +119,8 @@ const en = {
   'energy.electrolysis': 'Electrolysis',
   'energy.hydrogenSold': 'Hydrogen sold',
   'energy.hydrogenStorage': 'Hydrogen tank',
+  'energy.spot': 'Spot price',
+  'energy.legend.price': 'Spot price',
   'energy.graph.label': 'Generation and consumption over the last day',
   'energy.legend.generation': 'generation',
   'energy.legend.consumption': 'consumption',
@@ -126,6 +128,9 @@ const en = {
   'tax.label': 'Tax rate',
   'smartCharging.label': '⚡ Smart charging',
   'smartCharging.title': 'EV charging automatically follows the generation surplus',
+  'marketTrading.label': '📈 Market trading',
+  'marketTrading.title':
+    'Storage works the spot market: sells its top charge at scarcity prices, buys cheap regional surplus',
   'insulation.label': '🏠 Building insulation',
   'insulation.title':
     'One-off upgrade: halves the electric heating and cooling load of every building',
@@ -189,7 +194,7 @@ const en = {
     'Drag roads, then paint residential, commercial and retail zones next to them. Buildings appear on their own when there is demand (see the R/C/S bars) and densify over time — but only while they are fully supplied with energy.',
   'help.energy.title': 'Energy',
   'help.energy.body':
-    'Plants supply only what power lines connect to them (see Grid and power lines). Solar peaks at noon and suffers under clouds; wind follows the weather day and night. Batteries store the midday surplus for the evening; the biogas plant is dispatchable backup — reliable but expensive to run, and it only fires when sun, wind, water and storage cannot cover the load, so it usually sits on standby. Dense buildings add rooftop PV automatically. The hydrogen plant electrolyses surplus that batteries, pumped storage and the export link cannot absorb: it fills a large tank, re-electrifies through its fuel cell in a lull, and sells hydrogen for profit once the tank is full — curtailed energy becomes income.',
+    'Plants supply only what power lines connect to them (see Grid and power lines). Solar peaks at noon and suffers under clouds; wind follows the weather day and night. Batteries store the midday surplus for the evening; the biogas plant is dispatchable backup — reliable but expensive to run, and it only fires when sun, wind, water and storage cannot cover the load, so it usually sits on standby. Dense buildings add rooftop PV automatically. The hydrogen plant electrolyses surplus that batteries, pumped storage and the export link cannot absorb: it fills a large tank, re-electrifies through its fuel cell in a lull, and sells hydrogen for profit once the tank is full — curtailed energy becomes income. The transmission link trades at a spot price that follows the region: sunny, windy hours are cheap, calm overcast evenings dear — the dashed line in the energy graph. With market trading on, your storage sells its top charge at scarcity prices and buys cheap regional surplus.',
   'help.grid.title': 'Grid and power lines',
   'help.grid.body':
     'Plants only supply buildings connected to them. Draw power lines (⚡, key L) from a plant along your streets — they run over roads and across water. Every energised line tile and every plant connects buildings within three tiles. A line that does not touch a plant carries nothing; the supply overlay shows what is connected. Cities from before power lines got lines along their roads for free.',
@@ -544,6 +549,8 @@ const de: Record<TranslationKey, string> = {
   'energy.electrolysis': 'Elektrolyse',
   'energy.hydrogenSold': 'Wasserstoff verkauft',
   'energy.hydrogenStorage': 'Wasserstofftank',
+  'energy.spot': 'Spotpreis',
+  'energy.legend.price': 'Spotpreis',
   'energy.graph.label': 'Erzeugung und Verbrauch des letzten Tages',
   'energy.legend.generation': 'Erzeugung',
   'energy.legend.consumption': 'Verbrauch',
@@ -551,6 +558,9 @@ const de: Record<TranslationKey, string> = {
   'tax.label': 'Steuersatz',
   'smartCharging.label': '⚡ Smart Charging',
   'smartCharging.title': 'E-Auto-Laden folgt automatisch dem Erzeugungsüberschuss',
+  'marketTrading.label': '📈 Stromhandel',
+  'marketTrading.title':
+    'Speicher handeln an der Strombörse: verkaufen ihre oberste Ladung zu Knappheitspreisen, kaufen billigen regionalen Überschuss',
   'insulation.label': '🏠 Gebäudedämmung',
   'insulation.title':
     'Einmaliges Upgrade: halbiert die elektrische Heiz- und Kühllast aller Gebäude',
@@ -614,7 +624,7 @@ const de: Record<TranslationKey, string> = {
     'Ziehe Straßen und male daneben Wohn-, Gewerbe- und Einzelhandelszonen. Gebäude entstehen von selbst, wenn Nachfrage besteht (siehe die R/C/S-Balken), und verdichten sich mit der Zeit — aber nur, solange sie vollständig mit Energie versorgt sind.',
   'help.energy.title': 'Energie',
   'help.energy.body':
-    'Anlagen versorgen nur, was Stromleitungen mit ihnen verbinden (siehe Netz und Leitungen). Solar liefert mittags am meisten und leidet unter Wolken; Wind folgt dem Wetter, Tag und Nacht. Batterien speichern den Mittagsüberschuss für den Abend; die Biogasanlage ist regelbare Reserve — zuverlässig, aber teuer im Betrieb, und sie springt nur an, wenn Sonne, Wind, Wasser und Speicher die Last nicht decken; meist steht sie in Bereitschaft. Dichte Gebäude bekommen automatisch Dach-PV. Die Wasserstoffanlage elektrolysiert Überschuss, den Batterien, Pumpspeicher und die Netzeinspeisung nicht aufnehmen können: Sie füllt einen großen Tank, verstromt in der Flaute über ihre Brennstoffzelle und verkauft bei vollem Tank Wasserstoff mit Gewinn — abgeregelte Energie wird zu Einnahmen.',
+    'Anlagen versorgen nur, was Stromleitungen mit ihnen verbinden (siehe Netz und Leitungen). Solar liefert mittags am meisten und leidet unter Wolken; Wind folgt dem Wetter, Tag und Nacht. Batterien speichern den Mittagsüberschuss für den Abend; die Biogasanlage ist regelbare Reserve — zuverlässig, aber teuer im Betrieb, und sie springt nur an, wenn Sonne, Wind, Wasser und Speicher die Last nicht decken; meist steht sie in Bereitschaft. Dichte Gebäude bekommen automatisch Dach-PV. Die Wasserstoffanlage elektrolysiert Überschuss, den Batterien, Pumpspeicher und die Netzeinspeisung nicht aufnehmen können: Sie füllt einen großen Tank, verstromt in der Flaute über ihre Brennstoffzelle und verkauft bei vollem Tank Wasserstoff mit Gewinn — abgeregelte Energie wird zu Einnahmen. Die Netzleitung handelt zum Spotpreis, der der Region folgt: sonnige, windige Stunden sind billig, windstille bedeckte Abende teuer — die gestrichelte Linie im Energie-Graphen. Mit aktiviertem Stromhandel verkaufen deine Speicher ihre oberste Ladung zu Knappheitspreisen und kaufen billigen regionalen Überschuss.',
   'help.grid.title': 'Netz und Leitungen',
   'help.grid.body':
     'Anlagen versorgen nur Gebäude, die mit ihnen verbunden sind. Ziehe Stromleitungen (⚡, Taste L) von einer Anlage entlang deiner Straßen — sie laufen über Straßen und über Wasser. Jedes angeschlossene Leitungsfeld und jede Anlage versorgt Gebäude im Umkreis von drei Feldern. Eine Leitung ohne Anlage führt keinen Strom; das Versorgungs-Overlay zeigt, was angeschlossen ist. Städte aus der Zeit vor den Leitungen haben ihre Leitungen entlang der Straßen geschenkt bekommen.',

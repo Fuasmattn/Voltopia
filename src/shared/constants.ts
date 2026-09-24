@@ -160,6 +160,30 @@ export const BALANCE = {
     importCostPerEnergyUnit: 0.4,
     exportCapacity: 80,
     exportRevenuePerEnergyUnit: 0.03,
+    /**
+     * The spot price: both link prices scale with a common factor driven
+     * by regional demand (time of day) and regional renewable supply
+     * (weather fronts are regional, so the city's weather is the proxy):
+     * factor = 1 + spotSwing * (demand - supply), clamped below.
+     */
+    spotSwing: 1.2,
+    spotMin: 0.25,
+    spotMax: 2.5,
+    /** Regional renewable mix weights (sum to 1). */
+    spotSolarShare: 0.55,
+    spotWindShare: 0.45,
+    trading: {
+      /** Storage sells into the link at or above this spot factor... */
+      sellThreshold: 1.6,
+      /** ...but only the charge above this state-of-charge floor. */
+      sellFloor: 0.7,
+      /** Storage buys from the link at or below this spot factor... */
+      buyThreshold: 0.55,
+      /** ...and only up to this state of charge. Keeping the bands
+       *  disjoint (buyCeiling < sellFloor) makes buy-low-sell-high
+       *  wash-trading of the same energy impossible. */
+      buyCeiling: 0.6,
+    },
   },
 
   hydrogen: {

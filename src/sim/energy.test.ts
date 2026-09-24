@@ -459,6 +459,7 @@ describe('energyStep', () => {
       generation: 0,
       consumption: 0,
       stateOfCharge: 0,
+      price: 1,
     });
   });
 
@@ -953,5 +954,107 @@ describe('hydrogen plants', () => {
     expect(state.lastEnergy.fuelCell).toBeCloseTo(BALANCE.hydrogen.fuelCellPowerLimit, 3);
     expect(state.lastEnergy.biogas).toBeCloseTo(50, 3);
     expect(state.lastEnergy.deficit).toBe(0);
+  });
+});
+
+describe('market trading', () => {
+  /** Calm, overcast evening: regional scarcity, spot far above the sell threshold. */
+  function setScarceEvening(state: SimState): void {
+    state.tick = Math.round((19 / 24) * TICKS_PER_DAY);
+    state.weather.cloudCover = 1;
+    state.weather.windSpeed = 0;
+  }
+
+  /** Clear, windy noon: regional abundance, spot below the buy threshold. */
+  function setCheapNoon(state: SimState): void {
+    state.tick = TICKS_PER_DAY / 2;
+    state.weather.cloudCover = 0;
+    state.weather.windSpeed = 1;
+    state.season = { ...state.season, sunrise: SUNRISE, sunset: SUNSET, solarStrength: 1 };
+  }
+
+  it('records the spot price factor every tick', () => {
+    const state = makeState();
+    energyStep(state, { chargingDemand: 0 });
+    expect(state.lastEnergy.spotPrice).toBeGreaterThan(0);
+  });
+
+  it('sells stored energy above the reserve floor at scarcity prices', () => {
+    const state = makeState();
+    placePlant(state, at(5, 5), PlantType.Battery);
+    setScarceEvening(state);
+    state.storedEnergy = BALANCE.energy.batteryCapacity; // 100%
+    state.marketTrading = true;
+    energyStep(state, { chargingDemand: 0 });
+    const sellable =
+      BALANCE.energy.batteryCapacity -
+      BALANCE.market.trading.sellFloor * BALANCE.energy.batteryCapacity;
+    const expected = Math.min(
+      BALANCE.market.exportCapacity,
+      BALANCE.energy.batteryPowerLimit,
+      sellable,
+    );
+    expect(state.lastEnergy.tradeSell).toBeCloseTo(expected, 3);
+    expect(state.lastEnergy.gridExport).toBeCloseTo(expected, 3);
+    expect(state.storedEnergy).toBeCloseTo(BALANCE.energy.batteryCapacity - expected, 3);
+  });
+
+  it('never sells below the reserve floor', () => {
+    const state = makeState();
+    placePlant(state, at(5, 5), PlantType.Battery);
+    setScarceEvening(state);
+    state.storedEnergy = BALANCE.market.trading.sellFloor * BALANCE.energy.batteryCapacity;
+    state.marketTrading = true;
+    energyStep(state, { chargingDemand: 0 });
+    expect(state.lastEnergy.tradeSell).toBe(0);
+  });
+
+  it('buys cheap power into storage up to the buy ceiling', () => {
+    const state = makeState();
+    placePlant(state, at(5, 5), PlantType.Battery);
+    setCheapNoon(state);
+    state.storedEnergy = 0.2 * BALANCE.energy.batteryCapacity;
+    state.marketTrading = true;
+    energyStep(state, { chargingDemand: 0 });
+    const expected = Math.min(
+      BALANCE.market.importCapacity,
+      BALANCE.energy.batteryPowerLimit,
+      (BALANCE.market.trading.buyCeiling * BALANCE.energy.batteryCapacity - state.storedEnergy) /
+        BALANCE.energy.batteryChargeEfficiency,
+    );
+    expect(state.lastEnergy.tradeBuy).toBeCloseTo(expected, 3);
+    expect(state.lastEnergy.gridImport).toBeCloseTo(expected, 3);
+  });
+
+  it('never buys beyond the ceiling nor while own surplus is exported', () => {
+    const state = makeState();
+    placePlant(state, at(5, 5), PlantType.Battery);
+    placePlant(state, at(6, 5), PlantType.SolarFarm);
+    setCheapNoon(state);
+    // Own solar surplus at noon: the battery charges from it and the rest
+    // is exported, so buying on top would be nonsense.
+    state.storedEnergy = 0.2 * BALANCE.energy.batteryCapacity;
+    state.marketTrading = true;
+    energyStep(state, { chargingDemand: 0 });
+    expect(state.lastEnergy.gridExport).toBeGreaterThan(0);
+    expect(state.lastEnergy.tradeBuy).toBe(0);
+    // And a battery already at the ceiling stays untouched.
+    const full = makeState();
+    placePlant(full, at(5, 5), PlantType.Battery);
+    setCheapNoon(full);
+    full.storedEnergy = BALANCE.market.trading.buyCeiling * BALANCE.energy.batteryCapacity;
+    full.marketTrading = true;
+    energyStep(full, { chargingDemand: 0 });
+    expect(full.lastEnergy.tradeBuy).toBe(0);
+  });
+
+  it('does not trade while the toggle is off', () => {
+    const state = makeState();
+    placePlant(state, at(5, 5), PlantType.Battery);
+    setScarceEvening(state);
+    state.storedEnergy = BALANCE.energy.batteryCapacity;
+    energyStep(state, { chargingDemand: 0 });
+    expect(state.lastEnergy.tradeSell).toBe(0);
+    expect(state.lastEnergy.tradeBuy).toBe(0);
   });
 });

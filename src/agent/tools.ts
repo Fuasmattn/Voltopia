@@ -492,6 +492,9 @@ export function createAgentTools(ctx: AgentContext): AgentTool[] {
             curtailment: round(e.curtailment),
             gridImport: round(e.gridImport),
             gridExport: round(e.gridExport),
+            spotPrice: round(e.spotPrice, 3),
+            tradeSell: round(e.tradeSell),
+            tradeBuy: round(e.tradeBuy),
             batteries: { stored: Math.round(e.storedEnergy), capacity: e.storageCapacity },
             pumpedStorage: { stored: Math.round(e.pumpedStoredEnergy), capacity: e.pumpedCapacity },
             hydrogen: {
@@ -529,6 +532,7 @@ export function createAgentTools(ctx: AgentContext): AgentTool[] {
           taxRate: s.taxRate,
           maxTaxRate: BALANCE.tax.maxRate,
           smartCharging: s.smartCharging,
+          marketTrading: s.marketTrading,
           insulation: s.insulation,
           goals: s.goals.map((goal) => ({
             id: goal.id,
@@ -920,6 +924,22 @@ export function createAgentTools(ctx: AgentContext): AgentTool[] {
           throw new ToolInputError('"enabled" must be boolean');
         const outcome = await ctx.sendCommand({ type: 'setSmartCharging', enabled: input.enabled });
         return outcomeResult(outcome, { smartCharging: input.enabled });
+      },
+    },
+    {
+      name: 'set_market_trading',
+      description:
+        'Enable or disable spot-market trading: storage sells its top charge at scarcity prices and buys cheap regional surplus.',
+      inputSchema: {
+        type: 'object',
+        properties: { enabled: { type: 'boolean' } },
+        required: ['enabled'],
+      },
+      async execute(input) {
+        if (typeof input.enabled !== 'boolean')
+          throw new ToolInputError('"enabled" must be boolean');
+        const outcome = await ctx.sendCommand({ type: 'setMarketTrading', enabled: input.enabled });
+        return outcomeResult(outcome, { marketTrading: input.enabled });
       },
     },
     {

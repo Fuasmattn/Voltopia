@@ -92,8 +92,12 @@ export function economyStep(state: SimState, population: number, jobs: number): 
     busStopUpkeep;
   const biogasFuelCost =
     state.lastEnergy.biogas * BALANCE.upkeepPerTick.biogasFuelCostPerEnergyUnit;
-  const gridImportCost = state.lastEnergy.gridImport * BALANCE.market.importCostPerEnergyUnit;
-  const gridExportRevenue = state.lastEnergy.gridExport * BALANCE.market.exportRevenuePerEnergyUnit;
+  // All link traffic of a tick trades at that tick's spot price.
+  const spot = state.lastEnergy.spotPrice;
+  const gridImportCost =
+    state.lastEnergy.gridImport * BALANCE.market.importCostPerEnergyUnit * spot;
+  const gridExportRevenue =
+    state.lastEnergy.gridExport * BALANCE.market.exportRevenuePerEnergyUnit * spot;
   const hydrogenRevenue = state.lastEnergy.hydrogenSold * BALANCE.hydrogen.saleRevenuePerEnergyUnit;
 
   state.money +=

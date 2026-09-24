@@ -74,6 +74,22 @@ describe('economyStep', () => {
     );
   });
 
+  it('link prices scale with the spot factor', () => {
+    const state = createSimState(1, SIZE);
+    state.lastEnergy.gridImport = 40;
+    state.lastEnergy.gridExport = 50;
+    state.lastEnergy.spotPrice = 2;
+    const breakdown = economyStep(state, 0, 0);
+    expect(breakdown.gridImportCost).toBeCloseTo(
+      40 * BALANCE.market.importCostPerEnergyUnit * 2,
+      6,
+    );
+    expect(breakdown.gridExportRevenue).toBeCloseTo(
+      50 * BALANCE.market.exportRevenuePerEnergyUnit * 2,
+      6,
+    );
+  });
+
   it('sold hydrogen earns revenue', () => {
     const state = createSimState(1, SIZE);
     state.lastEnergy.hydrogenSold = 30;

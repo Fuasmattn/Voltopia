@@ -197,6 +197,8 @@ export interface SimState {
   money: number;
   taxRate: number;
   smartCharging: boolean;
+  /** Storage trades on the spot market: sell at scarcity, buy cheap. */
+  marketTrading: boolean;
   /** Building insulation upgrade bought (halves the heating load). */
   insulation: boolean;
   /** Day number on which year 1 started; 0 for new games. */
@@ -223,7 +225,13 @@ export interface SimState {
   undoStack: UndoEntry[];
   energyHistory: EnergyHistoryPoint[];
   /** Running sums since the last history sample (not persisted). */
-  energyHistoryAccum: { generation: number; consumption: number; soc: number; ticks: number };
+  energyHistoryAccum: {
+    generation: number;
+    consumption: number;
+    soc: number;
+    price: number;
+    ticks: number;
+  };
   /** Tile indices changed since the last diff collection. */
   dirty: Set<number>;
   /**
@@ -296,6 +304,11 @@ export interface SimState {
     fuelCell: number;
     /** Hydrogen units sold this tick because the tanks were full. */
     hydrogenSold: number;
+    /** Spot price factor applied to this tick's link traffic. */
+    spotPrice: number;
+    /** Stored energy sold / bought by market trading this tick. */
+    tradeSell: number;
+    tradeBuy: number;
   };
 }
 
@@ -339,6 +352,7 @@ export function createSimState(
     money: startingMoney,
     taxRate: BALANCE.tax.defaultRate,
     smartCharging: false,
+    marketTrading: false,
     insulation: false,
     seasonOriginDay: 0,
     season: seasonState({ day: 0, timeOfDay: 0, seasonOriginDay: 0, cloudCover: 0.3 }),
@@ -361,7 +375,7 @@ export function createSimState(
     buses: [],
     undoStack: [],
     energyHistory: [],
-    energyHistoryAccum: { generation: 0, consumption: 0, soc: 0, ticks: 0 },
+    energyHistoryAccum: { generation: 0, consumption: 0, soc: 0, price: 0, ticks: 0 },
     dirty: new Set(),
     statsDirty: false,
     lastDemand: { residential: 0, commercial: 0, retail: 0 },
@@ -418,6 +432,9 @@ export function createSimState(
       electrolysis: 0,
       fuelCell: 0,
       hydrogenSold: 0,
+      spotPrice: 1,
+      tradeSell: 0,
+      tradeBuy: 0,
     },
   };
 }
@@ -678,6 +695,7 @@ export function serializeState(state: SimState): SaveGame {
     money: state.money,
     taxRate: state.taxRate,
     smartCharging: state.smartCharging,
+    marketTrading: state.marketTrading,
     storedEnergy: state.storedEnergy,
     goals: [...state.goalsAchieved],
     lifetime: state.lifetime.samples.map((sample) => ({ ...sample })),
@@ -715,6 +733,7 @@ export function deserializeState(save: SaveGame): SimState {
   state.money = save.money;
   state.taxRate = save.taxRate;
   state.smartCharging = save.smartCharging;
+  state.marketTrading = save.marketTrading ?? false;
   state.storedEnergy = save.storedEnergy;
   state.goalsAchieved = new Set(save.goals ?? []);
   state.lifetime.samples = (save.lifetime ?? []).map((sample) => ({ ...sample }));

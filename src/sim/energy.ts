@@ -18,6 +18,7 @@ import {
   type SimState,
   type UndoEntry,
 } from './state.ts';
+import { spotPriceFactor } from './market.ts';
 import { timeOfDay } from './tick.ts';
 import { currentSolarFactor, currentWindFactor, riverFlowFactor } from './weather.ts';
 
@@ -325,6 +326,8 @@ export function energyStep(state: SimState, input: EnergyTickInput): void {
   let electrolysis = 0;
   let fuelCell = 0;
   let hydrogenSold = 0;
+  let batteryPowerUsed = 0;
+  let pumpedPowerUsed = 0;
 
   const net = generation - totalDemand;
   if (net >= 0) {
@@ -336,6 +339,7 @@ export function energyStep(state: SimState, input: EnergyTickInput): void {
       net,
     );
     state.storedEnergy = battery.stored;
+    batteryPowerUsed = battery.absorbed;
     const pumped = chargePool(
       state.pumpedStorageEnergy,
       pumpedCapacity,
@@ -344,6 +348,7 @@ export function energyStep(state: SimState, input: EnergyTickInput): void {
       net - battery.absorbed,
     );
     state.pumpedStorageEnergy = pumped.stored;
+    pumpedPowerUsed = pumped.absorbed;
     const remaining = net - battery.absorbed - pumped.absorbed;
     // Sell what storage cannot absorb over the link, then electrolyse
     // what the link cannot take; only the rest is curtailed.
@@ -370,9 +375,11 @@ export function energyStep(state: SimState, input: EnergyTickInput): void {
     const battery = dischargePool(state.storedEnergy, powerLimit, shortfall);
     state.storedEnergy = battery.stored;
     shortfall -= battery.released;
+    batteryPowerUsed = battery.released;
     const pumped = dischargePool(state.pumpedStorageEnergy, pumpedPowerLimit, shortfall);
     state.pumpedStorageEnergy = pumped.stored;
     shortfall -= pumped.released;
+    pumpedPowerUsed = pumped.released;
     const hydrogen = dischargePool(state.hydrogenEnergy, fuelCellLimit, shortfall);
     state.hydrogenEnergy = hydrogen.stored;
     fuelCell = hydrogen.released;
@@ -383,6 +390,64 @@ export function energyStep(state: SimState, input: EnergyTickInput): void {
     gridImport = Math.min(shortfall, BALANCE.market.importCapacity);
     shortfall -= gridImport;
     deficit = shortfall;
+  }
+
+  // Spot-market trading: with the toggle on, the storage pools work the
+  // link. At scarcity prices they sell the charge above a reserve floor;
+  // at abundance prices they buy up to a modest ceiling. The bands are
+  // disjoint (buyCeiling < sellFloor), so the same energy can never be
+  // bought low and sold high — selling monetises the city's own shifted
+  // surplus, buying pre-empts expensive imports.
+  const spotPrice = spotPriceFactor(state);
+  let tradeSell = 0;
+  let tradeBuy = 0;
+  if (state.marketTrading) {
+    const trading = BALANCE.market.trading;
+    if (spotPrice >= trading.sellThreshold && deficit === 0 && gridImport === 0) {
+      let exportRoom = BALANCE.market.exportCapacity - gridExport;
+      const sellFrom = (stored: number, floor: number, power: number): number => {
+        const sold = Math.min(exportRoom, power, Math.max(0, stored - floor));
+        exportRoom -= sold;
+        return sold;
+      };
+      const fromBattery = sellFrom(
+        state.storedEnergy,
+        trading.sellFloor * storageCapacity,
+        powerLimit - batteryPowerUsed,
+      );
+      state.storedEnergy -= fromBattery;
+      const fromPumped = sellFrom(
+        state.pumpedStorageEnergy,
+        trading.sellFloor * pumpedCapacity,
+        pumpedPowerLimit - pumpedPowerUsed,
+      );
+      state.pumpedStorageEnergy -= fromPumped;
+      tradeSell = fromBattery + fromPumped;
+      gridExport += tradeSell;
+    } else if (spotPrice <= trading.buyThreshold && curtailment === 0 && gridExport === 0) {
+      let importRoom = BALANCE.market.importCapacity - gridImport;
+      const buyInto = (stored: number, ceiling: number, power: number, efficiency: number) => {
+        const bought = Math.min(power, importRoom, Math.max(0, (ceiling - stored) / efficiency));
+        importRoom -= bought;
+        return { stored: stored + bought * efficiency, bought };
+      };
+      const battery = buyInto(
+        state.storedEnergy,
+        trading.buyCeiling * storageCapacity,
+        powerLimit - batteryPowerUsed,
+        BALANCE.energy.batteryChargeEfficiency,
+      );
+      state.storedEnergy = battery.stored;
+      const pumped = buyInto(
+        state.pumpedStorageEnergy,
+        trading.buyCeiling * pumpedCapacity,
+        pumpedPowerLimit - pumpedPowerUsed,
+        BALANCE.energy.pumpedStorageChargeEfficiency,
+      );
+      state.pumpedStorageEnergy = pumped.stored;
+      tradeBuy = battery.bought + pumped.bought;
+      gridImport += tradeBuy;
+    }
   }
 
   // Flag a deterministic, tick-varying share of connected buildings as
@@ -410,6 +475,9 @@ export function energyStep(state: SimState, input: EnergyTickInput): void {
     electrolysis,
     fuelCell,
     hydrogenSold,
+    spotPrice,
+    tradeSell,
+    tradeBuy,
   };
 
   // Average across the sample window instead of snapshotting the last
@@ -423,6 +491,7 @@ export function energyStep(state: SimState, input: EnergyTickInput): void {
   accum.generation += generation + biogas + fuelCell;
   accum.consumption += totalDemand;
   accum.soc += soc;
+  accum.price += spotPrice;
   accum.ticks++;
 
   if (state.tick % TICKS_PER_HISTORY_SAMPLE === 0) {
@@ -430,10 +499,12 @@ export function energyStep(state: SimState, input: EnergyTickInput): void {
       generation: accum.generation / accum.ticks,
       consumption: accum.consumption / accum.ticks,
       stateOfCharge: accum.soc / accum.ticks,
+      price: accum.price / accum.ticks,
     });
     accum.generation = 0;
     accum.consumption = 0;
     accum.soc = 0;
+    accum.price = 0;
     accum.ticks = 0;
   }
 }

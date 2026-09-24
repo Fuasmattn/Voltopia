@@ -53,6 +53,12 @@ describe('SimEngine basics', () => {
     expect(engine.state.smartCharging).toBe(true);
   });
 
+  it('toggles market trading', () => {
+    const engine = makeEngine();
+    engine.applyCommand({ type: 'setMarketTrading', enabled: true });
+    expect(engine.state.marketTrading).toBe(true);
+  });
+
   it('is deterministic: same seed produces identical stats over time', () => {
     const a = makeEngine(1234);
     const b = makeEngine(1234);

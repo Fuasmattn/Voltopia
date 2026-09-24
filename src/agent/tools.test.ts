@@ -116,6 +116,7 @@ describe('agent tools: reading', () => {
       'set_speed',
       'set_tax_rate',
       'set_smart_charging',
+      'set_market_trading',
       'buy_insulation',
       'advance_time',
       'save_game',
@@ -337,6 +338,8 @@ describe('agent tools: building', () => {
     });
     expect(await call('set_smart_charging', { enabled: true })).toMatchObject({ ok: true });
     expect(engine.state.smartCharging).toBe(true);
+    expect(await call('set_market_trading', { enabled: true })).toMatchObject({ ok: true });
+    expect(engine.state.marketTrading).toBe(true);
     expect(await call('buy_insulation')).toMatchObject({
       ok: true,
       spent: BALANCE.costs.insulation,

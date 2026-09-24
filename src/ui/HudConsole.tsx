@@ -18,6 +18,7 @@ export function HudConsole({
   onToggleDetails,
   onSetTaxRate,
   onSetSmartCharging,
+  onSetMarketTrading,
   onBuyInsulation,
 }: {
   stats: GlobalStats;
@@ -25,6 +26,7 @@ export function HudConsole({
   onToggleDetails: () => void;
   onSetTaxRate: (rate: number) => void;
   onSetSmartCharging: (enabled: boolean) => void;
+  onSetMarketTrading: (enabled: boolean) => void;
   onBuyInsulation: () => void;
 }) {
   const { t } = useI18n();
@@ -65,6 +67,18 @@ export function HudConsole({
                 onChange={(e) => onSetSmartCharging(e.target.checked)}
               />
               <span>{t('smartCharging.label')}</span>
+            </label>
+            <label
+              className="smart-charging-toggle"
+              data-testid="market-trading"
+              title={t('marketTrading.title')}
+            >
+              <input
+                type="checkbox"
+                checked={stats.marketTrading}
+                onChange={(e) => onSetMarketTrading(e.target.checked)}
+              />
+              <span>{t('marketTrading.label')}</span>
             </label>
             <div
               className="smart-charging-toggle"

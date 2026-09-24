@@ -179,6 +179,9 @@ export function buildStats(state: SimState): GlobalStats {
       hydrogenStoredEnergy: state.hydrogenEnergy,
       hydrogenCapacity: totalHydrogenCapacity(state),
       hydrogenSold: e.hydrogenSold,
+      spotPrice: e.spotPrice,
+      tradeSell: e.tradeSell,
+      tradeBuy: e.tradeBuy,
       biogasCapacity: totalBiogasCapacity(state),
       curtailment: e.curtailment,
       deficit: e.deficit,
@@ -190,6 +193,7 @@ export function buildStats(state: SimState): GlobalStats {
     taxRate: state.taxRate,
     speed: state.speed,
     smartCharging: state.smartCharging,
+    marketTrading: state.marketTrading,
     insulation: state.insulation,
     services: { ...state.lastServices },
     traffic: {
@@ -215,12 +219,13 @@ export function pendingHistoryPoint(state: SimState): EnergyHistoryPoint {
   const accum = state.energyHistoryAccum;
   if (accum.ticks === 0) {
     const last = state.energyHistory[state.energyHistory.length - 1];
-    return last ? { ...last } : { generation: 0, consumption: 0, stateOfCharge: 0 };
+    return last ? { ...last } : { generation: 0, consumption: 0, stateOfCharge: 0, price: 1 };
   }
   return {
     generation: accum.generation / accum.ticks,
     consumption: accum.consumption / accum.ticks,
     stateOfCharge: accum.soc / accum.ticks,
+    price: accum.price / accum.ticks,
   };
 }
 

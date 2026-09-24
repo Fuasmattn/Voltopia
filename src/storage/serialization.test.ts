@@ -76,6 +76,13 @@ describe('save game JSON export/import', () => {
     expect(restored.hydrogenEnergy).toBe(1234);
   });
 
+  it('round-trips the market trading toggle', () => {
+    const save = makeSave();
+    save.marketTrading = true;
+    expect(saveFromJson(saveToJson(save)).marketTrading).toBe(true);
+    expect(saveFromJson(saveToJson(makeSave())).marketTrading).toBeUndefined();
+  });
+
   it('accepts exports without the terrain layer', () => {
     const save = makeSave();
     const restored = saveFromJson(saveToJson(save));

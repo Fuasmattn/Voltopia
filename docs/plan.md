@@ -43,7 +43,8 @@ src/
     zones.ts       # zone painting, road adjacency
     growth.ts      # demand model, building spawn/densify/decay, abandonment
     economy.ts     # taxes, upkeep, construction costs, slope surcharge
-    energy.ts      # plants (PV/wind/biogas/hydro/pumped/hydrogen), storage, balance, market
+    energy.ts      # plants (PV/wind/biogas/hydro/pumped/hydrogen), storage, balance
+    market.ts      # spot price (regional weather + demand), storage trading
     powerGrid.ts   # connectivity: which tiles are energised
     powerLines.ts  # pylon placement, water crossings
     weather.ts     # seeded fronts, cloud/wind/rain, Dunkelflaute, day/night clock

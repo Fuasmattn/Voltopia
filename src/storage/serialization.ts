@@ -16,6 +16,7 @@ interface SaveGameJson {
   riverFlow?: number;
   pumpedStorageEnergy?: number;
   hydrogenEnergy?: number;
+  marketTrading?: boolean;
   seasonOriginDay?: number;
   snowpack?: number;
   insulation?: boolean;
@@ -65,6 +66,7 @@ export function saveToJson(save: SaveGame): string {
     ...(save.lifetime ? { lifetime: save.lifetime } : {}),
     ...(save.riverFlow !== undefined ? { riverFlow: save.riverFlow } : {}),
     ...(save.hydrogenEnergy !== undefined ? { hydrogenEnergy: save.hydrogenEnergy } : {}),
+    ...(save.marketTrading !== undefined ? { marketTrading: save.marketTrading } : {}),
     ...(save.pumpedStorageEnergy !== undefined
       ? { pumpedStorageEnergy: save.pumpedStorageEnergy }
       : {}),
@@ -152,6 +154,7 @@ export function saveFromJson(text: string): SaveGame {
       : {}),
     ...(typeof parsed.riverFlow === 'number' ? { riverFlow: parsed.riverFlow } : {}),
     ...(typeof parsed.hydrogenEnergy === 'number' ? { hydrogenEnergy: parsed.hydrogenEnergy } : {}),
+    ...(typeof parsed.marketTrading === 'boolean' ? { marketTrading: parsed.marketTrading } : {}),
     ...(typeof parsed.pumpedStorageEnergy === 'number'
       ? { pumpedStorageEnergy: parsed.pumpedStorageEnergy }
       : {}),

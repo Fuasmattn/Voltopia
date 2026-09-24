@@ -10,6 +10,7 @@
  */
 import { useRef } from 'react';
 import {
+  BALANCE,
   ENERGY_HISTORY_SAMPLES,
   TICKS_PER_DAY,
   TICKS_PER_HISTORY_SAMPLE,
@@ -20,6 +21,7 @@ import { useI18n } from './i18n.tsx';
 // Theme variables (see :root in app.css), so the curves follow the HUD theme.
 const GENERATION_COLOR = 'var(--hud-positive-strong)';
 const CONSUMPTION_COLOR = 'var(--hud-negative-strong)';
+const PRICE_COLOR = 'var(--hud-warn)';
 
 /**
  * The graph always spans one full history window, edge to edge, whether
@@ -84,6 +86,8 @@ function useNiceMax(energy: EnergyStats): number {
 interface Series {
   generation: Array<[number, number]>;
   consumption: Array<[number, number]>;
+  /** Spot price factor, on its own fixed 0..spotMax scale. */
+  price: Array<[number, number]>;
 }
 
 /**
@@ -115,9 +119,24 @@ function seriesOf(
     points.push([width, y(pick(energy.pending))]);
     return points;
   };
+  // The price is a factor, not an energy flow: it gets its own fixed
+  // scale so the curve never rescales with the energy axis.
+  const yPrice = (value: number): number =>
+    height -
+    (Math.min(value, BALANCE.market.spotMax) / BALANCE.market.spotMax) * (height - topPadding);
+  const projectPrice = (): Array<[number, number]> => {
+    if (newest < 0) return [];
+    const points: Array<[number, number]> = energy.history.map((point, i) => [
+      width - (offset + newest - i) * stepX,
+      yPrice(point.price),
+    ]);
+    points.push([width, yPrice(energy.pending.price)]);
+    return points;
+  };
   return {
     generation: project((p) => p.generation),
     consumption: project((p) => p.consumption),
+    price: projectPrice(),
   };
 }
 
@@ -276,6 +295,15 @@ export function EnergyGraph({ energy, timeOfDay }: { energy: EnergyStats; timeOf
           />
         ))}
         <path d={area(series.generation, BAND_WIDTH, BAND_HEIGHT)} fill="url(#energy-graph-fade)" />
+        <polyline
+          points={line(series.price)}
+          fill="none"
+          style={{ stroke: PRICE_COLOR }}
+          strokeWidth="1.5"
+          strokeDasharray="5 4"
+          strokeLinejoin="round"
+          vectorEffect="non-scaling-stroke"
+        />
         <Curves series={series} width={2} />
       </svg>
       {/* Labels sit outside the SVG: the drawing space is stretched, which
@@ -290,6 +318,7 @@ export function EnergyGraph({ energy, timeOfDay }: { energy: EnergyStats; timeOf
       <div className="energy-graph-legend">
         <span className="legend-generation">{t('energy.legend.generation')}</span>
         <span className="legend-consumption">{t('energy.legend.consumption')}</span>
+        <span className="legend-price">{t('energy.legend.price')}</span>
       </div>
     </div>
   );

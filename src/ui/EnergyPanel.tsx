@@ -157,6 +157,12 @@ export function EnergyPanel({ energy, riverFlow }: { energy: EnergyStats; riverF
           <span>{balance >= 0 ? t('energy.surplus') : t('energy.deficit')}</span>
           <span>{formatEnergy(Math.abs(balance))}</span>
         </div>
+        {/* Spot price is a factor on the link prices, not an energy flow,
+            so it gets its own row instead of the smoothed Row component. */}
+        <div className="energy-row" data-testid="detail-energy-spot">
+          <span>{t('energy.spot')}</span>
+          <span>{`×${energy.spotPrice.toFixed(2)}`}</span>
+        </div>
         <Row
           label={t('energy.import')}
           value={energy.gridImport}
