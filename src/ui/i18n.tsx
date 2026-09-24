@@ -203,7 +203,7 @@ const en = {
     'Shops need goods. A logistics depot sends three electric vans on tours along the roads; a shop that has not seen a van for a day and a half stops growing. Vans queue in traffic like cars and charge at the depot, so keep it powered and in reach of your retail streets. The deliveries overlay shows who is due.',
   'help.transit.title': 'Transit',
   'help.transit.body':
-    'Mark bus stops on your roads and build a bus depot. Three electric buses tour the stops that have waited longest; a stop a bus visited in the last half day counts as served and covers the roads around it. A commuter with a served stop near home and near work leaves the car at home, which eases traffic and the evening charging peak. Too many stops for one depot leave some unserved.',
+    'Mark bus stops on your roads and build a bus depot. Three electric buses tour the stops that have waited longest; a stop a bus visited recently counts as served and covers the roads around it. A commuter with a served stop near home and near work leaves the car at home, which eases traffic and the evening charging peak. Too many stops for one depot leave some unserved.',
   'help.services.title': 'City services',
   'help.services.body':
     'Fire and police stations protect every building within their ring, but only while connected to the grid. Buildings need fire cover to reach the highest density; without police cover, happiness and tax income fall once the city has 100 residents. The services overlay shows who is covered.',
@@ -620,7 +620,7 @@ const de: Record<TranslationKey, string> = {
     'Läden brauchen Waren. Ein Logistikdepot schickt drei E-Lieferwagen auf Touren über die Straßen; ein Laden, den anderthalb Tage kein Wagen erreicht hat, wächst nicht weiter. Lieferwagen stehen im Stau wie Autos und laden im Depot – also Strom anschließen und in Reichweite der Einkaufsstraßen bauen. Das Lieferungen-Overlay zeigt, wer fällig ist.',
   'help.transit.title': 'ÖPNV',
   'help.transit.body':
-    'Setze Haltestellen auf deine Straßen und baue ein Busdepot. Drei Elektrobusse fahren die Haltestellen ab, die am längsten warten; eine Haltestelle mit Bus im letzten halben Tag gilt als bedient und deckt die Straßen ringsum ab. Pendler mit bedienter Haltestelle nahe Wohnung und Arbeit lassen das Auto stehen, was Verkehr und abendliche Ladespitze entlastet. Zu viele Haltestellen für ein Depot bleiben teils unbedient.',
+    'Setze Haltestellen auf deine Straßen und baue ein Busdepot. Drei Elektrobusse fahren die Haltestellen ab, die am längsten warten; eine Haltestelle mit kürzlichem Bushalt gilt als bedient und deckt die Straßen ringsum ab. Pendler mit bedienter Haltestelle nahe Wohnung und Arbeit lassen das Auto stehen, was Verkehr und abendliche Ladespitze entlastet. Zu viele Haltestellen für ein Depot bleiben teils unbedient.',
   'help.services.title': 'Stadtdienste',
   'help.services.body':
     'Feuerwehr und Polizei schützen jedes Gebäude in ihrem Ring, aber nur mit Netzanschluss. Für die höchste Dichte brauchen Gebäude Feuerwehrschutz; ohne Polizeischutz sinken Zufriedenheit und Steuereinnahmen, sobald die Stadt 100 Einwohner hat. Das Dienste-Overlay zeigt, wer abgedeckt ist.',

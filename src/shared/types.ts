@@ -199,6 +199,7 @@ export interface TileCounts {
   plantTiles: number;
   buildingTiles: number;
   powerLineTiles: number;
+  /** Logistics depots only; bus depots are tracked separately in TransitStats. */
   depots: number;
 }
 

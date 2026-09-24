@@ -23,7 +23,7 @@ import {
 import { placePlant } from './energy.ts';
 import { buildPowerLines } from './powerLines.ts';
 import { buildRoads, bulldozeTiles, undoLastAction } from './roads.ts';
-import { chargingDemand, laneOccupancy, vehiclesStep } from './vehicles.ts';
+import { chargingDemand, laneOccupancy, ticksAtHour, vehiclesStep } from './vehicles.ts';
 import { BusPhase, createSimState, TileType, type SimState } from './state.ts';
 
 export const SIZE = 24;
@@ -52,6 +52,12 @@ describe('buildBusStops', () => {
     expect(state.money).toBe(before - 2 * BALANCE.costs.busStop);
     expect(countBusStops(state)).toBe(2);
     expect(state.dirty.has(at(5, 10))).toBe(true);
+  });
+
+  it('countBusStops ignores a busStop flag left on a non-road tile', () => {
+    const state = street();
+    state.layers.busStop[at(2, 2)] = 1;
+    expect(countBusStops(state)).toBe(0);
   });
 
   it('a fresh stop starts served (age 0)', () => {
@@ -353,8 +359,13 @@ describe('transitStep', () => {
     for (let t = 0; t < 600; t++) stepAll(state);
     for (const x of [6, 9, 12]) expect(state.layers.stopAge[at(x, 10)]).toBeLessThan(700);
     // Outside the window every bus finishes its tour and stays at the depot.
+    // Run until 40 ticks before the window reopens (tied to windowStartHour
+    // rather than a magic tick count, so a balance retune can't silently
+    // make this cross into the next window and flake).
     setHour(state, 23.5);
-    for (let t = 0; t < 200; t++) stepAll(state);
+    const ticksUntilWindowReopens =
+      Math.round(((24 - 23.5) / 24) * TICKS_PER_DAY) + ticksAtHour(BALANCE.transit.windowStartHour);
+    for (let t = 0; t < ticksUntilWindowReopens - 40; t++) stepAll(state);
     expect(state.buses.every((b) => b.phase === BusPhase.AtDepot)).toBe(true);
   });
 

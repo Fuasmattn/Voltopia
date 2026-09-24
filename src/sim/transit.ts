@@ -86,7 +86,7 @@ export function clearBusStops(state: SimState, tiles: number[]): void {
 export function countBusStops(state: SimState): number {
   const { busStop } = state.layers;
   let count = 0;
-  for (let i = 0; i < busStop.length; i++) if (busStop[i] !== 0) count++;
+  for (let i = 0; i < busStop.length; i++) if (isBusStop(state, i)) count++;
   return count;
 }
 

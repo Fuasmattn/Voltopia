@@ -358,6 +358,10 @@ present, else zero. `saveToJson` / `saveFromJson` pass it through like
 `roadClass`. `goalProgress.transitTicks?: number`. Buses, `stopAge`,
 `transitCover` and `rider` are never saved; after a load every stop is
 served for one window and riders are re-decided the next morning.
+Vehicles and `riderDay` are not saved either, so the modal-shift streak
+(`transitTicks`) restarts after a load: the first tick after a load has
+no riders yet. The field is kept as-is; this is not worth a
+`SAVE_VERSION` bump.
 
 ### Unit tests
 

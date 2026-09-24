@@ -1086,8 +1086,8 @@ function liveFigures(info: TileInfo): Record<string, unknown> {
     deliveryAgeDays: round(info.deliveryAgeTicks / TICKS_PER_DAY, 2),
     depot: info.depot,
     busStop: info.busStop,
-    stopState: STOP_STATE_NAME[info.stopState],
-    stopAgeHours: round((info.stopAgeTicks / TICKS_PER_DAY) * 24, 1),
+    stopState: info.busStop ? STOP_STATE_NAME[info.stopState] : null,
+    stopAgeHours: info.busStop ? round((info.stopAgeTicks / TICKS_PER_DAY) * 24, 1) : null,
     transitCovered: info.transitCovered,
     busDepot: info.busDepot,
   };

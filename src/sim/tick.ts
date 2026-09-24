@@ -111,6 +111,7 @@ function countTiles(state: SimState): {
   plantTiles: number;
   buildingTiles: number;
   powerLineTiles: number;
+  /** Logistics depots only; bus depots are tracked separately in transitStats. */
   depots: number;
 } {
   const { tileType, zone, density, roadClass, plantType } = state.layers;

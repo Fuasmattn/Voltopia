@@ -406,5 +406,12 @@ describe('agent tools: building', () => {
     });
     const depotInfo = await call('inspect_tile', { x, y: y + 1 });
     expect(depotInfo.busDepot).toMatchObject({ busesTotal: BALANCE.transit.busesPerDepot });
+    const plainRoad = await call('inspect_tile', { x, y });
+    expect(plainRoad).toMatchObject({
+      ok: true,
+      busStop: false,
+      stopState: null,
+      stopAgeHours: null,
+    });
   });
 });

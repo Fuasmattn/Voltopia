@@ -345,7 +345,7 @@ export function TileInspector({ info, onClose }: { info: TileInfo; onClose: () =
         </section>
       )}
 
-      {info.tileType === TileType.Road && (
+      {info.tileType === TileType.Road && (info.busStop || info.transitCovered) && (
         <section data-testid="inspect-transit">
           <h3>{t('inspect.section.transit')}</h3>
           <Row
