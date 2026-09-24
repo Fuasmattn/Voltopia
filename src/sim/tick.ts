@@ -1,6 +1,7 @@
 import { TICKS_PER_DAY } from '../shared/constants.ts';
 import { RoadClass } from '../shared/types.ts';
 import type { EnergyHistoryPoint, GlobalStats } from '../shared/types.ts';
+import { deliveriesStep } from './deliveries.ts';
 import { economyStep } from './economy.ts';
 import { energyStep } from './energy.ts';
 import { goalsStep, goalStates } from './goals.ts';
@@ -43,7 +44,9 @@ export function stepTick(state: SimState): void {
     cloudCover: state.weather.cloudCover,
   });
   updateWeather(state);
-  updateTrafficLoad(state, vehiclesStep(state));
+  const occupancy = vehiclesStep(state);
+  deliveriesStep(state, occupancy);
+  updateTrafficLoad(state, occupancy);
   energyStep(state, { chargingDemand: chargingDemand(state) });
   recomputeServices(state);
   state.lastServices = serviceCoverage(state);

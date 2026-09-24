@@ -5,7 +5,9 @@ import { DeliveryState, PlantType, Zone } from '../shared/types.ts';
 import {
   ageShops,
   claimedStops,
+  deliveriesStep,
   deliveryState,
+  drivingVans,
   dueTicks,
   planTour,
   supplyWindowTicks,
@@ -14,6 +16,7 @@ import {
 import { placePlant } from './energy.ts';
 import { bulldozeTiles, buildRoads } from './roads.ts';
 import { createSimState, TileType, VanPhase, type SimState } from './state.ts';
+import { chargingDemand, laneOccupancy, vehiclesStep } from './vehicles.ts';
 
 const SIZE = 24;
 const at = (x: number, y: number) => tileIndex(x, y, SIZE);
@@ -183,5 +186,181 @@ describe('planTour', () => {
     state.layers.deliveryAge[at(6, 11)] = dueTicks();
     state.layers.deliveryAge[at(6, 9)] = dueTicks();
     expect(planTour(state, state.vans[0], new Set())).toEqual([at(6, 10), at(2, 10)]);
+  });
+});
+
+function setHour(state: SimState, hour: number): void {
+  state.tick =
+    Math.floor(state.tick / TICKS_PER_DAY) * TICKS_PER_DAY +
+    Math.round((hour / 24) * TICKS_PER_DAY);
+}
+
+/** Power the depot: a wind turbine's ring energises it. */
+function powerDepot(state: SimState): void {
+  placePlant(state, at(3, 9), PlantType.WindTurbine);
+}
+
+/** One tick of cars + vans exactly as tick.ts runs them. */
+function stepAll(state: SimState): void {
+  const occupancy = vehiclesStep(state);
+  deliveriesStep(state, occupancy);
+  state.tick++;
+}
+
+describe('deliveriesStep', () => {
+  it('a van tours due shops inside the window and resets their age', () => {
+    const state = shopTown(1, 3);
+    powerDepot(state);
+    setHour(state, 8);
+    for (let i = 0; i < 3; i++) state.layers.deliveryAge[at(6 + i, 11)] = dueTicks();
+    let delivered = false;
+    for (let t = 0; t < 400 && !delivered; t++) {
+      stepAll(state);
+      delivered = state.layers.deliveryAge[at(6, 11)] < 50;
+    }
+    expect(delivered).toBe(true);
+    expect(state.vans.some((v) => v.phase !== VanPhase.AtDepot)).toBe(true);
+    // Eventually every shop is served and the van is back at the depot.
+    for (let t = 0; t < 600; t++) stepAll(state);
+    for (let i = 0; i < 3; i++) expect(state.layers.deliveryAge[at(6 + i, 11)]).toBeLessThan(700);
+    expect(state.vans.every((v) => v.phase === VanPhase.AtDepot)).toBe(true);
+  });
+
+  it('driving vans stay on road tiles and move slower than cars', () => {
+    const state = shopTown(1, 3);
+    powerDepot(state);
+    setHour(state, 8);
+    state.layers.deliveryAge[at(8, 11)] = dueTicks();
+    let ticksDriving = 0;
+    for (let t = 0; t < 200; t++) {
+      stepAll(state);
+      for (const van of drivingVans(state)) {
+        expect(state.layers.tileType[tileIndex(Math.floor(van.x), Math.floor(van.y), SIZE)]).toBe(
+          TileType.Road,
+        );
+      }
+      if (state.vans[0].phase === VanPhase.Driving) ticksDriving++;
+    }
+    // 6 tiles out and 6 back at 0.8 × 1.6 tiles/s (4 ticks/s) ≈ 38 ticks, plus unloading.
+    expect(ticksDriving).toBeGreaterThan(30);
+  });
+
+  it('no tour starts outside the delivery window', () => {
+    const state = shopTown(1, 3);
+    powerDepot(state);
+    setHour(state, 3);
+    for (let i = 0; i < 3; i++) state.layers.deliveryAge[at(6 + i, 11)] = dueTicks();
+    for (let t = 0; t < 60; t++) stepAll(state);
+    expect(state.vans.every((v) => v.phase === VanPhase.AtDepot)).toBe(true);
+  });
+
+  it('no tour starts below minTripCharge', () => {
+    const state = shopTown(1, 3);
+    setHour(state, 8);
+    for (let i = 0; i < 3; i++) state.layers.deliveryAge[at(6 + i, 11)] = dueTicks();
+    stepAll(state); // spawn the fleet (dispatches once at the high spawn charge)
+    for (const van of state.vans) van.charge = 0.1;
+    // The van already on tour still finishes it (charge isn't checked mid-trip),
+    // then never redispatches at 0.1 charge: needs the full 3-stop round trip
+    // (~76 ticks with the per-leg dispatch tick) to get back to the depot.
+    for (let t = 0; t < 90; t++) stepAll(state);
+    expect(state.vans.every((v) => v.phase === VanPhase.AtDepot)).toBe(true);
+  });
+
+  it('vans charge only at a powered depot, and driving drains them', () => {
+    const dark = shopTown(1, 3);
+    setHour(dark, 3);
+    stepAll(dark);
+    for (const van of dark.vans) van.charge = 0.5;
+    for (let t = 0; t < 20; t++) stepAll(dark);
+    expect(dark.vans[0].charge).toBe(0.5);
+    expect(dark.vans[0].charging).toBe(false);
+
+    const lit = shopTown(1, 3);
+    powerDepot(lit);
+    setHour(lit, 3);
+    stepAll(lit);
+    for (const van of lit.vans) van.charge = 0.5;
+    for (let t = 0; t < 20; t++) stepAll(lit);
+    expect(lit.vans[0].charge).toBeCloseTo(0.5 + 20 * BALANCE.deliveries.chargeRatePerTick, 6);
+    expect(lit.vans[0].charging).toBe(true);
+
+    setHour(lit, 8);
+    // shopTown(1, 3) only zones shops up to x=8; use that last shop as the due one.
+    lit.layers.deliveryAge[at(8, 11)] = dueTicks();
+    const before = lit.vans[0].charge;
+    for (let t = 0; t < 30; t++) stepAll(lit);
+    expect(lit.vans[0].charge).toBeLessThan(before);
+  });
+
+  it('a city-wide deficit stops depot charging', () => {
+    const state = shopTown(1, 3);
+    powerDepot(state);
+    setHour(state, 3);
+    stepAll(state);
+    for (const van of state.vans) van.charge = 0.5;
+    state.lastEnergy.deficit = 5;
+    for (let t = 0; t < 10; t++) stepAll(state);
+    expect(state.vans[0].charge).toBe(0.5);
+  });
+
+  it('smart charging holds off without surplus unless the van is below the floor', () => {
+    const state = shopTown(1, 3);
+    powerDepot(state);
+    state.smartCharging = true;
+    setHour(state, 3);
+    stepAll(state);
+    state.vans[0].charge = 0.5;
+    state.vans[1].charge = BALANCE.vehicles.smartChargeFloor - 0.05;
+    for (let t = 0; t < 10; t++) stepAll(state);
+    expect(state.vans[0].charge).toBe(0.5);
+    expect(state.vans[1].charge).toBeGreaterThan(BALANCE.vehicles.smartChargeFloor - 0.05);
+    state.lastEnergy.solar = 1000; // surplus
+    for (let t = 0; t < 10; t++) stepAll(state);
+    expect(state.vans[0].charge).toBeGreaterThan(0.5);
+  });
+
+  it('driving vans count in the lane occupancy and the charging load counts vans', () => {
+    const state = shopTown(1, 3);
+    powerDepot(state);
+    setHour(state, 8);
+    // shopTown(1, 3) only zones shops up to x=8; use that last shop as the due one.
+    state.layers.deliveryAge[at(8, 11)] = dueTicks();
+    for (let t = 0; t < 12; t++) stepAll(state);
+    expect(drivingVans(state).length).toBeGreaterThan(0);
+    let total = 0;
+    for (const count of laneOccupancy(state).values()) total += count;
+    expect(total).toBe(drivingVans(state).length);
+
+    for (const van of state.vans) van.charging = false;
+    state.vans[0].charging = true;
+    expect(chargingDemand(state)).toBe(BALANCE.deliveries.chargingEnergyPerVan);
+  });
+
+  it('a van whose route is bulldozed skips the stop and comes home', () => {
+    // 7 shops (x=6..12) so the due stop at x=12 routes through the x=9 tile
+    // this test bulldozes mid-trip; shopTown(1, 3) would stop at x=8.
+    const state = shopTown(1, 7);
+    powerDepot(state);
+    setHour(state, 8);
+    state.layers.deliveryAge[at(12, 11)] = dueTicks();
+    for (let t = 0; t < 8; t++) stepAll(state);
+    expect(state.vans[0].phase).toBe(VanPhase.Driving);
+    bulldozeTiles(state, [at(9, 10)]);
+    for (let t = 0; t < 200; t++) stepAll(state);
+    expect(state.layers.deliveryAge[at(12, 11)]).toBeGreaterThan(dueTicks());
+    expect(state.vans.every((v) => v.phase === VanPhase.AtDepot)).toBe(true);
+  });
+
+  it('is deterministic for the same seed', () => {
+    const run = () => {
+      const state = shopTown(7, 6);
+      powerDepot(state);
+      setHour(state, 7);
+      for (let i = 0; i < 6; i++) state.layers.deliveryAge[at(6 + i, 11)] = dueTicks() + i;
+      for (let t = 0; t < TICKS_PER_DAY / 2; t++) stepAll(state);
+      return state.vans.map((v) => [v.id, v.x, v.y, v.phase, v.charge]);
+    };
+    expect(run()).toEqual(run());
   });
 });

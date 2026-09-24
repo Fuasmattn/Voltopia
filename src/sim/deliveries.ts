@@ -1,7 +1,9 @@
-import { BALANCE, TICKS_PER_DAY } from '../shared/constants.ts';
+import { BALANCE, TICK_RATE, TICKS_PER_DAY } from '../shared/constants.ts';
 import { neighbors4, tileX, tileY } from '../shared/grid.ts';
 import { DeliveryState, PlantType, Zone } from '../shared/types.ts';
-import { roadDistances } from './routing.ts';
+import { isTileConnected } from './energy.ts';
+import { findRoadPath, roadDistances } from './routing.ts';
+import { advanceAlongPath, surplusAvailable, vehicleTile } from './vehicles.ts';
 import {
   deliveryStateOfAge,
   markDirty,
@@ -191,4 +193,131 @@ export function planTour(state: SimState, van: Van, claimed: Set<number>): numbe
   if (ordered.length === 0) return [];
   ordered.push(van.depotRoad);
   return ordered;
+}
+
+/** A depot can charge while it is energised and the grid met all demand last tick. */
+function depotPowered(state: SimState, depot: number): boolean {
+  return isTileConnected(state, depot) && state.lastEnergy.deficit === 0;
+}
+
+/** Plugged in? At the depot whenever the battery isn't full and the depot has power; smart charging defers to surplus unless low. */
+function decideVanCharging(state: SimState, van: Van, surplus: boolean): boolean {
+  if (van.charge >= 1 || !depotPowered(state, van.depot)) return false;
+  if (!state.smartCharging) return true;
+  return surplus || van.charge < BALANCE.vehicles.smartChargeFloor;
+}
+
+/**
+ * Route the van to stops[0], skipping stops that became unreachable. A
+ * van that cannot even reach its depot is marked lost and removed by the
+ * next syncFleet.
+ */
+function routeToNextStop(state: SimState, van: Van): void {
+  const from = vehicleTile(state, van);
+  while (van.stops.length > 0) {
+    const path = findRoadPath(state, from, van.stops[0]);
+    if (path) {
+      van.path = path;
+      van.pathIndex = 0;
+      van.phase = VanPhase.Driving;
+      return;
+    }
+    van.stops.shift();
+  }
+  van.depot = -1;
+}
+
+/** Mark every shop next to the van's road tile as delivered right now. */
+function deliver(state: SimState, van: Van): void {
+  const { layers } = state;
+  for (const n of neighbors4(vehicleTile(state, van), state.size)) {
+    if (!isShop(state, n)) continue;
+    const before = deliveryStateOfAge(layers.deliveryAge[n]);
+    layers.deliveryAge[n] = 0;
+    if (before !== DeliveryState.Supplied) markDirty(state, n);
+  }
+}
+
+function arrive(state: SimState, van: Van): void {
+  if (van.stops.length <= 1) {
+    // Last stop is always the depot road.
+    van.stops = [];
+    van.phase = VanPhase.AtDepot;
+    van.dwellTicks = BALANCE.deliveries.turnaroundTicks;
+    van.x = tileX(van.depotRoad, state.size) + 0.5;
+    van.y = tileY(van.depotRoad, state.size) + 0.5;
+    return;
+  }
+  van.phase = VanPhase.Unloading;
+  van.dwellTicks = BALANCE.deliveries.unloadTicks;
+}
+
+/**
+ * Delivery vans: keep the fleets in sync, age the shops, charge at the
+ * depot, dispatch tours inside the delivery window, drive on the shared
+ * lanes and unload at every stop. Runs after vehiclesStep with its lane
+ * occupancy map so cars and vans queue behind each other.
+ */
+export function deliveriesStep(state: SimState, occupancy: Map<number, number>): void {
+  syncFleet(state);
+  ageShops(state);
+  if (state.vans.length === 0) return;
+
+  const d = BALANCE.deliveries;
+  const step = (BALANCE.vehicles.speedTilesPerSecond / TICK_RATE) * d.speedFactor;
+  const ticksIntoDay = state.tick % TICKS_PER_DAY;
+  const windowStart = Math.floor((d.windowStartHour / 24) * TICKS_PER_DAY);
+  const windowEnd = Math.floor((d.windowEndHour / 24) * TICKS_PER_DAY);
+  const inWindow = ticksIntoDay >= windowStart && ticksIntoDay < windowEnd;
+  const surplus = surplusAvailable(state);
+  const claimed = claimedStops(state);
+
+  for (const van of state.vans) {
+    van.charging = false;
+    switch (van.phase) {
+      case VanPhase.AtDepot: {
+        if (van.dwellTicks > 0) van.dwellTicks--;
+        van.charging = decideVanCharging(state, van, surplus);
+        if (van.charging) van.charge = Math.min(1, van.charge + d.chargeRatePerTick);
+        if (van.dwellTicks === 0 && inWindow && van.charge >= d.minTripCharge) {
+          const stops = planTour(state, van, claimed);
+          if (stops.length > 0) {
+            for (const stop of stops) if (stop !== van.depotRoad) claimed.add(stop);
+            van.stops = stops;
+            routeToNextStop(state, van);
+          }
+        }
+        break;
+      }
+      case VanPhase.Driving: {
+        const result = advanceAlongPath(state, van, step, occupancy);
+        if (result === 'arrived') arrive(state, van);
+        else if (result === 'lost') {
+          van.stops.shift();
+          routeToNextStop(state, van);
+        }
+        break;
+      }
+      case VanPhase.Unloading: {
+        van.dwellTicks--;
+        if (van.dwellTicks <= 0) {
+          deliver(state, van);
+          van.stops.shift();
+          routeToNextStop(state, van);
+        }
+        break;
+      }
+    }
+  }
+}
+
+/** Vans on the road (parked ones are not rendered). */
+export function drivingVans(state: SimState): Van[] {
+  return state.vans.filter((v) => v.phase !== VanPhase.AtDepot);
+}
+
+export function drivingVanCount(state: SimState): number {
+  let count = 0;
+  for (const v of state.vans) if (v.phase !== VanPhase.AtDepot) count++;
+  return count;
 }

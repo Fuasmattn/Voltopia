@@ -5,6 +5,7 @@ import { findRoadPath } from './routing.ts';
 import {
   countPopulationAndJobs,
   TileType,
+  VanPhase,
   VehiclePhase,
   type SimState,
   type Vehicle,
@@ -197,6 +198,12 @@ export function laneOccupancy(state: SimState): Map<number, number> {
   for (const vehicle of state.vehicles) {
     if (vehicle.phase === VehiclePhase.ToWork || vehicle.phase === VehiclePhase.ToHome) {
       const lane = vehicleLane(state, vehicle);
+      occupancy.set(lane, (occupancy.get(lane) ?? 0) + 1);
+    }
+  }
+  for (const van of state.vans) {
+    if (van.phase === VanPhase.Driving) {
+      const lane = vehicleLane(state, van);
       occupancy.set(lane, (occupancy.get(lane) ?? 0) + 1);
     }
   }
@@ -428,15 +435,16 @@ export function drivingVehicleCount(state: SimState): number {
 }
 
 /**
- * EV charging demand for this tick: the number of vehicles actually
- * plugged in right now times the charger power. The evening peak, the
- * daytime hub window, and smart charging's surplus-following all emerge
- * from individual vehicle behavior in vehiclesStep.
+ * Charging demand for this tick: cars plugged in at home or a hub plus
+ * vans plugged in at their depot, each times its charger power.
  */
 export function chargingDemand(state: SimState): number {
-  let charging = 0;
-  for (const vehicle of state.vehicles) {
-    if (vehicle.charging) charging++;
-  }
-  return charging * BALANCE.vehicles.chargingEnergyPerVehicle;
+  let cars = 0;
+  for (const vehicle of state.vehicles) if (vehicle.charging) cars++;
+  let vans = 0;
+  for (const van of state.vans) if (van.charging) vans++;
+  return (
+    cars * BALANCE.vehicles.chargingEnergyPerVehicle +
+    vans * BALANCE.deliveries.chargingEnergyPerVan
+  );
 }

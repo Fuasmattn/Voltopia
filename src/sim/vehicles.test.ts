@@ -5,7 +5,7 @@ import { PlantType, RoadClass, Zone } from '../shared/types.ts';
 import { placePlant } from './energy.ts';
 import { buildRoads } from './roads.ts';
 import { findRoadPath } from './routing.ts';
-import { createSimState, TileType, VehiclePhase, type SimState } from './state.ts';
+import { createSimState, TileType, VanPhase, VehiclePhase, type SimState } from './state.ts';
 import { updateTrafficLoad } from './traffic.ts';
 import { chargingDemand, drivingVehicles, vehiclesStep } from './vehicles.ts';
 
@@ -703,5 +703,31 @@ describe('avenues on the road', () => {
     expect(ratio(16, false)).toBe(1);
     expect(ratio(6, true)).toBe(1);
     expect(ratio(16, true)).toBe(1);
+  });
+});
+
+describe('vans in the commuter step', () => {
+  it('a driving van occupies a lane the cars must respect', () => {
+    const state = commuterTown();
+    state.vans.push({
+      id: 999,
+      depot: -1,
+      depotRoad: at(5, 10),
+      x: 5.5,
+      y: 10.5,
+      angle: 0,
+      phase: VanPhase.Driving,
+      stops: [at(8, 10)],
+      path: [at(5, 10), at(6, 10), at(7, 10), at(8, 10)],
+      pathIndex: 1,
+      charge: 0.8,
+      charging: false,
+      waitTicks: 0,
+      dwellTicks: 0,
+    });
+    const occupancy = vehiclesStep(state);
+    let total = 0;
+    for (const count of occupancy.values()) total += count;
+    expect(total).toBe(1);
   });
 });
