@@ -1,6 +1,7 @@
 import { BALANCE, TICK_RATE, TICKS_PER_DAY } from '../shared/constants.ts';
 import { neighbors4, tileIndex, tileX, tileY } from '../shared/grid.ts';
-import { PlantType, Zone } from '../shared/types.ts';
+import { MinHeap } from '../shared/heap.ts';
+import { PlantType, RoadClass, Zone } from '../shared/types.ts';
 import {
   countPopulationAndJobs,
   TileType,
@@ -8,11 +9,20 @@ import {
   type SimState,
   type Vehicle,
 } from './state.ts';
-import { laneKey, updateTrafficLoad } from './traffic.ts';
+import { laneCapacity, laneKey, updateTrafficLoad } from './traffic.ts';
+
+/** Cost of driving onto a road tile: avenues are cheaper, loaded tiles dearer. */
+function tileCost(state: SimState, tile: number): number {
+  const { roadClass, trafficLoad } = state.layers;
+  const base = roadClass[tile] === RoadClass.Avenue ? 1 / BALANCE.vehicles.avenueSpeedFactor : 1;
+  return base * (1 + BALANCE.vehicles.routeLoadPenalty * (trafficLoad[tile] / 255));
+}
 
 /**
- * Breadth-first search over road tiles. Returns the tile path from
- * `from` to `to` (both included), or null when they are not connected.
+ * Cheapest route over road tiles from `from` to `to` (both included), or
+ * null when they are not connected. Dijkstra with per-tile costs from
+ * road class and traffic load; ties break by tile index, so the result
+ * is deterministic.
  */
 export function findRoadPath(state: SimState, from: number, to: number): number[] | null {
   const { tileType } = state.layers;
@@ -21,32 +31,36 @@ export function findRoadPath(state: SimState, from: number, to: number): number[
   }
   if (from === to) return [from];
 
-  const cameFrom = new Int32Array(state.size * state.size).fill(-1);
-  cameFrom[from] = from;
-  let frontier = [from];
-  while (frontier.length > 0) {
-    const next: number[] = [];
-    for (const tile of frontier) {
-      for (const neighbor of neighbors4(tile, state.size)) {
-        if (tileType[neighbor] !== TileType.Road || cameFrom[neighbor] !== -1) {
-          continue;
-        }
+  const tiles = state.size * state.size;
+  const distance = new Float64Array(tiles).fill(Infinity);
+  const cameFrom = new Int32Array(tiles).fill(-1);
+  const settled = new Uint8Array(tiles);
+  const heap = new MinHeap();
+  distance[from] = 0;
+  heap.push(0, from);
+  while (heap.size > 0) {
+    const tile = heap.pop()!;
+    if (settled[tile]) continue;
+    settled[tile] = 1;
+    if (tile === to) break;
+    for (const neighbor of neighbors4(tile, state.size)) {
+      if (tileType[neighbor] !== TileType.Road || settled[neighbor]) continue;
+      const next = distance[tile] + tileCost(state, neighbor);
+      if (next < distance[neighbor]) {
+        distance[neighbor] = next;
         cameFrom[neighbor] = tile;
-        if (neighbor === to) {
-          const path = [to];
-          let current = to;
-          while (current !== from) {
-            current = cameFrom[current];
-            path.push(current);
-          }
-          return path.reverse();
-        }
-        next.push(neighbor);
+        heap.push(next, neighbor);
       }
     }
-    frontier = next;
   }
-  return null;
+  if (cameFrom[to] === -1) return null;
+  const path = [to];
+  let current = to;
+  while (current !== from) {
+    current = cameFrom[current];
+    path.push(current);
+  }
+  return path.reverse();
 }
 
 /** Road tiles adjacent to buildings of the given zones. */
@@ -225,7 +239,7 @@ export function vehiclesStep(state: SimState): void {
             vehicle.path = path;
             vehicle.pathIndex = 0;
             vehicle.phase = VehiclePhase.ToWork;
-            startTripClock(vehicle, step);
+            startTripClock(state, vehicle, step);
           } else {
             // Not connected (yet): try again tomorrow.
             vehicle.departureOffset = state.rng.nextInt(Math.max(1, windowTicks));
@@ -241,7 +255,7 @@ export function vehiclesStep(state: SimState): void {
             vehicle.path = path;
             vehicle.pathIndex = 0;
             vehicle.phase = VehiclePhase.ToHome;
-            startTripClock(vehicle, step);
+            startTripClock(state, vehicle, step);
           }
         }
         break;
@@ -321,19 +335,23 @@ function driveAlongPath(
   const dx = targetX - vehicle.x;
   const dy = targetY - vehicle.y;
   const distance = Math.hypot(dx, dy);
-  const move = Math.min(step, distance);
 
   // Congestion: entering a lane that is full means waiting — unless the
   // wait has gone on so long that this is a gridlock, in which case the
   // car squeezes past so traffic never freezes for good.
   const currentTile = vehicleTile(state, vehicle);
-  const nextX = distance <= step ? targetX : vehicle.x + (dx / distance) * move;
-  const nextY = distance <= step ? targetY : vehicle.y + (dy / distance) * move;
+  const stride =
+    state.layers.roadClass[currentTile] === RoadClass.Avenue
+      ? step * BALANCE.vehicles.avenueSpeedFactor
+      : step;
+  const move = Math.min(stride, distance);
+  const nextX = distance <= stride ? targetX : vehicle.x + (dx / distance) * move;
+  const nextY = distance <= stride ? targetY : vehicle.y + (dy / distance) * move;
   const nextTile = tileIndex(Math.floor(nextX), Math.floor(nextY), state.size);
   if (nextTile !== currentTile) {
     const heading = headingOf(currentTile, nextTile, state.size);
     const nextLane = laneKey(nextTile, heading);
-    const full = (occupancy.get(nextLane) ?? 0) >= BALANCE.vehicles.maxPerRoadTile;
+    const full = (occupancy.get(nextLane) ?? 0) >= laneCapacity(state, nextTile);
     if (full && vehicle.waitTicks < BALANCE.vehicles.maxWaitTicks) {
       vehicle.waitTicks++;
       return; // queue behind the jam, try again next tick
@@ -351,7 +369,7 @@ function driveAlongPath(
     vehicle.charge = Math.max(0, vehicle.charge - move * BALANCE.vehicles.batteryDrainPerTile);
   }
 
-  if (distance <= step) {
+  if (distance <= stride) {
     vehicle.pathIndex++;
     if (vehicle.pathIndex >= vehicle.path.length) {
       const arrivedAtWork = vehicle.phase === VehiclePhase.ToWork;
@@ -365,10 +383,16 @@ function driveAlongPath(
   }
 }
 
-/** Reset a vehicle's trip clock and note its free-flow duration. */
-function startTripClock(vehicle: Vehicle, step: number): void {
+/** Reset a vehicle's trip clock and note its free-flow duration (avenues count faster). */
+function startTripClock(state: SimState, vehicle: Vehicle, step: number): void {
   vehicle.tripTicks = 0;
-  vehicle.tripFreeFlowTicks = Math.max(1, Math.ceil(vehicle.path.length / step));
+  let ticks = 0;
+  for (const tile of vehicle.path) {
+    const factor =
+      state.layers.roadClass[tile] === RoadClass.Avenue ? BALANCE.vehicles.avenueSpeedFactor : 1;
+    ticks += 1 / (step * factor);
+  }
+  vehicle.tripFreeFlowTicks = Math.max(1, Math.ceil(ticks));
 }
 
 /** Congestion smoothing factor per completed commute. */

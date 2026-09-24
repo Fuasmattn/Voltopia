@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { BALANCE, TICKS_PER_DAY } from '../shared/constants.ts';
 import { tileIndex } from '../shared/grid.ts';
-import { PlantType, Zone } from '../shared/types.ts';
+import { PlantType, RoadClass, Zone } from '../shared/types.ts';
 import { placePlant } from './energy.ts';
 import { buildRoads } from './roads.ts';
 import { createSimState, TileType, VehiclePhase, type SimState } from './state.ts';
@@ -513,5 +513,151 @@ describe('commute congestion metric', () => {
     setHour(calm, 6);
     runDays(calm, 1);
     expect(jammed).toBeGreaterThan(calm.commuteCongestion);
+  });
+});
+
+describe('routing', () => {
+  /** Two parallel east-west streets joined at both ends: a ring. */
+  function ring() {
+    const state = createSimState(3, SIZE);
+    state.layers.elevation.fill(0);
+    const top = Array.from({ length: 8 }, (_, x) => at(x + 3, 4));
+    const bottom = Array.from({ length: 8 }, (_, x) => at(x + 3, 6));
+    buildRoads(state, [...top, ...bottom, at(3, 5), at(10, 5)]);
+    return { state, top, bottom };
+  }
+
+  it('matches the shortest path length on an unloaded street map', () => {
+    const state = commuterTown();
+    const path = findRoadPath(state, at(3, 10), at(18, 10))!;
+    expect(path.length).toBe(16);
+    expect(path[0]).toBe(at(3, 10));
+    expect(path[15]).toBe(at(18, 10));
+  });
+
+  it('avoids a loaded street when an empty one of equal length exists', () => {
+    const { state, top, bottom } = ring();
+    for (const tile of top) state.layers.trafficLoad[tile] = 255;
+    const path = findRoadPath(state, at(3, 5), at(10, 5))!;
+    expect(path.some((tile) => bottom.includes(tile))).toBe(true);
+    expect(path.some((tile) => top.slice(1, -1).includes(tile))).toBe(false);
+  });
+
+  it('prefers an avenue detour over a slightly shorter street', () => {
+    const state = createSimState(3, SIZE);
+    state.layers.elevation.fill(0);
+    // Top route: 9 street tiles. Bottom route: 11 tiles, all avenue
+    // (cost 1/1.5 each) except the shared destination — cheaper overall.
+    const top = Array.from({ length: 8 }, (_, x) => at(x + 3, 4));
+    const bottom = Array.from({ length: 8 }, (_, x) => at(x + 3, 7));
+    const links = [at(3, 5), at(3, 6), at(10, 5), at(10, 6)];
+    buildRoads(state, [...top, ...bottom, ...links]);
+    for (const tile of [...bottom, at(3, 6), at(10, 6)]) {
+      state.layers.roadClass[tile] = RoadClass.Avenue;
+    }
+    const path = findRoadPath(state, at(3, 5), at(10, 5))!;
+    expect(path.some((tile) => bottom.includes(tile))).toBe(true);
+    expect(path.some((tile) => top.includes(tile))).toBe(false);
+  });
+
+  it('is deterministic for equal-cost alternatives', () => {
+    const { state } = ring();
+    const a = findRoadPath(state, at(3, 5), at(10, 5));
+    const b = findRoadPath(state, at(3, 5), at(10, 5));
+    expect(a).toEqual(b);
+  });
+});
+
+describe('avenues on the road', () => {
+  function driver(state: SimState, id: number, tile: number, path: number[], workRoad: number) {
+    state.vehicles.push({
+      id,
+      homeRoad: tile,
+      workRoad,
+      x: (tile % SIZE) + 0.5,
+      y: Math.floor(tile / SIZE) + 0.5,
+      angle: 0,
+      phase: VehiclePhase.ToWork,
+      path,
+      pathIndex: 0,
+      departureOffset: 0,
+      charge: 0.8,
+      tripTicks: 0,
+      tripFreeFlowTicks: 0,
+      charging: false,
+      waitTicks: 0,
+    });
+  }
+
+  function residents(state: SimState, xFrom: number, y: number): void {
+    for (let i = 0; i < 4; i++) {
+      state.layers.zone[at(xFrom + i, y)] = Zone.Residential;
+      state.layers.density[at(xFrom + i, y)] = 3;
+    }
+  }
+
+  it('an avenue lane admits avenueMaxPerTile cars', () => {
+    const state = createSimState(1, SIZE);
+    state.layers.elevation.fill(0);
+    const a = at(3, 5);
+    const b = at(4, 5);
+    const c = at(5, 5);
+    buildRoads(state, [a, b, c], true);
+    residents(state, 3, 4);
+    driver(state, 100, a, [b, c], c);
+    for (let i = 0; i < BALANCE.vehicles.avenueMaxPerTile - 1; i++) {
+      driver(state, 101 + i, b, [b, c], c);
+    }
+    const follower = state.vehicles[0];
+    for (let i = 0; i < 3; i++) {
+      vehiclesStep(state);
+      for (const blocker of state.vehicles.slice(1)) {
+        blocker.x = (b % SIZE) + 0.5;
+        blocker.pathIndex = 0;
+      }
+    }
+    expect(follower.x).toBeGreaterThanOrEqual(4); // entered b: 3 blockers leave room on a 4-car lane
+  });
+
+  it('crosses an avenue tile in fewer ticks than a street tile', () => {
+    const ticksToCross = (avenue: boolean): number => {
+      const state = createSimState(1, SIZE);
+      state.layers.elevation.fill(0);
+      const road = Array.from({ length: 6 }, (_, x) => at(x + 2, 5));
+      buildRoads(state, road, avenue);
+      residents(state, 2, 4);
+      driver(state, 100, road[0], road, road[5]);
+      const car = state.vehicles[0];
+      state.tick = TICKS_PER_DAY / 2;
+      let ticks = 0;
+      while (car.phase === VehiclePhase.ToWork && ticks < 200) {
+        vehiclesStep(state);
+        state.tick++;
+        ticks++;
+      }
+      return ticks;
+    };
+    expect(ticksToCross(true)).toBeLessThan(ticksToCross(false));
+  });
+
+  it('free-flow ticks account for avenue speed', () => {
+    const estimate = (avenue: boolean): number => {
+      const state = commuterTown();
+      if (avenue) {
+        for (let i = 0; i < state.layers.tileType.length; i++) {
+          if (state.layers.tileType[i] === TileType.Road) {
+            state.layers.roadClass[i] = RoadClass.Avenue;
+          }
+        }
+      }
+      setHour(state, BALANCE.vehicles.commute.morningStartHour);
+      vehiclesStep(state); // spawn the fleet
+      for (const v of state.vehicles) v.departureOffset = 0;
+      vehiclesStep(state); // everyone departs; same seed → same homes and workplaces
+      return state.vehicles[0].tripFreeFlowTicks;
+    };
+    const street = estimate(false);
+    expect(street).toBeGreaterThan(0);
+    expect(estimate(true)).toBeLessThan(street);
   });
 });
