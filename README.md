@@ -55,7 +55,9 @@ _Screenshots coming soon — run `pnpm dev`, build a city, and snap away._
   the evening; charging hubs shift the load into the PV-friendly daytime,
   and the smart-charging upgrade follows the generation surplus
   automatically. Cars commute on the cheapest route; avenues carry more
-  traffic faster, and the traffic overlay shows where it jams.
+  traffic faster, and the traffic overlay shows where it jams. A logistics
+  depot sends electric vans to the shops; retail without deliveries stops
+  growing.
 - **Economy**: construction costs, taxes (with a slider), upkeep, biogas
   fuel costs.
 - **Overlays** show supply status (connected, undersupplied, not connected
@@ -67,7 +69,8 @@ Beyond the core loop: **multi-day weather fronts** (including genuine
 Dunkelflaute spells), **rooftop PV** that grows with density, a limited
 **grid interconnector** (expensive imports, modest export revenue),
 **abandonment** of chronically unpowered buildings, **fire and police
-stations** with powered coverage rings, a services overlay, and city
+stations** with powered coverage rings, a services overlay,
+**delivery traffic** with a depot, vans and a well-stocked goal, and city
 goals (including a safe-city goal and a free-flow traffic goal), an
 **interactive tutorial**, warning icons in the world, touch gestures,
 tool hotkeys, synthesized sound effects, and a settings panel with save

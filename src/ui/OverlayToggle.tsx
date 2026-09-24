@@ -32,6 +32,12 @@ const MODES: Array<{
     label: 'overlay.traffic',
     title: 'overlay.traffic.title',
   },
+  {
+    mode: OverlayMode.Deliveries,
+    id: 'deliveries',
+    label: 'overlay.deliveries',
+    title: 'overlay.deliveries.title',
+  },
 ];
 
 export function OverlayToggle({

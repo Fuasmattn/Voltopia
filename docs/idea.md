@@ -129,6 +129,10 @@ in balance.
   (matching PV generation)
 - "Smart Charging" upgrade: charging load automatically follows generation
   surplus
+- Delivery traffic: a logistics depot sends electric vans on tours to the
+  retail buildings; a shop without a delivery for 1.5 days stops
+  densifying. Vans share lanes and traffic load with commuters and charge
+  at the depot (added after the MVP; see the deliveries spec)
 
 ### HUD & Overlays
 

@@ -8,6 +8,7 @@
  */
 import { TICKS_PER_DAY } from '../shared/constants.ts';
 import {
+  DeliveryState,
   PlantType,
   RoadClass,
   SupplyStatus,
@@ -52,6 +53,12 @@ const BLOCKER_LABEL: Record<GrowthBlocker, TranslationKey> = {
   notLand: 'inspect.blocker.notLand',
   noFireCoverage: 'inspect.blocker.noFireCoverage',
   noDeliveries: 'inspect.blocker.noDeliveries',
+};
+
+const DELIVERY_LABEL: Record<DeliveryState, TranslationKey> = {
+  [DeliveryState.Supplied]: 'inspect.delivery.supplied',
+  [DeliveryState.Due]: 'inspect.delivery.due',
+  [DeliveryState.Unsupplied]: 'inspect.delivery.unsupplied',
 };
 
 const SUPPLY_LABEL: Record<SupplyStatus, TranslationKey> = {
@@ -278,6 +285,54 @@ export function TileInspector({ info, onClose }: { info: TileInfo; onClose: () =
             testId="inspect-traffic-load"
           />
           <Row label={t('inspect.laneCapacity')} value={String(info.laneCapacity)} tone="muted" />
+        </section>
+      )}
+
+      {isBuilding && info.zone === Zone.Retail && (
+        <section data-testid="inspect-deliveries">
+          <h3>{t('inspect.section.deliveries')}</h3>
+          <Row
+            label={t('inspect.deliveryState')}
+            value={t(DELIVERY_LABEL[info.deliveryState])}
+            tone={
+              info.deliveryState === DeliveryState.Supplied
+                ? 'positive'
+                : info.deliveryState === DeliveryState.Due
+                  ? undefined
+                  : 'negative'
+            }
+            testId="inspect-delivery-state"
+          />
+          <Row
+            label={t('inspect.lastDelivery')}
+            value={
+              info.deliveryAgeTicks >= 65535
+                ? t('inspect.lastDelivery.never')
+                : t('inspect.lastDelivery.daysAgo', {
+                    days: (info.deliveryAgeTicks / TICKS_PER_DAY).toFixed(1),
+                  })
+            }
+            tone="muted"
+          />
+        </section>
+      )}
+
+      {info.depot && (
+        <section data-testid="inspect-depot">
+          <h3>{t('inspect.section.deliveries')}</h3>
+          <Row
+            label={t('inspect.depot.vans')}
+            value={t('inspect.depot.vansValue', {
+              driving: info.depot.vansDriving,
+              charging: info.depot.vansCharging,
+              total: info.depot.vansTotal,
+            })}
+          />
+          <Row
+            label={t('inspect.depot.shopsInReach')}
+            value={String(info.depot.shopsInReach)}
+            tone={info.depot.shopsInReach > 0 ? 'positive' : 'negative'}
+          />
         </section>
       )}
 

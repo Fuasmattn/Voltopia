@@ -59,6 +59,24 @@ export function CityVitals({ stats }: { stats: GlobalStats }) {
         <span className="hud-stat-value">🚗 {stats.traffic.congestion.toFixed(1)}×</span>
         <span className="hud-stat-label">{t('hud.traffic')}</span>
       </div>
+      {stats.deliveries.shops > 0 && (
+        <div
+          className={`hud-stat ${
+            stats.deliveries.suppliedShare < BALANCE.deliveries.goalSuppliedShare ? 'negative' : ''
+          }`}
+          data-testid="deliveries"
+          title={t('hud.deliveries.title', {
+            supplied: Math.round(stats.deliveries.suppliedShare * stats.deliveries.shops),
+            shops: stats.deliveries.shops,
+            vans: stats.deliveries.driving,
+          })}
+        >
+          <span className="hud-stat-value">
+            🚚 {Math.round(stats.deliveries.suppliedShare * 100)}%
+          </span>
+          <span className="hud-stat-label">{t('hud.deliveries')}</span>
+        </div>
+      )}
       <DemandBars demand={stats.demand} />
     </div>
   );
