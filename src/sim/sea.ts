@@ -1,7 +1,7 @@
 import { BALANCE, TICKS_PER_DAY } from '../shared/constants.ts';
 import { inBounds, neighbors4, tileIndex, tileX, tileY } from '../shared/grid.ts';
 import { Rng } from '../shared/rng.ts';
-import { Terrain, type TideState } from '../shared/types.ts';
+import { Terrain, TileType, type TideState } from '../shared/types.ts';
 import { markDirty, type SimState } from './state.ts';
 
 /** Keeps the coastline independent of terrain, river and gameplay RNG. */
@@ -202,4 +202,39 @@ export function tidalSiteFactor(state: SimState, index: number): number {
 export function tideState(tick: number): TideState {
   const level = tideLevel(tick);
   return { level, factor: tideFactor(tick), rising: level > tideLevel(tick - 1) };
+}
+
+/**
+ * Share (0..1) of buildings with a sea tile within the coast radius —
+ * the sea view that raises happiness. Mirrors `forestCoverage`.
+ */
+export function seaCoverage(state: SimState): number {
+  const { layers } = state;
+  const radius = BALANCE.sea.coastRadius;
+  let buildings = 0;
+  let covered = 0;
+  for (let i = 0; i < layers.tileType.length; i++) {
+    if (layers.tileType[i] !== TileType.Empty || layers.density[i] === 0) continue;
+    buildings++;
+    if (hasSeaWithin(state, i, radius)) covered++;
+  }
+  return buildings > 0 ? covered / buildings : 0;
+}
+
+/** True when any tile in the Chebyshev ring around `index` is sea. */
+function hasSeaWithin(state: SimState, index: number, radius: number): boolean {
+  const { terrain } = state.layers;
+  const { size } = state;
+  const cx = tileX(index, size);
+  const cy = tileY(index, size);
+  const x0 = Math.max(0, cx - radius);
+  const x1 = Math.min(size - 1, cx + radius);
+  const y0 = Math.max(0, cy - radius);
+  const y1 = Math.min(size - 1, cy + radius);
+  for (let y = y0; y <= y1; y++) {
+    for (let x = x0; x <= x1; x++) {
+      if (terrain[y * size + x] === Terrain.Sea) return true;
+    }
+  }
+  return false;
 }

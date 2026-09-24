@@ -1,10 +1,10 @@
 import { describe, expect, it } from 'vitest';
 import { BALANCE, TICKS_PER_DAY } from '../shared/constants.ts';
-import { Terrain } from '../shared/types.ts';
+import { Terrain, TileType, Zone } from '../shared/types.ts';
 import { createSimState, type SimState } from './state.ts';
 import { generateTerrain } from './terrain.ts';
 import { generateWater } from './water.ts';
-import { tideFactor, tideLevel, tidalSiteFactor, windTurbineFactor } from './sea.ts';
+import { seaCoverage, tideFactor, tideLevel, tidalSiteFactor, windTurbineFactor } from './sea.ts';
 
 /** A generated map: elevation and water (river, lake, sea) but no zoning. */
 function generatedState(seed: number, size: number): SimState {
@@ -237,5 +237,29 @@ describe('wind turbine factor', () => {
     state.layers.terrain.fill(Terrain.Land);
     const tile = 5 * 16 + 5;
     expect(windTurbineFactor(state, tile, 2.5)).toBe(2.5);
+  });
+});
+
+describe('coastal happiness coverage', () => {
+  it('counts only buildings with the sea within the coast radius', () => {
+    const state = createSimState(1, 32);
+    state.layers.terrain.fill(Terrain.Land);
+    for (let x = 0; x < state.size; x++) state.layers.terrain[x] = Terrain.Sea;
+
+    const radius = BALANCE.sea.coastRadius;
+    // One building just inside the radius, one far inland.
+    const near = radius * state.size + 5;
+    const far = (radius + 6) * state.size + 5;
+    for (const index of [near, far]) {
+      state.layers.tileType[index] = TileType.Empty;
+      state.layers.zone[index] = Zone.Residential;
+      state.layers.density[index] = 1;
+    }
+    expect(seaCoverage(state)).toBeCloseTo(0.5, 5);
+  });
+
+  it('is zero without buildings', () => {
+    const state = createSimState(1, 32);
+    expect(seaCoverage(state)).toBe(0);
   });
 });
