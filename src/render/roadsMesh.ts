@@ -1,4 +1,5 @@
 import * as THREE from 'three';
+import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
 import { DIR_E, DIR_N, DIR_S, DIR_W, DIRECTIONS } from '../shared/grid.ts';
 import type { TileDiff } from '../shared/types.ts';
 import { RoadClass, Terrain, TileType } from '../shared/types.ts';
@@ -29,6 +30,12 @@ const DECK_HEIGHT = 0.04;
 const RAIL_THICKNESS = 0.06;
 const RAIL_HEIGHT = 0.14;
 
+const SHELTER_COLOR = 0x4a5560;
+const SIGN_COLOR = 0xf2d16b;
+/** Shelter stands at the south-west kerb, clear of the lamp corner (north-east). */
+const SHELTER_OFFSET_X = 0.16;
+const SHELTER_OFFSET_Z = 0.84;
+
 /**
  * Instanced road tiles. Each road tile is composed of a center pad plus an
  * arm toward every connected neighbor, so straights, curves, T-junctions,
@@ -44,10 +51,14 @@ export class RoadsMesh implements DiffLayer {
   private readonly lampHeadMaterial: THREE.MeshBasicMaterial;
   private readonly decks: THREE.InstancedMesh;
   private readonly rails: THREE.InstancedMesh;
+  private readonly shelters: THREE.InstancedMesh;
+  private readonly signs: THREE.InstancedMesh;
+  private readonly signMaterial: THREE.MeshBasicMaterial;
   private readonly gridSize: number;
   private readonly roadMasks: Int16Array; // -1 = no road, else mask 0..15
   private readonly roadClasses: Uint8Array;
   private readonly terrain: Uint8Array;
+  private readonly busStops: Uint8Array;
   private readonly matrix = new THREE.Matrix4();
 
   constructor(
@@ -59,6 +70,7 @@ export class RoadsMesh implements DiffLayer {
     this.roadMasks = new Int16Array(gridSize * gridSize).fill(-1);
     this.roadClasses = new Uint8Array(gridSize * gridSize);
     this.terrain = new Uint8Array(gridSize * gridSize);
+    this.busStops = new Uint8Array(gridSize * gridSize);
     const geometry = new THREE.BoxGeometry(1, 1, 1);
     const material = new THREE.MeshLambertMaterial({ color: PALETTE.road });
     this.mesh = new THREE.InstancedMesh(
@@ -120,6 +132,38 @@ export class RoadsMesh implements DiffLayer {
     this.lampHeads.count = 0;
     scene.add(this.lampHeads);
 
+    const post1 = new THREE.BoxGeometry(0.03, 0.22, 0.03);
+    post1.translate(-0.09, 0.11, 0);
+    const post2 = new THREE.BoxGeometry(0.03, 0.22, 0.03);
+    post2.translate(0.09, 0.11, 0);
+    const roof = new THREE.BoxGeometry(0.26, 0.03, 0.14);
+    roof.translate(0, 0.23, 0);
+    const shelterGeometry = mergeGeometries([post1, post2, roof]);
+    this.shelters = new THREE.InstancedMesh(
+      shelterGeometry,
+      new THREE.MeshLambertMaterial({ color: SHELTER_COLOR }),
+      gridSize * gridSize,
+    );
+    // Instance transforms live across the whole grid; the base geometry's
+    // bounds would wrongly cull the mesh, so culling is disabled.
+    this.shelters.frustumCulled = false;
+    this.shelters.count = 0;
+    scene.add(this.shelters);
+
+    const signGeometry = new THREE.BoxGeometry(0.06, 0.08, 0.01);
+    signGeometry.translate(0.12, 0.3, 0);
+    this.signMaterial = new THREE.MeshBasicMaterial({
+      color: SIGN_COLOR,
+      transparent: true,
+      opacity: 0.6,
+    });
+    this.signs = new THREE.InstancedMesh(signGeometry, this.signMaterial, gridSize * gridSize);
+    // Instance transforms live across the whole grid; the base geometry's
+    // bounds would wrongly cull the mesh, so culling is disabled.
+    this.signs.frustumCulled = false;
+    this.signs.count = 0;
+    scene.add(this.signs);
+
     const deckGeometry = new THREE.BoxGeometry(1, 1, 1);
     this.decks = new THREE.InstancedMesh(
       deckGeometry,
@@ -147,10 +191,11 @@ export class RoadsMesh implements DiffLayer {
     scene.add(this.rails);
   }
 
-  /** Streetlamps glow warmly at night. */
+  /** Streetlamps and stop signs glow warmly at night. */
   setEnvironment(environment: RenderEnvironment): void {
     this.lampHeadMaterial.opacity = 0.25 + 0.75 * environment.nightFactor;
     this.lampHeadMaterial.color.setHex(environment.nightFactor > 0.4 ? 0xffcf6e : 0xffe3a1);
+    this.signMaterial.opacity = 0.6 + 0.4 * environment.nightFactor;
   }
 
   applyDiffs(diffs: TileDiff[]): void {
@@ -158,6 +203,7 @@ export class RoadsMesh implements DiffLayer {
     for (const diff of diffs) {
       const mask = diff.tileType === TileType.Road ? diff.roadMask : -1;
       const roadClass = diff.tileType === TileType.Road ? diff.roadClass : 0;
+      const busStop = diff.tileType === TileType.Road ? diff.busStop : 0;
       if (this.terrain[diff.index] !== diff.terrain) {
         this.terrain[diff.index] = diff.terrain;
         changed = true;
@@ -168,6 +214,10 @@ export class RoadsMesh implements DiffLayer {
       }
       if (this.roadClasses[diff.index] !== roadClass) {
         this.roadClasses[diff.index] = roadClass;
+        changed = true;
+      }
+      if (this.busStops[diff.index] !== busStop) {
+        this.busStops[diff.index] = busStop;
         changed = true;
       }
     }
@@ -244,6 +294,7 @@ export class RoadsMesh implements DiffLayer {
     this.centreLines.count = lineCount;
     this.centreLines.instanceMatrix.needsUpdate = true;
     this.rebuildLamps();
+    this.rebuildShelters();
     this.rebuildBridges();
   }
 
@@ -272,6 +323,33 @@ export class RoadsMesh implements DiffLayer {
     this.lampHeads.count = count;
     this.lampPoles.instanceMatrix.needsUpdate = true;
     this.lampHeads.instanceMatrix.needsUpdate = true;
+  }
+
+  /** One shelter with a lit sign at the kerb of every stop tile. */
+  private rebuildShelters(): void {
+    let count = 0;
+    for (let index = 0; index < this.busStops.length; index++) {
+      if (this.busStops[index] === 0 || this.roadMasks[index] < 0) continue;
+      const px = (index % this.gridSize) + SHELTER_OFFSET_X;
+      const pz = Math.floor(index / this.gridSize) + SHELTER_OFFSET_Z;
+      const lift = this.isBridge(index)
+        ? this.elevation.maxCornerY(index)
+        : this.elevation.surfaceY(px, pz);
+      this.matrix.identity();
+      this.matrix.setPosition(px, lift, pz);
+      this.shelters.setMatrixAt(count, this.matrix);
+      this.signs.setMatrixAt(count, this.matrix);
+      count++;
+    }
+    this.shelters.count = count;
+    this.signs.count = count;
+    this.shelters.instanceMatrix.needsUpdate = true;
+    this.signs.instanceMatrix.needsUpdate = true;
+  }
+
+  /** Whether a bus stop is marked on the tile (for the tool's cost preview). */
+  hasBusStop(index: number): boolean {
+    return this.busStops[index] !== 0;
   }
 
   /**

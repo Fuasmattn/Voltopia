@@ -324,6 +324,11 @@ export class GameRenderer {
     return this.roadsMesh.roadClassAt(index);
   }
 
+  /** Whether a bus stop is marked on the tile, for the tool's cost preview. */
+  busStopAt(index: number): boolean {
+    return this.roadsMesh.hasBusStop(index);
+  }
+
   /** Elevation level of a tile, tracked from diffs. */
   levelAt(index: number): number {
     return this.elevation.levelAt(index);

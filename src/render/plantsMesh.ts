@@ -54,6 +54,10 @@ const COLORS = {
   depotRoof: 0xe4e7ea,
   depotDoor: 0x3a4048,
   depotRamp: 0x6f7a86,
+  busHall: 0x5b8fc7,
+  busRoof: 0xe4e7ea,
+  busDoor: 0x3a4048,
+  busApron: 0x6f7a86,
 } as const;
 
 /** Where a plant stands: which neighbours are water (for hydro shapes). */
@@ -220,6 +224,14 @@ function plantBoxParts(plant: PlantType, site: PlantSite): BoxPart[] {
         { sx: 0.88, sy: 0.04, sz: 0.66, ox: 0, oy: 0.3, oz: 0.06, color: COLORS.depotRoof },
         { sx: 0.3, sy: 0.22, sz: 0.03, ox: -0.15, oy: 0, oz: -0.26, color: COLORS.depotDoor },
         { sx: 0.5, sy: 0.06, sz: 0.2, ox: 0, oy: 0, oz: -0.36, color: COLORS.depotRamp },
+      ];
+    case PlantType.BusDepot:
+      return [
+        // Long garage hall with a pale roof, a wide door and a bus apron.
+        { sx: 0.86, sy: 0.32, sz: 0.5, ox: 0, oy: 0, oz: 0.12, color: COLORS.busHall },
+        { sx: 0.9, sy: 0.04, sz: 0.54, ox: 0, oy: 0.32, oz: 0.12, color: COLORS.busRoof },
+        { sx: 0.5, sy: 0.24, sz: 0.03, ox: 0, oy: 0, oz: -0.14, color: COLORS.busDoor },
+        { sx: 0.8, sy: 0.03, sz: 0.24, ox: 0, oy: 0, oz: -0.3, color: COLORS.busApron },
       ];
     default:
       return [];

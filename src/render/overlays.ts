@@ -6,6 +6,7 @@ import {
   PlantType,
   SERVICE_FIRE,
   SERVICE_POLICE,
+  StopState,
   SupplyStatus,
   TileType,
   trafficLevel,
@@ -36,6 +37,15 @@ const DELIVERY_COLORS = {
   depot: 0x5b9bd5,
 } as const;
 
+const TRANSIT_COLORS = {
+  [StopState.Served]: 0x4cd964,
+  [StopState.Due]: 0xffb347,
+  [StopState.Unserved]: 0xe05263,
+  covered: 0x8fd6a4,
+  uncovered: 0x6b7280,
+  depot: 0x5b9bd5,
+} as const;
+
 interface OverlayTile {
   zone: Zone;
   density: number;
@@ -45,13 +55,16 @@ interface OverlayTile {
   trafficLoad: number;
   deliveryState: number;
   plantType: PlantType;
+  busStop: number;
+  stopState: number;
+  transitCover: number;
 }
 
 /**
  * Toggleable color maps over the city: supply status of every building,
  * growth demand tinting all zoned tiles, fire/police service coverage of
- * every building, per-tile traffic congestion on roads, or delivery
- * status of shops and depots.
+ * every building, per-tile traffic congestion on roads, delivery status
+ * of shops and depots, or bus coverage and stop service.
  */
 export class OverlaysMesh implements DiffLayer {
   private readonly mesh: THREE.InstancedMesh;
@@ -100,7 +113,8 @@ export class OverlaysMesh implements DiffLayer {
         diff.zone !== Zone.None ||
         diff.density > 0 ||
         diff.tileType === TileType.Road ||
-        diff.plantType === PlantType.LogisticsDepot
+        diff.plantType === PlantType.LogisticsDepot ||
+        diff.plantType === PlantType.BusDepot
       ) {
         this.tiles.set(diff.index, {
           zone: diff.zone,
@@ -111,6 +125,9 @@ export class OverlaysMesh implements DiffLayer {
           trafficLoad: diff.trafficLoad,
           deliveryState: diff.deliveryState,
           plantType: diff.plantType,
+          busStop: diff.busStop,
+          stopState: diff.stopState,
+          transitCover: diff.transitCover,
         });
       } else {
         this.tiles.delete(diff.index);
@@ -182,6 +199,17 @@ export class OverlaysMesh implements DiffLayer {
             tile.density > 0
           ) {
             colorHex = DELIVERY_COLORS[tile.deliveryState as DeliveryState] ?? null;
+          }
+        } else if (this.mode === OverlayMode.Transit) {
+          if (tile.tileType === TileType.Plant && tile.plantType === PlantType.BusDepot) {
+            colorHex = TRANSIT_COLORS.depot;
+          } else if (tile.tileType === TileType.Road) {
+            colorHex =
+              tile.busStop !== 0
+                ? (TRANSIT_COLORS[tile.stopState as StopState] ?? null)
+                : tile.transitCover !== 0
+                  ? TRANSIT_COLORS.covered
+                  : TRANSIT_COLORS.uncovered;
           }
         }
         if (colorHex === null) continue;

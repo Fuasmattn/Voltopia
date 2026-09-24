@@ -9,6 +9,7 @@ const COLORS = {
   river: '#4d8fc4',
   lake: '#3f7fb5',
   powerLine: '#e8d76a',
+  busStop: '#f2d16b',
   zoned: {
     [Zone.Residential]: '#a9d3ab',
     [Zone.Commercial]: '#a9c3e0',
@@ -31,6 +32,7 @@ const COLORS = {
     [PlantType.FireStation]: '#c0392b',
     [PlantType.PoliceStation]: '#2f5fa8',
     [PlantType.LogisticsDepot]: '#8d99a6',
+    [PlantType.BusDepot]: '#5b8fc7',
   } as Record<number, string>,
 } as const;
 
@@ -76,6 +78,7 @@ export class MinimapLayer implements DiffLayer {
       return diff.terrain === Terrain.River ? COLORS.river : COLORS.lake;
     }
     if (diff.tileType === TileType.Road) {
+      if (diff.busStop !== 0) return COLORS.busStop;
       return diff.roadClass === RoadClass.Avenue ? COLORS.avenue : COLORS.road;
     }
     if (diff.tileType === TileType.Plant) {
