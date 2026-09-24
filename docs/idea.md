@@ -169,6 +169,43 @@ terrain elevation, sound, multiplayer, electricity market/import/
 export. Design the architecture so that additional layers, building types,
 and energy sources can easily be added later.
 
+(Most of these shipped after the MVP: pathfinding, water + hydro,
+terrain elevation, sound, the import/export market, and more.)
+
+## Future Ideas (post-MVP backlog)
+
+Collected 2026-09-24; roughly in the order we want to build them.
+
+- **Hydrogen & electrolysers** (in progress): a hydrogen plant that
+  electrolyses surplus that would otherwise be curtailed, stores H2,
+  re-electrifies it in a Dunkelflaute, and sells the overflow once the
+  tank is full — curtailment gets a value.
+- **Dynamic electricity market**: the existing import/export market
+  gets a moving spot price driven by weather/time of the neighbouring
+  region, a price chart, and storage arbitrage (charge cheap, sell
+  dear).
+- **Forests & nature**: forest tiles (natural + plantable) with
+  CO2/happiness value, a felling malus, conflicts like "wind park in
+  the forest?", maybe a nature-value overlay. Pairs well with cliffs —
+  unbuildable no longer means useless.
+- **Sea edge & tidal power**: one seed-chosen map edge becomes sea;
+  tidal plants generate on a deterministic ~12.4 h cycle — predictable,
+  unlike wind and solar.
+- **Railways**: trains connecting villages/districts on large maps;
+  best built after per-district grids so regions mean something.
+- **Smart-meter rollout**: turn the smart-charging toggle into a
+  mechanic — per-household rollout costs, load shifting for heat
+  pumps/households, richer live graphs.
+- **Disasters/events**: storms stopping turbines or cutting lines,
+  fires (finally giving fire stations an active role), river floods.
+- **Heat sector**: heat pumps as seasonal winter load, district
+  heating/power-to-heat as a consumer and storage.
+- **Geothermal plants** at special terrain spots.
+- **Demand response**: contracts with industry to shed load in a
+  Dunkelflaute; maybe a grid-frequency minigame.
+- **Per-district grids** (deferred earlier): separate grid islands
+  with their own balance, coupled by substations.
+
 ## Way of Working
 
 - Start with a short architecture and implementation plan and wait for my
