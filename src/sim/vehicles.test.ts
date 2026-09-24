@@ -89,6 +89,15 @@ describe('vehiclesStep (commuting)', () => {
     expect(state.vehicles).toHaveLength(0);
   });
 
+  it('a stale traffic load still decays without residential buildings', () => {
+    const state = createSimState(1, SIZE);
+    const road = at(2, 2);
+    buildRoads(state, [road, at(3, 2)]);
+    state.layers.trafficLoad[road] = 255;
+    for (let i = 0; i < 400; i++) vehiclesStep(state);
+    expect(state.layers.trafficLoad[road]).toBe(0);
+  });
+
   it('vehicles drive to work in the morning and are parked before dawn', () => {
     const state = commuterTown(7, 200);
     setHour(state, 5);
@@ -659,5 +668,33 @@ describe('avenues on the road', () => {
     const street = estimate(false);
     expect(street).toBeGreaterThan(0);
     expect(estimate(true)).toBeLessThan(street);
+  });
+
+  it('a lone car on an empty road matches its own free-flow estimate exactly', () => {
+    const ratio = (tiles: number, avenue: boolean): number => {
+      const state = createSimState(1, SIZE);
+      state.layers.elevation.fill(0);
+      const road = Array.from({ length: tiles }, (_, x) => at(x + 2, 5));
+      buildRoads(state, road, avenue);
+      residents(state, 2, 4);
+      driver(state, 100, road[0], [], road[road.length - 1]);
+      const car = state.vehicles[0];
+      // Depart via the normal path (so startTripClock runs); widen the
+      // literal so TS doesn't narrow the phase check below to "never".
+      car.phase = VehiclePhase.ParkedHome as VehiclePhase;
+      state.tick = TICKS_PER_DAY / 2; // noon: departs at once, no evening departure to interfere
+      let ticks = 0;
+      while (car.phase !== VehiclePhase.ParkedWork && ticks < 200) {
+        vehiclesStep(state);
+        state.tick++;
+        ticks++;
+      }
+      expect(car.phase).toBe(VehiclePhase.ParkedWork);
+      return car.tripTicks / car.tripFreeFlowTicks;
+    };
+    expect(ratio(6, false)).toBe(1);
+    expect(ratio(16, false)).toBe(1);
+    expect(ratio(6, true)).toBe(1);
+    expect(ratio(16, true)).toBe(1);
   });
 });

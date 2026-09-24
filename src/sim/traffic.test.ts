@@ -79,4 +79,17 @@ describe('updateTrafficLoad', () => {
     expect(state.layers.trafficLoad[at(9, 9)]).toBe(0);
     expect(state.dirty.has(at(9, 9))).toBe(false);
   });
+
+  it('settles at a non-integer target instead of oscillating forever', () => {
+    const state = roadState();
+    const avenue = at(5, 5);
+    const oneCar = new Map([[laneKey(avenue, 1), 1]]); // target = 1/4 * 255 = 63.75
+    for (let i = 0; i < 400; i++) updateTrafficLoad(state, oneCar);
+    const settled = state.layers.trafficLoad[avenue];
+    state.dirty.clear();
+    updateTrafficLoad(state, oneCar);
+    updateTrafficLoad(state, oneCar);
+    expect(state.layers.trafficLoad[avenue]).toBe(settled);
+    expect(state.dirty.size).toBe(0);
+  });
 });

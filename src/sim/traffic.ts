@@ -28,8 +28,10 @@ export function laneCapacity(state: SimState, tile: number): number {
  * Fold this tick's lane occupancy into the smoothed per-tile load. The
  * busiest lane over the tile's lane capacity is the tick's target; the
  * stored value moves toward it by trafficLoadSmoothing, always at least
- * one step, so it reaches 0 and 255 exactly. A tile is marked dirty only
- * when its quantised level changes, which keeps the diffs small.
+ * one step but never past the (possibly fractional) target, so it
+ * settles exactly instead of oscillating around a non-integer target. A
+ * tile is marked dirty only when its quantised level changes, which
+ * keeps the diffs small.
  */
 export function updateTrafficLoad(state: SimState, occupancy: Map<number, number>): void {
   const { layers } = state;
@@ -46,8 +48,12 @@ export function updateTrafficLoad(state: SimState, occupancy: Map<number, number
       next = 0;
     } else {
       const occupied = Math.min(1, (busiest.get(i) ?? 0) / laneCapacity(state, i));
-      const delta = (occupied * 255 - previous) * smoothing;
-      next = previous + (delta > 0 ? Math.ceil(delta) : Math.floor(delta));
+      const target = occupied * 255;
+      const delta = (target - previous) * smoothing;
+      next =
+        delta > 0
+          ? Math.min(Math.floor(target), previous + Math.ceil(delta))
+          : Math.max(Math.ceil(target), previous + Math.floor(delta));
       next = Math.min(255, Math.max(0, next));
     }
     if (next === previous) continue;

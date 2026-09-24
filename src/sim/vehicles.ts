@@ -150,6 +150,7 @@ export function vehiclesStep(state: SimState): void {
 
   if (homeRoads.length === 0) {
     state.vehicles.length = 0;
+    updateTrafficLoad(state, new Map()); // let a stale load decay even without commuters
     return;
   }
 
@@ -383,16 +384,25 @@ function driveAlongPath(
   }
 }
 
-/** Reset a vehicle's trip clock and note its free-flow duration (avenues count faster). */
+/**
+ * Reset a vehicle's trip clock and note its free-flow duration (avenues
+ * count faster). Mirrors driveAlongPath exactly: the first driving tick
+ * always snaps onto path[0] (the vehicle already sits there, parked),
+ * then each further tile is paid for by the SOURCE tile's road class,
+ * quantised the same way driveAlongPath quantises movement (whole
+ * ticks, rounded up), so an empty road reports a ratio of exactly 1.
+ */
 function startTripClock(state: SimState, vehicle: Vehicle, step: number): void {
   vehicle.tripTicks = 0;
-  let ticks = 0;
-  for (const tile of vehicle.path) {
+  let ticks = 1; // the first driving tick snaps onto path[0]
+  for (let i = 0; i < vehicle.path.length - 1; i++) {
     const factor =
-      state.layers.roadClass[tile] === RoadClass.Avenue ? BALANCE.vehicles.avenueSpeedFactor : 1;
-    ticks += 1 / (step * factor);
+      state.layers.roadClass[vehicle.path[i]] === RoadClass.Avenue
+        ? BALANCE.vehicles.avenueSpeedFactor
+        : 1;
+    ticks += Math.ceil(1 / (step * factor));
   }
-  vehicle.tripFreeFlowTicks = Math.max(1, Math.ceil(ticks));
+  vehicle.tripFreeFlowTicks = Math.max(1, ticks);
 }
 
 /** Congestion smoothing factor per completed commute. */
