@@ -13,6 +13,7 @@ export const GOAL_IDS = [
   'evFleet',
   'exporter',
   'hydroPower',
+  'tidalPower',
   'winterResilience',
   'summerResilience',
   'safeCity',
@@ -116,6 +117,9 @@ export function goalsStep(state: SimState): void {
   }
   if (!achieved.has('hydroPower') && countPlants(state, PlantType.RunOfRiver) > 0) {
     achieved.add('hydroPower');
+  }
+  if (!achieved.has('tidalPower') && countPlants(state, PlantType.TidalPlant) > 0) {
+    achieved.add('tidalPower');
   }
   if (!achieved.has('gridBuilder') && hasPowerLines(state)) {
     achieved.add('gridBuilder');
