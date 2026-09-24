@@ -9,6 +9,7 @@
 import { TICKS_PER_DAY } from '../shared/constants.ts';
 import {
   DeliveryState,
+  MAX_DELIVERY_AGE,
   PlantType,
   RoadClass,
   SupplyStatus,
@@ -306,7 +307,7 @@ export function TileInspector({ info, onClose }: { info: TileInfo; onClose: () =
           <Row
             label={t('inspect.lastDelivery')}
             value={
-              info.deliveryAgeTicks >= 65535
+              info.deliveryAgeTicks >= MAX_DELIVERY_AGE
                 ? t('inspect.lastDelivery.never')
                 : t('inspect.lastDelivery.daysAgo', {
                     days: (info.deliveryAgeTicks / TICKS_PER_DAY).toFixed(1),

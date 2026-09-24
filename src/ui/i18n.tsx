@@ -378,7 +378,7 @@ const en = {
   'inspect.blocker.cityUnhappy': 'City too unhappy to grow',
   'inspect.blocker.notLand': 'Cannot build on water',
   'inspect.blocker.noFireCoverage': 'No fire station in reach for the next density',
-  'inspect.blocker.noDeliveries': 'No deliveries — build a logistics depot in reach',
+  'inspect.blocker.noDeliveries': 'No deliveries — needs a powered logistics depot in reach',
   'inspector.elevation': 'Elevation',
   'inspector.steepSlope': 'Steep slope — cannot be built on',
   'inspector.terrain': 'Terrain',
@@ -767,7 +767,8 @@ const de: Record<TranslationKey, string> = {
   'inspect.blocker.cityUnhappy': 'Stadt zu unzufrieden zum Wachsen',
   'inspect.blocker.notLand': 'Bauen auf Wasser nicht möglich',
   'inspect.blocker.noFireCoverage': 'Keine Feuerwehr in Reichweite für die nächste Dichte',
-  'inspect.blocker.noDeliveries': 'Keine Lieferungen – Logistikdepot in Reichweite bauen',
+  'inspect.blocker.noDeliveries':
+    'Keine Lieferungen – braucht ein versorgtes Logistikdepot in Reichweite',
   'inspector.elevation': 'Höhenstufe',
   'inspector.steepSlope': 'Steilhang — nicht bebaubar',
   'inspector.terrain': 'Gelände',

@@ -55,6 +55,9 @@ export type PlantType = (typeof PlantType)[keyof typeof PlantType];
 export const DeliveryState = { Supplied: 0, Due: 1, Unsupplied: 2 } as const;
 export type DeliveryState = (typeof DeliveryState)[keyof typeof DeliveryState];
 
+/** deliveryAge saturates here (Uint16). */
+export const MAX_DELIVERY_AGE = 65535;
+
 export const SupplyStatus = {
   NotConnected: 0,
   Undersupplied: 1,

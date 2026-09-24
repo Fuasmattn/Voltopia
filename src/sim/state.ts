@@ -458,11 +458,20 @@ export function slopeCostMultiplier(state: SimState, index: number): number {
   return slopeAt(state, index) > 0 ? BALANCE.terrain.slopeCostFactor : 1;
 }
 
+/** Ticks a shop stays supplied after a delivery. */
+export function supplyWindowTicks(): number {
+  return Math.round(BALANCE.deliveries.supplyWindowDays * TICKS_PER_DAY);
+}
+
+/** Ticks after which a shop counts as due for a delivery. */
+export function dueTicks(): number {
+  return Math.round(BALANCE.deliveries.dueAfterDays * TICKS_PER_DAY);
+}
+
 /** Delivery bucket of a shop given its ticks since the last delivery. */
 export function deliveryStateOfAge(age: number): DeliveryState {
-  const { supplyWindowDays, dueAfterDays } = BALANCE.deliveries;
-  if (age > supplyWindowDays * TICKS_PER_DAY) return DeliveryState.Unsupplied;
-  if (age > dueAfterDays * TICKS_PER_DAY) return DeliveryState.Due;
+  if (age > supplyWindowTicks()) return DeliveryState.Unsupplied;
+  if (age > dueTicks()) return DeliveryState.Due;
   return DeliveryState.Supplied;
 }
 

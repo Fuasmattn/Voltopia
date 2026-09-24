@@ -254,6 +254,14 @@ describe('deliveriesStep', () => {
     expect(state.vans.every((v) => v.phase === VanPhase.AtDepot)).toBe(true);
   });
 
+  it('no tour starts while no shop is even half-way to due (dispatch guard)', () => {
+    const state = shopTown(1, 3);
+    powerDepot(state);
+    setHour(state, 8); // inside the window the whole time
+    for (let t = 0; t < 200; t++) stepAll(state);
+    expect(state.vans.every((v) => v.phase === VanPhase.AtDepot)).toBe(true);
+  });
+
   it('no tour starts below minTripCharge', () => {
     const state = shopTown(1, 3);
     setHour(state, 3); // outside the delivery window: spawn without dispatching
@@ -291,7 +299,7 @@ describe('deliveriesStep', () => {
     expect(lit.vans[0].charge).toBeLessThan(before);
   });
 
-  it('a city-wide deficit stops depot charging', () => {
+  it('a deficit does not stop depot charging', () => {
     const state = shopTown(1, 3);
     powerDepot(state);
     setHour(state, 3);
@@ -299,7 +307,7 @@ describe('deliveriesStep', () => {
     for (const van of state.vans) van.charge = 0.5;
     state.lastEnergy.deficit = 5;
     for (let t = 0; t < 10; t++) stepAll(state);
-    expect(state.vans[0].charge).toBe(0.5);
+    expect(state.vans[0].charge).toBeGreaterThan(0.5);
   });
 
   it('smart charging holds off without surplus unless the van is below the floor', () => {

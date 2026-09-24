@@ -1,31 +1,22 @@
 import { BALANCE, TICK_RATE, TICKS_PER_DAY } from '../shared/constants.ts';
 import { neighbors4, tileX, tileY } from '../shared/grid.ts';
-import { DeliveryState, PlantType, Zone } from '../shared/types.ts';
+import { DeliveryState, MAX_DELIVERY_AGE, PlantType, Zone } from '../shared/types.ts';
 import type { DeliveryStats, DepotInfo } from '../shared/types.ts';
 import { isTileConnected } from './energy.ts';
 import { findRoadPath, roadDistances } from './routing.ts';
-import { advanceAlongPath, surplusAvailable, vehicleTile } from './vehicles.ts';
+import { advanceAlongPath, surplusAvailable, ticksAtHour, vehicleTile } from './vehicles.ts';
 import {
   deliveryStateOfAge,
+  dueTicks,
   markDirty,
+  supplyWindowTicks,
   TileType,
   VanPhase,
   type SimState,
   type Van,
 } from './state.ts';
 
-/** deliveryAge saturates here (Uint16). */
-const MAX_AGE = 65535;
-
-/** Ticks a shop stays supplied after a delivery. */
-export function supplyWindowTicks(): number {
-  return Math.round(BALANCE.deliveries.supplyWindowDays * TICKS_PER_DAY);
-}
-
-/** Ticks after which a shop counts as due for a delivery. */
-export function dueTicks(): number {
-  return Math.round(BALANCE.deliveries.dueAfterDays * TICKS_PER_DAY);
-}
+export { supplyWindowTicks, dueTicks } from './state.ts';
 
 /** A retail building: zoned retail with a building on it. */
 export function isShop(state: SimState, index: number): boolean {
@@ -44,12 +35,19 @@ export function isShopSupplied(state: SimState, index: number): boolean {
   return state.layers.deliveryAge[index] <= supplyWindowTicks();
 }
 
+function isDepot(state: SimState, tile: number): boolean {
+  const { tileType, plantType } = state.layers;
+  return (
+    tile >= 0 && tileType[tile] === TileType.Plant && plantType[tile] === PlantType.LogisticsDepot
+  );
+}
+
 /** Tile indices of every logistics depot. */
 export function depotTiles(state: SimState): number[] {
-  const { tileType, plantType } = state.layers;
+  const { tileType } = state.layers;
   const depots: number[] = [];
   for (let i = 0; i < tileType.length; i++) {
-    if (tileType[i] === TileType.Plant && plantType[i] === PlantType.LogisticsDepot) depots.push(i);
+    if (isDepot(state, i)) depots.push(i);
   }
   return depots;
 }
@@ -62,13 +60,6 @@ export function depotRoadTile(state: SimState, depot: number): number {
     if (tileType[n] === TileType.Road && (road < 0 || n < road)) road = n;
   }
   return road;
-}
-
-function isDepot(state: SimState, tile: number): boolean {
-  const { tileType, plantType } = state.layers;
-  return (
-    tile >= 0 && tileType[tile] === TileType.Plant && plantType[tile] === PlantType.LogisticsDepot
-  );
 }
 
 function createVan(state: SimState, depot: number, depotRoad: number): Van {
@@ -114,23 +105,34 @@ export function syncFleet(state: SimState): void {
 /**
  * Advance every shop's delivery age by one tick (saturating); tiles that
  * are not shops sit at 0. A tile is marked dirty when it crosses into
- * "due" or "unsupplied" so the overlay follows.
+ * "due" or "unsupplied" so the overlay follows. Returns the number of
+ * shops with `deliveryAge >= floor(dueTicks() / 2)` — the same threshold
+ * `planTour` requires of a candidate stop — so `deliveriesStep` can skip
+ * dispatching entirely while it is 0, without running `planTour`'s
+ * Dijkstra just to learn it would return nothing.
  */
-export function ageShops(state: SimState): void {
+export function ageShops(state: SimState): number {
   const { layers } = state;
   const due = dueTicks();
   const window = supplyWindowTicks();
+  const minAge = Math.floor(due / 2);
+  let dueSoon = 0;
   for (let i = 0; i < layers.tileType.length; i++) {
     const age = layers.deliveryAge[i];
     if (!isShop(state, i)) {
       if (age !== 0) layers.deliveryAge[i] = 0;
       continue;
     }
-    if (age >= MAX_AGE) continue;
+    if (age >= MAX_DELIVERY_AGE) {
+      dueSoon++;
+      continue;
+    }
     const next = age + 1;
     layers.deliveryAge[i] = next;
     if (next === due + 1 || next === window + 1) markDirty(state, i);
+    if (next >= minAge) dueSoon++;
   }
+  return dueSoon;
 }
 
 /** Stops every van is already going to visit (never the depot roads). */
@@ -155,9 +157,10 @@ function oldestShopAge(state: SimState, road: number): number {
  * Plan a tour for a van waiting at its depot: up to stopsPerTour road
  * tiles with shops beside them, reachable within maxRouteTiles, oldest
  * first (ties: nearer, then lower index), ordered nearest-neighbour from
- * the depot and closed by the depot road. Only shops at least half-way
- * to due are considered so an idle fleet does not circle. Empty when
- * nothing qualifies.
+ * the depot and closed by the depot road. Only candidates with `age >=
+ * dueTicks() / 2` are considered, so a shop is visited at most about
+ * three times per supply window and an idle fleet does not circle.
+ * Empty when nothing qualifies.
  */
 export function planTour(state: SimState, van: Van, claimed: Set<number>): number[] {
   const { stopsPerTour, maxRouteTiles } = BALANCE.deliveries;
@@ -172,11 +175,15 @@ export function planTour(state: SimState, van: Van, claimed: Set<number>): numbe
   }
   candidates.sort((a, b) => b.age - a.age || a.distance - b.distance || a.tile - b.tile);
   const remaining = new Set(candidates.slice(0, stopsPerTour).map((c) => c.tile));
+  if (remaining.size === 0) return [];
 
   const ordered: number[] = [];
   let current = van.depotRoad;
+  // Reuse the depot's bounded distance map for the first hop. Every
+  // later stop lies within maxRouteTiles of the depot road, so twice
+  // that bound covers every hop after it too (triangle inequality).
+  let from = distances;
   while (remaining.size > 0) {
-    const from = roadDistances(state, current);
     let best = -1;
     let bestCost = Infinity;
     for (const tile of remaining) {
@@ -186,22 +193,29 @@ export function planTour(state: SimState, van: Van, claimed: Set<number>): numbe
         bestCost = cost;
       }
     }
-    if (best < 0) break; // the rest became unreachable: leave them for later
     ordered.push(best);
     remaining.delete(best);
     current = best;
+    from = roadDistances(state, current, 2 * maxRouteTiles);
   }
-  if (ordered.length === 0) return [];
   ordered.push(van.depotRoad);
   return ordered;
 }
 
-/** A depot can charge while it is energised and the grid met all demand last tick. */
+/**
+ * A depot can charge whenever its tile is energised — like home charging
+ * of cars, this ignores a city-wide deficit; the van's load feeds the
+ * deficit like every other load instead of being gated by it.
+ */
 function depotPowered(state: SimState, depot: number): boolean {
-  return isTileConnected(state, depot) && state.lastEnergy.deficit === 0;
+  return isTileConnected(state, depot);
 }
 
-/** Plugged in? At the depot whenever the battery isn't full and the depot has power; smart charging defers to surplus unless low. */
+/**
+ * Plugged in? At the depot whenever the battery isn't full and the depot
+ * is energised (regardless of a city-wide deficit); smart charging
+ * defers to surplus unless low.
+ */
 function decideVanCharging(state: SimState, van: Van, surplus: boolean): boolean {
   if (van.charge >= 1 || !depotPowered(state, van.depot)) return false;
   if (!state.smartCharging) return true;
@@ -263,14 +277,14 @@ function arrive(state: SimState, van: Van): void {
  */
 export function deliveriesStep(state: SimState, occupancy: Map<number, number>): void {
   syncFleet(state);
-  ageShops(state);
+  const dueSoon = ageShops(state);
   if (state.vans.length === 0) return;
 
   const d = BALANCE.deliveries;
   const step = (BALANCE.vehicles.speedTilesPerSecond / TICK_RATE) * d.speedFactor;
   const ticksIntoDay = state.tick % TICKS_PER_DAY;
-  const windowStart = Math.floor((d.windowStartHour / 24) * TICKS_PER_DAY);
-  const windowEnd = Math.floor((d.windowEndHour / 24) * TICKS_PER_DAY);
+  const windowStart = ticksAtHour(d.windowStartHour);
+  const windowEnd = ticksAtHour(d.windowEndHour);
   const inWindow = ticksIntoDay >= windowStart && ticksIntoDay < windowEnd;
   const surplus = surplusAvailable(state);
   const claimed = claimedStops(state);
@@ -282,7 +296,10 @@ export function deliveriesStep(state: SimState, occupancy: Map<number, number>):
         if (van.dwellTicks > 0) van.dwellTicks--;
         van.charging = decideVanCharging(state, van, surplus);
         if (van.charging) van.charge = Math.min(1, van.charge + d.chargeRatePerTick);
-        if (van.dwellTicks === 0 && inWindow && van.charge >= d.minTripCharge) {
+        // Skip planTour's Dijkstra while no shop is even half-way to due:
+        // it would return [] anyway, but a full graph walk per idle van
+        // per tick is wasted work while the fleet has nothing to do.
+        if (dueSoon > 0 && van.dwellTicks === 0 && inWindow && van.charge >= d.minTripCharge) {
           const stops = planTour(state, van, claimed);
           if (stops.length > 0) {
             for (const stop of stops) if (stop !== van.depotRoad) claimed.add(stop);

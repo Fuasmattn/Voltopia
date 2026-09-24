@@ -43,6 +43,7 @@ const EXPENSE_COLORS: Record<string, string> = {
   [PlantType.PumpedStorage]: '#3f6fa8',
   [PlantType.FireStation]: '#d9534f',
   [PlantType.PoliceStation]: '#4a7ec2',
+  [PlantType.LogisticsDepot]: '#8d99a6',
   fuel: '#d98f54',
   import: 'var(--hud-negative)',
 };

@@ -42,8 +42,9 @@ function chargingHubTiles(state: SimState): number[] {
   return hubs;
 }
 
-function departureTicks(startHour: number): number {
-  return Math.floor((startHour / 24) * TICKS_PER_DAY);
+/** Tick offset into the day at which the given hour (0..24) starts. */
+export function ticksAtHour(hour: number): number {
+  return Math.floor((hour / 24) * TICKS_PER_DAY);
 }
 
 /** Anything that drives along a road path: commuter cars and delivery vans. */
@@ -228,7 +229,10 @@ export function surplusAvailable(state: SimState): boolean {
  * drains the battery, plugging in at home (evenings) or at a nearby
  * charging hub (workdays) recharges it — the charging load on the grid
  * emerges from what the fleet actually does. Congestion: at most a few
- * vehicles fit on a road tile; followers wait, so queues form.
+ * vehicles fit on a road tile; followers wait, so queues form. Returns
+ * this tick's lane occupancy map; the caller must pass it on to both
+ * `deliveriesStep` (so vans queue behind cars) and `updateTrafficLoad`
+ * (see `tick.ts`).
  */
 export function vehiclesStep(state: SimState): Map<number, number> {
   const { population, jobs } = countPopulationAndJobs(state);
@@ -274,8 +278,8 @@ export function vehiclesStep(state: SimState): Map<number, number> {
   const { tileType } = state.layers;
   const step = BALANCE.vehicles.speedTilesPerSecond / TICK_RATE;
   const ticksIntoDay = state.tick % TICKS_PER_DAY;
-  const morningDeparture = departureTicks(BALANCE.vehicles.commute.morningStartHour);
-  const eveningDeparture = departureTicks(BALANCE.vehicles.commute.eveningStartHour);
+  const morningDeparture = ticksAtHour(BALANCE.vehicles.commute.morningStartHour);
+  const eveningDeparture = ticksAtHour(BALANCE.vehicles.commute.eveningStartHour);
 
   const occupancy = laneOccupancy(state);
 

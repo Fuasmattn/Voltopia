@@ -36,6 +36,9 @@ section, a HUD chip and a goal make the mechanic legible.
   and count in the traffic load, at a lower speed than cars.
 - Vans charge at the depot; the smart-charging toggle applies to them
   like to cars. Their charging load is part of `chargingConsumption`.
+- Vans charge whenever the depot is energised, regardless of a
+  city-wide deficit (like home charging); their load counts toward the
+  deficit like any other load.
 - Every tuning value lives in `BALANCE.deliveries`, `BALANCE.costs.plant`
   and `BALANCE.upkeepPerTick.plant`.
 - Save format unchanged: the plant layer already persists the depot.
@@ -151,8 +154,8 @@ position, heading and path (the `Mover` interface below).
    tile is reset to 0. A tile whose age crosses `supplyWindowTicks` or
    `dueTicks` is marked dirty (drives the overlay).
 3. **Charging.** A van `AtDepot` with `charge < 1` charges when the
-   depot tile is `SupplyStatus.Supplied` and (smart charging off, or a
-   surplus is available as in `vehiclesStep`, or `charge <
+   depot tile is energised (`isTileConnected`) and (smart charging off,
+   or a surplus is available as in `vehiclesStep`, or `charge <
 smartChargeFloor`). Sets `charging`, adds `chargeRatePerTick`.
 4. **Dispatch.** A van `AtDepot` with `dwellTicks === 0`, `charge >=
 minTripCharge`, inside the delivery window, starts a tour if
@@ -192,8 +195,8 @@ fields, path and wait counter (`Vehicle` and `Van` both satisfy a small
   `findRoadPath` lengths (deterministic tie-break by tile index), append
   `depotRoad`.
 - Only candidates with `age >= dueTicks / 2` are considered, so a shop
-  is visited about twice per supply window at most and an idle fleet
-  does not circle. Returns `[]` when nothing qualifies.
+  is visited at most about three times per supply window and an idle
+  fleet does not circle. Returns `[]` when nothing qualifies.
 
 ### `roadDistances(state, from, maxCost)` (`src/sim/routing.ts`)
 
@@ -313,7 +316,10 @@ Nothing new in `layers`. `wellStockedTicks?: number` in `SaveGame`,
 passed through like `freeFlowTicks`. `deliveryAge` and `vans` are
 rebuilt: after a load every shop is at age 0 and the fleets respawn at
 their depots on the first tick. Undo of a depot placement refunds as
-for any plant.
+for any plant. Because `wellStockedTicks` persists while every shop
+restarts at age 0, a reload keeps the goal streak through the grace
+window — same shape as `freeFlowTicks` with the non-persisted
+congestion ratio.
 
 ### Unit tests
 
