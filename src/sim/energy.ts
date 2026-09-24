@@ -3,7 +3,7 @@ import { PlantType, Terrain, Zone } from '../shared/types.ts';
 import { clearForest, fellingCost, windForestFactor } from './forest.ts';
 import { isSupplySource, recomputeGrid } from './powerGrid.ts';
 import type { BuildResult } from './roads.ts';
-import { tideFactor, tidalSiteFactor } from './sea.ts';
+import { tideFactor, tidalSiteFactor, windTurbineFactor } from './sea.ts';
 import { coolingDegree, heatingDegree } from './seasons.ts';
 import {
   BuildIntent,
@@ -129,11 +129,12 @@ export function censusPlants(state: SimState): PlantCensus {
         census.windTurbines++;
         // Offshore: free wind, no shelter, no height to gain. On land:
         // height helps, sheltering woods hurt (turbulence and lower wind).
-        census.windCapacity +=
-          state.layers.terrain[i] === Terrain.Sea
-            ? 1 + BALANCE.sea.offshoreWindBonus
-            : (1 + BALANCE.terrain.windBonusPerLevel * state.layers.elevation[i]) *
-              windForestFactor(state, i);
+        census.windCapacity += windTurbineFactor(
+          state,
+          i,
+          (1 + BALANCE.terrain.windBonusPerLevel * state.layers.elevation[i]) *
+            windForestFactor(state, i),
+        );
         break;
       case PlantType.Battery:
         census.batteries++;

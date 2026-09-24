@@ -22,7 +22,7 @@ import {
 } from './energy.ts';
 import { demandFor, energySystemActive, hasRoadAccess } from './growth.ts';
 import { isSupplySource } from './powerGrid.ts';
-import { tideFactor, tidalSiteFactor } from './sea.ts';
+import { tideFactor, tidalSiteFactor, windTurbineFactor } from './sea.ts';
 import { SERVICE_FIRE, SERVICE_POLICE } from './services.ts';
 import {
   countPopulationAndJobs,
@@ -46,10 +46,11 @@ function plantGeneration(
     case PlantType.SolarFarm:
       return { generation: e.solarPeakOutput * currentSolarFactor(state), peak: e.solarPeakOutput };
     case PlantType.WindTurbine: {
-      const bonus =
-        state.layers.terrain[index] === Terrain.Sea
-          ? 1 + BALANCE.sea.offshoreWindBonus
-          : 1 + BALANCE.terrain.windBonusPerLevel * state.layers.elevation[index];
+      const bonus = windTurbineFactor(
+        state,
+        index,
+        1 + BALANCE.terrain.windBonusPerLevel * state.layers.elevation[index],
+      );
       return {
         generation: e.windPeakOutput * currentWindFactor(state) * bonus,
         peak: e.windPeakOutput * bonus,
@@ -245,7 +246,7 @@ export function inspectTile(state: SimState, index: number): TileInfo | null {
   const terrainBonus =
     tileType === TileType.Plant
       ? plant === PlantType.WindTurbine
-        ? 1 + BALANCE.terrain.windBonusPerLevel * elevation
+        ? windTurbineFactor(state, index, 1 + BALANCE.terrain.windBonusPerLevel * elevation)
         : plant === PlantType.RunOfRiver
           ? 1 + BALANCE.terrain.hydroDropBonus * riverDropAt(state, index)
           : plant === PlantType.PumpedStorage

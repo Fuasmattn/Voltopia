@@ -141,6 +141,19 @@ export function isCoastalSea(state: SimState, index: number): boolean {
 }
 
 /**
+ * Wind turbine output factor for a tile: offshore, the wind is free and
+ * unsheltered — a flat bonus, no height to gain and no woods to hide
+ * behind. On land, elevation and shelter decide it instead, so the
+ * caller passes in that already-computed factor and gets it back
+ * unchanged when the tile is not at sea.
+ */
+export function windTurbineFactor(state: SimState, index: number, landFactor: number): number {
+  return state.layers.terrain[index] === Terrain.Sea
+    ? 1 + BALANCE.sea.offshoreWindBonus
+    : landFactor;
+}
+
+/**
  * Output factor of a tidal plant on this tile. Narrow water runs fast:
  * the more of the eight neighbours are land, the stronger the current.
  * A river mouth within `estuaryRadius` adds its own bonus. Off-map

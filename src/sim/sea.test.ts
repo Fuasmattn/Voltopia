@@ -4,7 +4,7 @@ import { Terrain } from '../shared/types.ts';
 import { createSimState, type SimState } from './state.ts';
 import { generateTerrain } from './terrain.ts';
 import { generateWater } from './water.ts';
-import { tideFactor, tideLevel, tidalSiteFactor } from './sea.ts';
+import { tideFactor, tideLevel, tidalSiteFactor, windTurbineFactor } from './sea.ts';
 
 /** A generated map: elevation and water (river, lake, sea) but no zoning. */
 function generatedState(seed: number, size: number): SimState {
@@ -220,5 +220,22 @@ describe('tidal site factor', () => {
     expect(tidalSiteFactor(withLakeNeighbour, 5 * 16 + 5)).toBeLessThan(
       tidalSiteFactor(allLand, 5 * 16 + 5),
     );
+  });
+});
+
+describe('wind turbine factor', () => {
+  it('replaces the land factor with the flat offshore bonus at sea', () => {
+    const state = createSimState(1, 16);
+    state.layers.terrain.fill(Terrain.Sea);
+    const tile = 5 * 16 + 5;
+    // A deliberately unrelated land factor: at sea it must be ignored.
+    expect(windTurbineFactor(state, tile, 999)).toBeCloseTo(1 + BALANCE.sea.offshoreWindBonus, 5);
+  });
+
+  it('passes the land factor through unchanged on land', () => {
+    const state = createSimState(1, 16);
+    state.layers.terrain.fill(Terrain.Land);
+    const tile = 5 * 16 + 5;
+    expect(windTurbineFactor(state, tile, 2.5)).toBe(2.5);
   });
 });
