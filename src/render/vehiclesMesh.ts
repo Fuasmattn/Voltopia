@@ -2,11 +2,14 @@ import * as THREE from 'three';
 import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
 import { TICK_MS } from '../shared/constants.ts';
 import type { VehicleState } from '../shared/types.ts';
+import { VehicleKind } from '../shared/types.ts';
 import type { RenderEnvironment } from './renderer.ts';
 import type { ElevationField } from './elevationField.ts';
 
 const MAX_VEHICLES = 256;
+const MAX_VANS = 64;
 const CAR_COLORS = [0xe8e6e0, 0x8fb3c9, 0xd9a066, 0x9aa88f, 0x707a86, 0xc9788f];
+const VAN_COLOR = 0xf2f2ef;
 
 /** Simple low-poly car: body + cabin merged into one geometry. */
 function createCarGeometry(): THREE.BufferGeometry {
@@ -17,6 +20,15 @@ function createCarGeometry(): THREE.BufferGeometry {
   return mergeGeometries([body, cabin]);
 }
 
+/** Boxy delivery van: tall cargo body plus a short cab. */
+function createVanGeometry(): THREE.BufferGeometry {
+  const cargo = new THREE.BoxGeometry(0.24, 0.16, 0.15);
+  cargo.translate(-0.05, 0.1, 0);
+  const cab = new THREE.BoxGeometry(0.1, 0.11, 0.15);
+  cab.translate(0.12, 0.075, 0);
+  return mergeGeometries([cargo, cab]);
+}
+
 /**
  * Instanced electric vehicles. Positions arrive at tick rate from the
  * simulation; rendering interpolates between the last two updates for
@@ -24,6 +36,7 @@ function createCarGeometry(): THREE.BufferGeometry {
  */
 export class VehiclesMesh {
   private readonly mesh: THREE.InstancedMesh;
+  private readonly vans: THREE.InstancedMesh;
   private readonly headlights: THREE.InstancedMesh;
   private readonly headlightMaterial: THREE.MeshBasicMaterial;
   private previous = new Map<number, VehicleState>();
@@ -57,6 +70,18 @@ export class VehiclesMesh {
     }
     scene.add(this.mesh);
 
+    this.vans = new THREE.InstancedMesh(
+      createVanGeometry(),
+      new THREE.MeshLambertMaterial({ color: VAN_COLOR }),
+      MAX_VANS,
+    );
+    // Instance transforms live across the whole grid; the base geometry's
+    // bounds would wrongly cull the mesh, so culling is disabled.
+    this.vans.frustumCulled = false;
+    this.vans.castShadow = true;
+    this.vans.count = 0;
+    scene.add(this.vans);
+
     const lightGeometry = new THREE.BoxGeometry(0.02, 0.03, 0.12);
     lightGeometry.translate(0.16, 0.06, 0);
     this.headlightMaterial = new THREE.MeshBasicMaterial({
@@ -64,7 +89,11 @@ export class VehiclesMesh {
       transparent: true,
       opacity: 0,
     });
-    this.headlights = new THREE.InstancedMesh(lightGeometry, this.headlightMaterial, MAX_VEHICLES);
+    this.headlights = new THREE.InstancedMesh(
+      lightGeometry,
+      this.headlightMaterial,
+      MAX_VEHICLES + MAX_VANS,
+    );
     // Instance transforms live across the whole grid; the base geometry's
     // bounds would wrongly cull the mesh, so culling is disabled.
     this.headlights.frustumCulled = false;
@@ -91,14 +120,17 @@ export class VehiclesMesh {
 
   /** Interpolate between the last two sim updates. */
   update(nowSeconds: number): void {
-    const count = Math.min(this.current.length, MAX_VEHICLES);
     const blend = THREE.MathUtils.clamp(
       (nowSeconds - this.lastUpdateSeconds) / this.updateInterval,
       0,
       1,
     );
-    for (let i = 0; i < count; i++) {
-      const target = this.current[i];
+    let cars = 0;
+    let vans = 0;
+    let lights = 0;
+    for (const target of this.current) {
+      const isVan = target.kind === VehicleKind.Van;
+      if (isVan ? vans >= MAX_VANS : cars >= MAX_VEHICLES) continue;
       // Match by stable id: vehicles enter/leave the visible set when
       // they start or finish trips, so indices don't line up.
       const source = this.previous.get(target.id) ?? target;
@@ -110,12 +142,15 @@ export class VehiclesMesh {
       this.position.set(x, 0.03 + this.elevation.surfaceY(x, y), y);
       this.quaternion.setFromAxisAngle(this.up, -angle);
       this.matrix.compose(this.position, this.quaternion, this.unitScale);
-      this.mesh.setMatrixAt(i, this.matrix);
-      this.headlights.setMatrixAt(i, this.matrix);
+      if (isVan) this.vans.setMatrixAt(vans++, this.matrix);
+      else this.mesh.setMatrixAt(cars++, this.matrix);
+      this.headlights.setMatrixAt(lights++, this.matrix);
     }
-    this.mesh.count = count;
-    this.headlights.count = count;
+    this.mesh.count = cars;
+    this.vans.count = vans;
+    this.headlights.count = lights;
     this.mesh.instanceMatrix.needsUpdate = true;
+    this.vans.instanceMatrix.needsUpdate = true;
     this.headlights.instanceMatrix.needsUpdate = true;
   }
 }

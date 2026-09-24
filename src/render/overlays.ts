@@ -1,7 +1,9 @@
 import * as THREE from 'three';
 import type { TileDiff } from '../shared/types.ts';
 import {
+  DeliveryState,
   OverlayMode,
+  PlantType,
   SERVICE_FIRE,
   SERVICE_POLICE,
   SupplyStatus,
@@ -27,6 +29,13 @@ const SERVICE_COLORS = {
 
 const TRAFFIC_COLORS = { free: 0x4cd964, busy: 0xf4d35e, slow: 0xffb347, jammed: 0xe05263 };
 
+const DELIVERY_COLORS = {
+  [DeliveryState.Supplied]: 0x4cd964,
+  [DeliveryState.Due]: 0xffb347,
+  [DeliveryState.Unsupplied]: 0xe05263,
+  depot: 0x5b9bd5,
+} as const;
+
 interface OverlayTile {
   zone: Zone;
   density: number;
@@ -34,12 +43,15 @@ interface OverlayTile {
   tileType: TileType;
   services: number;
   trafficLoad: number;
+  deliveryState: number;
+  plantType: PlantType;
 }
 
 /**
  * Toggleable color maps over the city: supply status of every building,
  * growth demand tinting all zoned tiles, fire/police service coverage of
- * every building, or per-tile traffic congestion on roads.
+ * every building, per-tile traffic congestion on roads, or delivery
+ * status of shops and depots.
  */
 export class OverlaysMesh implements DiffLayer {
   private readonly mesh: THREE.InstancedMesh;
@@ -84,7 +96,12 @@ export class OverlaysMesh implements DiffLayer {
 
   applyDiffs(diffs: TileDiff[]): void {
     for (const diff of diffs) {
-      if (diff.zone !== Zone.None || diff.density > 0 || diff.tileType === TileType.Road) {
+      if (
+        diff.zone !== Zone.None ||
+        diff.density > 0 ||
+        diff.tileType === TileType.Road ||
+        diff.plantType === PlantType.LogisticsDepot
+      ) {
         this.tiles.set(diff.index, {
           zone: diff.zone,
           density: diff.density,
@@ -92,6 +109,8 @@ export class OverlaysMesh implements DiffLayer {
           tileType: diff.tileType,
           services: diff.services,
           trafficLoad: diff.trafficLoad,
+          deliveryState: diff.deliveryState,
+          plantType: diff.plantType,
         });
       } else {
         this.tiles.delete(diff.index);
@@ -153,6 +172,16 @@ export class OverlaysMesh implements DiffLayer {
                   : level <= 6
                     ? TRAFFIC_COLORS.slow
                     : TRAFFIC_COLORS.jammed;
+          }
+        } else if (this.mode === OverlayMode.Deliveries) {
+          if (tile.tileType === TileType.Plant && tile.plantType === PlantType.LogisticsDepot) {
+            colorHex = DELIVERY_COLORS.depot;
+          } else if (
+            tile.tileType === TileType.Empty &&
+            tile.zone === Zone.Retail &&
+            tile.density > 0
+          ) {
+            colorHex = DELIVERY_COLORS[tile.deliveryState as DeliveryState] ?? null;
           }
         }
         if (colorHex === null) continue;

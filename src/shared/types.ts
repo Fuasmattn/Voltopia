@@ -70,8 +70,13 @@ export const OverlayMode = {
   Demand: 2,
   Services: 3,
   Traffic: 4,
+  Deliveries: 5,
 } as const;
 export type OverlayMode = (typeof OverlayMode)[keyof typeof OverlayMode];
+
+/** Which mesh renders a VehicleState. */
+export const VehicleKind = { Car: 0, Van: 1 } as const;
+export type VehicleKind = (typeof VehicleKind)[keyof typeof VehicleKind];
 
 export interface Weather {
   /** 0 = clear sky, 1 = fully overcast. Reduces photovoltaic generation. */
@@ -397,6 +402,8 @@ export interface TileDiff {
   terrain: Terrain;
   /** Elevation level 0..7 (immutable after map generation). */
   elevation: number;
+  /** DeliveryState of a retail building (0 elsewhere). */
+  deliveryState: number;
 }
 
 /** Position and heading of one vehicle, interpolated by the renderer. */
@@ -408,6 +415,8 @@ export interface VehicleState {
   y: number;
   /** Heading angle in radians (0 = +x). */
   angle: number;
+  /** Which mesh draws it. */
+  kind: VehicleKind;
 }
 
 export interface SaveGame {

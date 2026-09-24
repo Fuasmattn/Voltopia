@@ -410,6 +410,7 @@ export function collectDiffs(state: SimState): TileDiff[] {
       plantType: layers.plantType[index] as TileDiff['plantType'],
       terrain: layers.terrain[index] as TileDiff['terrain'],
       elevation: layers.elevation[index],
+      deliveryState: deliveryStateOfAge(layers.deliveryAge[index]),
     });
   }
   state.dirty.clear();

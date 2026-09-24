@@ -1,8 +1,9 @@
 import { describe, expect, it } from 'vitest';
 import { BALANCE, TICKS_PER_DAY } from '../shared/constants.ts';
 import { tileIndex } from '../shared/grid.ts';
-import { PlantType, Terrain, Zone } from '../shared/types.ts';
+import { PlantType, Terrain, VehicleKind, Zone } from '../shared/types.ts';
 import { SimEngine } from './engine.ts';
+import { TileType, VanPhase } from './state.ts';
 import { timeOfDay, dayNumber } from './tick.ts';
 import { placePlant } from './energy.ts';
 import { buildPowerLines } from './powerLines.ts';
@@ -197,11 +198,44 @@ describe('SimEngine basics', () => {
     expect(first.stats.budget.avenueUpkeep).toBe(0);
     expect(first.diffs[0].services).toBe(0);
     expect(first.diffs[0].trafficLoad).toBe(0);
+    expect(first.diffs[0].deliveryState).toBe(0);
     engine.state.tick = TICKS_PER_DAY * BALANCE.seasons.daysPerSeason - 1;
     const next = engine.tick();
     if (next.type !== 'tick') throw new Error('expected tick');
     expect(next.stats.season.season).toBe('summer');
     expect(next.stats.season.dayOfSeason).toBe(1);
+  });
+
+  it('driving vans are sent to the renderer with kind Van', () => {
+    const engine = new SimEngine(1, 24);
+    // stepTick's syncFleet keeps only vans whose depot and parking road exist.
+    const depot = tileIndex(2, 2, 24);
+    const road = tileIndex(2, 3, 24);
+    engine.state.layers.tileType[depot] = TileType.Plant;
+    engine.state.layers.plantType[depot] = PlantType.LogisticsDepot;
+    engine.state.layers.tileType[road] = TileType.Road;
+    engine.state.vans.push({
+      id: 5,
+      depot,
+      depotRoad: road,
+      x: 2.5,
+      y: 3.5,
+      angle: 0,
+      phase: VanPhase.Unloading,
+      stops: [road],
+      path: [],
+      pathIndex: 0,
+      charge: 1,
+      charging: false,
+      waitTicks: 0,
+      dwellTicks: 50,
+    });
+    const event = engine.tick();
+    if (event.type !== 'tick') throw new Error('expected tick');
+    const vans = event.vehicles.filter((v) => v.kind === VehicleKind.Van);
+    expect(vans).toEqual([{ id: 5, x: 2.5, y: 3.5, angle: 0, kind: VehicleKind.Van }]);
+    // syncFleet topped the fleet up to vansPerDepot; the parked ones are not rendered.
+    expect(engine.state.vans).toHaveLength(BALANCE.deliveries.vansPerDepot);
   });
 
   it('reports the cooling load in stats on a hot summer afternoon', () => {

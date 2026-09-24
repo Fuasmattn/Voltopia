@@ -1,8 +1,10 @@
 import { BALANCE } from '../shared/constants.ts';
 import type { SimCommand, SimEvent } from '../shared/messages.ts';
 import type { VehicleState } from '../shared/types.ts';
+import { VehicleKind } from '../shared/types.ts';
 import { buildRoads, bulldozeTiles, undoLastAction, type BuildResult } from './roads.ts';
 import { buyInsulation } from './economy.ts';
+import { drivingVans } from './deliveries.ts';
 import { placePlant } from './energy.ts';
 import { buildPowerLines } from './powerLines.ts';
 import { drivingVehicles } from './vehicles.ts';
@@ -128,11 +130,20 @@ export class SimEngine {
 
   private collectVehicles(): VehicleState[] {
     // Only vehicles on the road are rendered; parked ones stay hidden.
-    return drivingVehicles(this.state).map((v) => ({
+    const cars = drivingVehicles(this.state).map((v) => ({
       id: v.id,
       x: v.x,
       y: v.y,
       angle: v.angle,
+      kind: VehicleKind.Car,
     }));
+    const vans = drivingVans(this.state).map((v) => ({
+      id: v.id,
+      x: v.x,
+      y: v.y,
+      angle: v.angle,
+      kind: VehicleKind.Van,
+    }));
+    return [...cars, ...vans];
   }
 }

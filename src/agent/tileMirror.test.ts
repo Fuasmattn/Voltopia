@@ -48,6 +48,7 @@ describe('TileMirror', () => {
         plantType: PlantType.None,
         terrain: Terrain.Land,
         elevation: 0,
+        deliveryState: 0,
       },
     ]);
     expect(Array.from(mirror.tileType)).toEqual(Array.from({ length: 16 }, () => 0));
