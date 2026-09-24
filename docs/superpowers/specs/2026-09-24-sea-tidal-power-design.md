@@ -101,7 +101,7 @@ Periods are converted to ticks via `TICKS_PER_DAY` (960).
 
 Properties this yields, all of which become tests:
 
-- The current runs a quarter period ahead of the water level: zero at
+- The current runs a quarter period behind the water level: zero at
   high and low water (slack), maximal at mid-tide. Two high waters and
   four generation peaks per day. (Each constituent's current is 90° out
   of phase with its level; the exact derivative would also weight the

@@ -109,7 +109,7 @@ const en = {
     'Electrolyses surplus the grid cannot take into hydrogen, re-electrifies it in a lull and sells the overflow once the tank is full.',
   'tool.plant-tidal.desc':
     'Built on the coast, generating from the tidal current: two high waters a day, four generation ' +
-    'peaks and four slack-water gaps in between. Fully predictable, but drifts against the sun. ' +
+    'peaks and four slack-water gaps in between. Fully predictable, but drifts against the clock. ' +
     'Narrow water and the river mouth run faster.',
   'tool.plant-forest.desc':
     'Plant saplings by the patch. They grow over a few days, raise happiness nearby — and slow the wind for turbines standing in them.',
@@ -569,7 +569,7 @@ const de: Record<TranslationKey, string> = {
   'tool.plant-tidal.desc':
     'An der Küste gebaut, erzeugt Strom aus der Gezeitenströmung: zwei Hochwasser am Tag ergeben ' +
     'vier Erzeugungsspitzen und vier Flauten dazwischen. Genau vorhersehbar, wandert aber gegen die ' +
-    'Sonne. Enge Fahrwasser und die Flussmündung strömen schneller.',
+    'Uhr. Enge Fahrwasser und die Flussmündung strömen schneller.',
   'tool.plant-forest.desc':
     'Pflanzt Setzlinge flächenweise. Sie wachsen über einige Tage, heben die Zufriedenheit in der Nähe — und bremsen den Wind für Turbinen, die darin stehen.',
   'tool.bulldoze.desc': 'Entfernt Straßen, Gebiete und Anlagen. Ziehen räumt eine Fläche.',

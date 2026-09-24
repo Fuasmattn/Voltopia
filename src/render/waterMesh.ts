@@ -13,7 +13,12 @@ const WATER_THICKNESS = 0.01;
 const WOBBLE_AMPLITUDE = 0.06;
 const WOBBLE_SPEED = 1.3;
 const NIGHT_DIM = 0.55;
-/** Peak-to-peak tidal range of the rendered sea surface, in tile units. */
+/**
+ * Tidal offset scale, in tile units: the sea surface moves
+ * `tideLevel * TIDE_AMPLITUDE` with tideLevel running -1..1, so the full
+ * peak-to-peak swing is twice this value. Deliberately small so the
+ * shore reads as a shore, not as a flood.
+ */
 const TIDE_AMPLITUDE = 0.05;
 
 /**

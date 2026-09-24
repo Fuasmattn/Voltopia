@@ -492,7 +492,11 @@ export function createAgentTools(ctx: AgentContext): AgentTool[] {
             riverFlow: round(s.weather.riverFlow, 2),
             snowpack: round(s.weather.snowpack, 2),
           },
-          tide: s.tide,
+          tide: {
+            level: round(s.tide.level, 2),
+            factor: round(s.tide.factor, 2),
+            rising: s.tide.rising,
+          },
           energyPerTick: {
             generation: {
               solar: round(e.generation.solar),

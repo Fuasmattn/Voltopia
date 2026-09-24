@@ -176,20 +176,26 @@ terrain elevation, sound, the import/export market, and more.)
 
 Collected 2026-09-24; roughly in the order we want to build them.
 
-- **Hydrogen & electrolysers** (in progress): a hydrogen plant that
+- **Hydrogen & electrolysers** (done): a hydrogen plant that
   electrolyses surplus that would otherwise be curtailed, stores H2,
   re-electrifies it in a Dunkelflaute, and sells the overflow once the
   tank is full — curtailment gets a value.
-- **Dynamic electricity market**: the existing import/export market
-  gets a moving spot price driven by weather/time of the neighbouring
-  region, a price chart, and storage arbitrage (charge cheap, sell
-  dear).
+- **Dynamic electricity market** (done): the existing import/export
+  market gets a moving spot price driven by weather/time of the
+  neighbouring region, a price chart, and storage arbitrage (charge
+  cheap, sell dear).
 - **Forests & nature** (done): woodland tiles (generated + plantable in
   3 growth stages) raise happiness in reach, cost a felling fee when
   built through, and slow the wind for turbines standing in them.
-- **Sea edge & tidal power**: one seed-chosen map edge becomes sea;
-  tidal plants generate on a deterministic ~12.4 h cycle — predictable,
-  unlike wind and solar.
+- **Sea edge & tidal power** (done): one seed-chosen map edge becomes
+  sea, widening into a bay at the river mouth. A two-constituent tide
+  clock (lunar + solar) produces two high waters and four generation
+  peaks a day, with spring and neap tides beating over ~7.4 days —
+  fully predictable, unlike wind and solar. Tidal plants sit on coastal
+  sea tiles; their output scales with a site factor that rewards narrow
+  water and river mouths. The same coast carries offshore wind turbines
+  (free, unsheltered wind) and raises the happiness of buildings with a
+  sea view.
 - **Railways**: trains connecting villages/districts on large maps;
   best built after per-district grids so regions mean something.
 - **Smart-meter rollout**: turn the smart-charging toggle into a

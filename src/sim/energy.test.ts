@@ -728,6 +728,47 @@ describe('tidal plants', () => {
     expect(census.tidalPlants).toBe(1);
     expect(census.tidalCapacity).toBeCloseTo(tidalSiteFactor(state, tile), 6);
   });
+
+  it("tidalCapacity sums each plant's own site factor, not count times one factor", () => {
+    const state = makeState();
+    state.money = 1_000_000;
+
+    // Tile A: fully enclosed by land (all 8 neighbours land) — maximum
+    // narrowness, the strongest possible current.
+    const tileA = at(5, 5);
+    state.layers.terrain[tileA] = Terrain.Sea;
+
+    // Tile B: open water except for one land neighbour — just enough to
+    // be coastal, but the weakest possible current.
+    const tileB = at(20, 20);
+    state.layers.terrain[tileB] = Terrain.Sea;
+    for (const [dx, dy] of [
+      [-1, -1],
+      [0, -1],
+      [1, -1],
+      [-1, 0],
+      [-1, 1],
+      [0, 1],
+      [1, 1],
+    ]) {
+      state.layers.terrain[at(20 + dx, 20 + dy)] = Terrain.Sea;
+    }
+    // (21, 20) is left as land, so tileB stays coastal.
+
+    const factorA = tidalSiteFactor(state, tileA);
+    const factorB = tidalSiteFactor(state, tileB);
+    expect(factorA).not.toBeCloseTo(factorB, 2); // the sites must genuinely differ
+
+    expect(placePlant(state, tileA, PlantType.TidalPlant).rejected).toBeUndefined();
+    expect(placePlant(state, tileB, PlantType.TidalPlant).rejected).toBeUndefined();
+
+    const census = censusPlants(state);
+    expect(census.tidalPlants).toBe(2);
+    // Sum of the two distinct factors — not 2 * either one.
+    expect(census.tidalCapacity).toBeCloseTo(factorA + factorB, 6);
+    expect(census.tidalCapacity).not.toBeCloseTo(2 * factorA, 2);
+    expect(census.tidalCapacity).not.toBeCloseTo(2 * factorB, 2);
+  });
 });
 
 describe('offshore wind', () => {
