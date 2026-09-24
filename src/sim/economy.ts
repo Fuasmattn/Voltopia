@@ -1,5 +1,5 @@
 import { BALANCE } from '../shared/constants.ts';
-import { PlantType, TileType } from '../shared/types.ts';
+import { PlantType, RoadClass, TileType } from '../shared/types.ts';
 import { countPowerLineTiles } from './powerLines.ts';
 import type { BuildResult } from './roads.ts';
 import type { SimState } from './state.ts';
@@ -13,9 +13,13 @@ export interface EconomyBreakdown {
   /** Plants placed per type (feeds the budget panel). */
   plantCountByType: Record<PlantType, number>;
   roadTiles: number;
+  /** Road tiles that are avenues (subset of roadTiles). */
+  avenueTiles: number;
   biogasFuelCost: number;
   gridImportCost: number;
   gridExportRevenue: number;
+  /** Upkeep of the avenue tiles (part of gridUpkeep). */
+  avenueUpkeep: number;
 }
 
 /** Zero-initialised map over every plant type. */
@@ -46,7 +50,7 @@ export function policeTaxFactor(police: number, population: number): number {
  * generated — dispatchable but expensive).
  */
 export function economyStep(state: SimState, population: number, jobs: number): EconomyBreakdown {
-  const { tileType, plantType } = state.layers;
+  const { tileType, plantType, roadClass } = state.layers;
 
   const taxIncome =
     policeTaxFactor(state.lastServices.police, population) *
@@ -54,12 +58,15 @@ export function economyStep(state: SimState, population: number, jobs: number): 
     (population * BALANCE.tax.incomePerResident + jobs * BALANCE.tax.incomePerJob);
 
   let roadTiles = 0;
+  let avenueTiles = 0;
   let plantUpkeep = 0;
   const plantUpkeepByType = emptyPlantMap();
   const plantCountByType = emptyPlantMap();
   for (let i = 0; i < tileType.length; i++) {
-    if (tileType[i] === TileType.Road) roadTiles++;
-    else if (tileType[i] === TileType.Plant) {
+    if (tileType[i] === TileType.Road) {
+      roadTiles++;
+      if (roadClass[i] === RoadClass.Avenue) avenueTiles++;
+    } else if (tileType[i] === TileType.Plant) {
       const plant = plantType[i] as PlantType;
       const upkeep = BALANCE.upkeepPerTick.plant[plant] ?? 0;
       plantUpkeep += upkeep;
@@ -67,9 +74,11 @@ export function economyStep(state: SimState, population: number, jobs: number): 
       plantCountByType[plant]++;
     }
   }
-  // Grid upkeep: roads and power lines share one line item.
+  const avenueUpkeep = avenueTiles * BALANCE.upkeepPerTick.avenuePerTile;
+  // Grid upkeep: roads, avenues and power lines share one line item.
   const gridUpkeep =
-    roadTiles * BALANCE.upkeepPerTick.roadPerTile +
+    (roadTiles - avenueTiles) * BALANCE.upkeepPerTick.roadPerTile +
+    avenueUpkeep +
     countPowerLineTiles(state) * BALANCE.upkeepPerTick.powerLinePerTile;
   const biogasFuelCost =
     state.lastEnergy.biogas * BALANCE.upkeepPerTick.biogasFuelCostPerEnergyUnit;
@@ -85,9 +94,11 @@ export function economyStep(state: SimState, population: number, jobs: number): 
     plantUpkeepByType,
     plantCountByType,
     roadTiles,
+    avenueTiles,
     biogasFuelCost,
     gridImportCost,
     gridExportRevenue,
+    avenueUpkeep,
   };
   state.lastEconomy = breakdown;
   return breakdown;

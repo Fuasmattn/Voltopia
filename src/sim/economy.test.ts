@@ -94,6 +94,19 @@ describe('economyStep', () => {
     const covered = economyStep(state, minPopulation, 50).taxIncome;
     expect(uncovered).toBeCloseTo(covered * uncoveredTaxFactor, 6);
   });
+
+  it('charges avenue upkeep on top of street upkeep and reports the split', () => {
+    const state = createSimState(1, SIZE);
+    state.layers.elevation.fill(0);
+    buildRoads(state, [at(1, 1), at(2, 1)]);
+    buildRoads(state, [at(3, 1)], true);
+    const breakdown = economyStep(state, 0, 0);
+    const { roadPerTile, avenuePerTile } = BALANCE.upkeepPerTick;
+    expect(breakdown.roadTiles).toBe(3);
+    expect(breakdown.avenueTiles).toBe(1);
+    expect(breakdown.avenueUpkeep).toBeCloseTo(avenuePerTile, 9);
+    expect(breakdown.gridUpkeep).toBeCloseTo(2 * roadPerTile + avenuePerTile, 9);
+  });
 });
 
 describe('happinessStep', () => {

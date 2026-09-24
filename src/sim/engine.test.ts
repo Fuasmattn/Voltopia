@@ -189,6 +189,9 @@ describe('SimEngine basics', () => {
     expect(first.stats.energy.consumption.heating).toBe(0);
     expect(first.stats.energy.consumption.cooling).toBe(0);
     expect(first.stats.services).toEqual({ fire: 1, police: 1 });
+    expect(first.stats.counts.avenueTiles).toBe(0);
+    expect(first.stats.budget.avenueTiles).toBe(0);
+    expect(first.stats.budget.avenueUpkeep).toBe(0);
     expect(first.diffs[0].services).toBe(0);
     engine.state.tick = TICKS_PER_DAY * BALANCE.seasons.daysPerSeason - 1;
     const next = engine.tick();

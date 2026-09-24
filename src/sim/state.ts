@@ -271,9 +271,11 @@ export function createSimState(
       plantUpkeepByType: emptyPlantMap(),
       plantCountByType: emptyPlantMap(),
       roadTiles: 0,
+      avenueTiles: 0,
       biogasFuelCost: 0,
       gridImportCost: 0,
       gridExportRevenue: 0,
+      avenueUpkeep: 0,
     },
     inspectedTile: -1,
     lastEnergy: {

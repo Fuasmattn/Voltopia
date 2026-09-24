@@ -163,6 +163,7 @@ export interface GoalState {
 /** Rough tile counts for the HUD and the tutorial. */
 export interface TileCounts {
   roadTiles: number;
+  avenueTiles: number;
   zonedTiles: number;
   plantTiles: number;
   buildingTiles: number;
@@ -190,6 +191,8 @@ export interface BudgetStats {
   /** Plants placed per type, indexed by PlantType. */
   plantCountByType: Record<PlantType, number>;
   roadTiles: number;
+  avenueTiles: number;
+  avenueUpkeep: number;
   biogasFuelCost: number;
   gridImportCost: number;
   /** Income - expenses for this tick. */

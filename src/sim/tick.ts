@@ -1,4 +1,5 @@
 import { TICKS_PER_DAY } from '../shared/constants.ts';
+import { RoadClass } from '../shared/types.ts';
 import type { EnergyHistoryPoint, GlobalStats } from '../shared/types.ts';
 import { economyStep } from './economy.ts';
 import { energyStep } from './energy.ts';
@@ -97,22 +98,26 @@ function recordLifetime(state: SimState, population: number, jobs: number): void
 
 function countTiles(state: SimState): {
   roadTiles: number;
+  avenueTiles: number;
   zonedTiles: number;
   plantTiles: number;
   buildingTiles: number;
   powerLineTiles: number;
 } {
-  const { tileType, zone, density } = state.layers;
+  const { tileType, zone, density, roadClass } = state.layers;
   const counts = {
     roadTiles: 0,
+    avenueTiles: 0,
     zonedTiles: 0,
     plantTiles: 0,
     buildingTiles: 0,
     powerLineTiles: countPowerLineTiles(state),
   };
   for (let i = 0; i < tileType.length; i++) {
-    if (tileType[i] === TileType.Road) counts.roadTiles++;
-    else if (tileType[i] === TileType.Plant) counts.plantTiles++;
+    if (tileType[i] === TileType.Road) {
+      counts.roadTiles++;
+      if (roadClass[i] === RoadClass.Avenue) counts.avenueTiles++;
+    } else if (tileType[i] === TileType.Plant) counts.plantTiles++;
     else {
       if (zone[i] !== Zone.None) counts.zonedTiles++;
       if (density[i] > 0) counts.buildingTiles++;
@@ -203,6 +208,8 @@ function buildBudget(state: SimState): GlobalStats['budget'] {
     plantUpkeepByType: { ...b.plantUpkeepByType },
     plantCountByType: { ...b.plantCountByType },
     roadTiles: b.roadTiles,
+    avenueTiles: b.avenueTiles,
+    avenueUpkeep: b.avenueUpkeep,
     biogasFuelCost: b.biogasFuelCost,
     gridImportCost: b.gridImportCost,
     net:
