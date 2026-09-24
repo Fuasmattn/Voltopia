@@ -186,7 +186,7 @@ export class GameRenderer {
     this.addDiffLayer(new ZoneTilesMesh(scene, gridSize, this.elevation));
     this.addDiffLayer(new BuildingsMesh(scene, gridSize, this.elevation));
     this.addDiffLayer(new PlantsMesh(scene, gridSize, this.elevation));
-    this.vehiclesMesh = new VehiclesMesh(scene, this.elevation);
+    this.vehiclesMesh = new VehiclesMesh(scene, this.elevation, (index) => this.terrainAt(index));
     this.overlays = new OverlaysMesh(scene, gridSize, this.elevation);
     this.addDiffLayer(this.overlays);
     this.minimap = new MinimapLayer(gridSize);
@@ -658,7 +658,7 @@ export class GameRenderer {
       this.webgl.domElement,
       this.isoCamera.camera,
       this.gridSize,
-      this.groundMesh.ground,
+      this.elevation,
     );
   }
 
