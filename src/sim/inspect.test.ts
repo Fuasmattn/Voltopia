@@ -2,7 +2,8 @@
 import { describe, expect, it } from 'vitest';
 import { BALANCE, TICKS_PER_DAY } from '../shared/constants.ts';
 import { neighbors4, tileIndex } from '../shared/grid.ts';
-import { RoadClass } from '../shared/types.ts';
+import { DeliveryState, RoadClass } from '../shared/types.ts';
+import { syncFleet } from './deliveries.ts';
 import { economyStep } from './economy.ts';
 import { buildingConsumption, placePlant } from './energy.ts';
 import { inspectTile } from './inspect.ts';
@@ -287,5 +288,43 @@ describe('traffic in the inspector', () => {
     expect(avenue.laneCapacity).toBe(BALANCE.vehicles.avenueMaxPerTile);
     expect(avenue.trafficLoad).toBe(200);
     expect(inspectTile(state, at(9, 9))!.laneCapacity).toBe(0);
+  });
+});
+
+describe('deliveries in the inspector', () => {
+  it('reports the delivery state and age of a shop and the noDeliveries blocker', () => {
+    const state = createSimState(1, SIZE);
+    buildRoads(state, [at(5, 5)]);
+    state.layers.zone[at(5, 6)] = Zone.Retail;
+    state.layers.density[at(5, 6)] = 1;
+    state.layers.buildingAge[at(5, 6)] = BALANCE.growth.densifyMinAge;
+    expect(inspectTile(state, at(5, 6))!.growthBlockers).not.toContain('noDeliveries');
+    state.layers.deliveryAge[at(5, 6)] = BALANCE.deliveries.supplyWindowDays * TICKS_PER_DAY + 1;
+    const info = inspectTile(state, at(5, 6))!;
+    expect(info.deliveryState).toBe(DeliveryState.Unsupplied);
+    expect(info.deliveryAgeTicks).toBe(BALANCE.deliveries.supplyWindowDays * TICKS_PER_DAY + 1);
+    expect(info.growthBlockers).toContain('noDeliveries');
+    expect(info.depot).toBeNull();
+  });
+
+  it("reports a depot's fleet and the shops in reach", () => {
+    const state = createSimState(1, SIZE);
+    buildRoads(
+      state,
+      Array.from({ length: 10 }, (_, i) => at(i + 2, 10)),
+    );
+    placePlant(state, at(2, 9), PlantType.LogisticsDepot);
+    state.layers.zone[at(6, 11)] = Zone.Retail;
+    state.layers.density[at(6, 11)] = 1;
+    syncFleet(state);
+    state.vans[0].charging = true;
+    const info = inspectTile(state, at(2, 9))!;
+    expect(info.depot).toEqual({
+      vansTotal: BALANCE.deliveries.vansPerDepot,
+      vansDriving: 0,
+      vansCharging: 1,
+      shopsInReach: 1,
+    });
+    expect(info.upkeepPerTick).toBe(BALANCE.upkeepPerTick.plant[PlantType.LogisticsDepot]);
   });
 });

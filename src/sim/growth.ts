@@ -1,5 +1,6 @@
 import { BALANCE } from '../shared/constants.ts';
 import { neighbors4 } from '../shared/grid.ts';
+import { isShopSupplied } from './deliveries.ts';
 import { hasPowerInfrastructure } from './energy.ts';
 import { SERVICE_FIRE } from './services.ts';
 import type { DemandStats } from '../shared/types.ts';
@@ -131,6 +132,8 @@ function canDensify(state: SimState, index: number): boolean {
   if (layers.buildingAge[index] < BALANCE.growth.densifyMinAge) return false;
   // The top density needs a fire station in reach.
   if (layers.density[index] === 2 && (layers.services[index] & SERVICE_FIRE) === 0) return false;
+  // Shops need a recent delivery to grow.
+  if (layers.zone[index] === Zone.Retail && !isShopSupplied(state, index)) return false;
   if (!energySystemActive(state)) return true;
   return layers.supplied[index] === SupplyStatus.Supplied;
 }

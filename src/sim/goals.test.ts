@@ -224,4 +224,43 @@ describe('goals', () => {
     goalsStep(small);
     expect(small.goalProgress.freeFlowTicks).toBe(0);
   });
+
+  describe('wellStocked', () => {
+    it('needs enough shops supplied for a whole day', () => {
+      const state = bigCity();
+      state.lastDeliveries = {
+        suppliedShare: 1,
+        shops: BALANCE.deliveries.goalMinShops,
+        driving: 0,
+        depots: 1,
+      };
+      for (let t = 0; t < TICKS_PER_DAY - 1; t++) goalsStep(state);
+      expect(state.goalsAchieved.has('wellStocked')).toBe(false);
+      goalsStep(state);
+      expect(state.goalsAchieved.has('wellStocked')).toBe(true);
+    });
+
+    it('too few shops or a bad share resets the streak', () => {
+      const state = bigCity();
+      state.lastDeliveries = {
+        suppliedShare: 1,
+        shops: BALANCE.deliveries.goalMinShops,
+        driving: 0,
+        depots: 1,
+      };
+      for (let t = 0; t < 50; t++) goalsStep(state);
+      expect(state.goalProgress.wellStockedTicks).toBe(50);
+      state.lastDeliveries.suppliedShare = BALANCE.deliveries.goalSuppliedShare - 0.01;
+      goalsStep(state);
+      expect(state.goalProgress.wellStockedTicks).toBe(0);
+      state.lastDeliveries = {
+        suppliedShare: 1,
+        shops: BALANCE.deliveries.goalMinShops - 1,
+        driving: 0,
+        depots: 1,
+      };
+      goalsStep(state);
+      expect(state.goalProgress.wellStockedTicks).toBe(0);
+    });
+  });
 });

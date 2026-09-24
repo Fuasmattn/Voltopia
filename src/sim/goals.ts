@@ -17,6 +17,7 @@ export const GOAL_IDS = [
   'summerResilience',
   'safeCity',
   'freeFlow',
+  'wellStocked',
 ] as const;
 export type GoalId = (typeof GOAL_IDS)[number];
 
@@ -76,6 +77,15 @@ export function goalsStep(state: SimState): void {
     progress.freeFlowTicks = 0;
   }
 
+  // A whole day with (nearly) every shop supplied, for a real retail scene.
+  const { goalSuppliedShare, goalMinShops } = BALANCE.deliveries;
+  const deliveries = state.lastDeliveries;
+  if (deliveries.shops >= goalMinShops && deliveries.suppliedShare >= goalSuppliedShare) {
+    progress.wellStockedTicks++;
+  } else {
+    progress.wellStockedTicks = 0;
+  }
+
   const achieved = state.goalsAchieved;
   if (!achieved.has('firstPower') && hasPowerInfrastructure(state)) {
     achieved.add('firstPower');
@@ -124,6 +134,9 @@ export function goalsStep(state: SimState): void {
   }
   if (!achieved.has('freeFlow') && progress.freeFlowTicks >= TICKS_PER_DAY) {
     achieved.add('freeFlow');
+  }
+  if (!achieved.has('wellStocked') && progress.wellStockedTicks >= TICKS_PER_DAY) {
+    achieved.add('wellStocked');
   }
 }
 

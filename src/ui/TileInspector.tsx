@@ -51,6 +51,7 @@ const BLOCKER_LABEL: Record<GrowthBlocker, TranslationKey> = {
   cityUnhappy: 'inspect.blocker.cityUnhappy',
   notLand: 'inspect.blocker.notLand',
   noFireCoverage: 'inspect.blocker.noFireCoverage',
+  noDeliveries: 'inspect.blocker.noDeliveries',
 };
 
 const SUPPLY_LABEL: Record<SupplyStatus, TranslationKey> = {

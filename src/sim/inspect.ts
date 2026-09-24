@@ -11,6 +11,7 @@ import { BALANCE, TICKS_PER_DAY } from '../shared/constants.ts';
 import { neighbors4, tileX, tileY } from '../shared/grid.ts';
 import type { GrowthBlocker, TileInfo } from '../shared/types.ts';
 import { PlantType, RoadClass, SupplyStatus, Terrain, TileType, Zone } from '../shared/types.ts';
+import { deliveryState, depotInfo, isShopSupplied } from './deliveries.ts';
 import { policeTaxFactor } from './economy.ts';
 import {
   buildingConsumption,
@@ -116,6 +117,7 @@ function growthBlockers(state: SimState, index: number, connected: boolean): Gro
     if (density === 2 && (layers.services[index] & SERVICE_FIRE) === 0) {
       blockers.push('noFireCoverage');
     }
+    if (zone === Zone.Retail && !isShopSupplied(state, index)) blockers.push('noDeliveries');
     if (energySystemActive(state) && layers.supplied[index] !== SupplyStatus.Supplied) {
       blockers.push(connected ? 'undersupplied' : 'notConnected');
     }
@@ -261,6 +263,12 @@ export function inspectTile(state: SimState, index: number): TileInfo | null {
       : RoadClass.Street) as RoadClass,
     trafficLoad: tileType === TileType.Road ? layers.trafficLoad[index] : 0,
     laneCapacity: tileType === TileType.Road ? laneCapacity(state, index) : 0,
+    deliveryState: deliveryState(state, index),
+    deliveryAgeTicks: isBuilding && zone === Zone.Retail ? layers.deliveryAge[index] : 0,
+    depot:
+      tileType === TileType.Plant && plant === PlantType.LogisticsDepot
+        ? depotInfo(state, index)
+        : null,
     growthBlockers: growthBlockers(state, index, connected),
     elevation,
     slope,

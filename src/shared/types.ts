@@ -182,6 +182,7 @@ export interface TileCounts {
   plantTiles: number;
   buildingTiles: number;
   powerLineTiles: number;
+  depots: number;
 }
 
 export interface DemandStats {
@@ -223,7 +224,28 @@ export type GrowthBlocker =
   | 'maxDensity'
   | 'cityUnhappy'
   | 'notLand'
-  | 'noFireCoverage';
+  | 'noFireCoverage'
+  | 'noDeliveries';
+
+/** Fleet figures of one logistics depot (inspector). */
+export interface DepotInfo {
+  vansTotal: number;
+  vansDriving: number;
+  vansCharging: number;
+  /** Retail buildings a tour from this depot can reach. */
+  shopsInReach: number;
+}
+
+/** City-wide delivery figures. */
+export interface DeliveryStats {
+  /** Supplied shops over all shops, 0..1 (1 when there are none). */
+  suppliedShare: number;
+  /** Retail buildings. */
+  shops: number;
+  /** Vans on the road. */
+  driving: number;
+  depots: number;
+}
 
 /**
  * Everything the tile inspector shows for the selected tile.
@@ -289,6 +311,12 @@ export interface TileInfo {
   trafficLoad: number;
   /** Cars per lane this tile holds (0 off-road). */
   laneCapacity: number;
+  /** Delivery bucket of a retail building (Supplied elsewhere). */
+  deliveryState: DeliveryState;
+  /** Ticks since the last delivery (0 off retail). */
+  deliveryAgeTicks: number;
+  /** Fleet figures when this tile is a logistics depot. */
+  depot: DepotInfo | null;
   growthBlockers: GrowthBlocker[];
   /** Elevation level 0..7 of this tile. */
   elevation: number;
@@ -331,6 +359,8 @@ export interface GlobalStats {
     driving: number;
     avenueShare: number;
   };
+  /** City-wide delivery figures. */
+  deliveries: DeliveryStats;
   goals: GoalState[];
   counts: TileCounts;
   /** Per-tick budget breakdown for the budget panel. */

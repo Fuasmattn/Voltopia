@@ -1,7 +1,7 @@
 import { TICKS_PER_DAY } from '../shared/constants.ts';
-import { RoadClass } from '../shared/types.ts';
+import { PlantType, RoadClass } from '../shared/types.ts';
 import type { EnergyHistoryPoint, GlobalStats } from '../shared/types.ts';
-import { deliveriesStep } from './deliveries.ts';
+import { deliveriesStep, deliveryStats } from './deliveries.ts';
 import { economyStep } from './economy.ts';
 import { energyStep } from './energy.ts';
 import { goalsStep, goalStates } from './goals.ts';
@@ -46,6 +46,7 @@ export function stepTick(state: SimState): void {
   updateWeather(state);
   const occupancy = vehiclesStep(state);
   deliveriesStep(state, occupancy);
+  state.lastDeliveries = deliveryStats(state);
   updateTrafficLoad(state, occupancy);
   energyStep(state, { chargingDemand: chargingDemand(state) });
   recomputeServices(state);
@@ -107,8 +108,9 @@ function countTiles(state: SimState): {
   plantTiles: number;
   buildingTiles: number;
   powerLineTiles: number;
+  depots: number;
 } {
-  const { tileType, zone, density, roadClass } = state.layers;
+  const { tileType, zone, density, roadClass, plantType } = state.layers;
   const counts = {
     roadTiles: 0,
     avenueTiles: 0,
@@ -116,13 +118,16 @@ function countTiles(state: SimState): {
     plantTiles: 0,
     buildingTiles: 0,
     powerLineTiles: countPowerLineTiles(state),
+    depots: 0,
   };
   for (let i = 0; i < tileType.length; i++) {
     if (tileType[i] === TileType.Road) {
       counts.roadTiles++;
       if (roadClass[i] === RoadClass.Avenue) counts.avenueTiles++;
-    } else if (tileType[i] === TileType.Plant) counts.plantTiles++;
-    else {
+    } else if (tileType[i] === TileType.Plant) {
+      counts.plantTiles++;
+      if (plantType[i] === PlantType.LogisticsDepot) counts.depots++;
+    } else {
       if (zone[i] !== Zone.None) counts.zonedTiles++;
       if (density[i] > 0) counts.buildingTiles++;
     }
@@ -182,6 +187,7 @@ export function buildStats(state: SimState): GlobalStats {
       driving: drivingVehicleCount(state),
       avenueShare: counts.roadTiles > 0 ? counts.avenueTiles / counts.roadTiles : 0,
     },
+    deliveries: { ...state.lastDeliveries },
     goals: goalStates(state),
     counts,
     budget: buildBudget(state),

@@ -290,6 +290,8 @@ const en = {
   'goal.safeCity.progress': 'Fire {fire} % · Police {police} %',
   'goal.freeFlow.title': 'Free flow',
   'goal.freeFlow.body': 'A whole day of commutes under 1.15× free flow (300+ residents).',
+  'goal.wellStocked.title': 'Well stocked',
+  'goal.wellStocked.body': 'A whole day with 95% of shops supplied (20+ shops).',
 
   // Budget panel and tile inspector.
   'budget.title': 'Budget',
@@ -357,6 +359,7 @@ const en = {
   'inspect.blocker.cityUnhappy': 'City too unhappy to grow',
   'inspect.blocker.notLand': 'Cannot build on water',
   'inspect.blocker.noFireCoverage': 'No fire station in reach for the next density',
+  'inspect.blocker.noDeliveries': 'No deliveries — build a logistics depot in reach',
   'inspector.elevation': 'Elevation',
   'inspector.steepSlope': 'Steep slope — cannot be built on',
   'inspector.terrain': 'Terrain',
@@ -657,6 +660,8 @@ const de: Record<TranslationKey, string> = {
   'goal.freeFlow.title': 'Freie Fahrt',
   'goal.freeFlow.body':
     'Ein ganzer Tag mit Pendelzeiten unter dem 1,15-fachen der freien Fahrt (ab 300 Einwohnern).',
+  'goal.wellStocked.title': 'Gut versorgt',
+  'goal.wellStocked.body': 'Einen ganzen Tag lang 95 % der Läden beliefert (ab 20 Läden).',
 
   // Budget-Panel und Kachel-Inspektor.
   'budget.title': 'Budget',
@@ -724,6 +729,7 @@ const de: Record<TranslationKey, string> = {
   'inspect.blocker.cityUnhappy': 'Stadt zu unzufrieden zum Wachsen',
   'inspect.blocker.notLand': 'Bauen auf Wasser nicht möglich',
   'inspect.blocker.noFireCoverage': 'Keine Feuerwehr in Reichweite für die nächste Dichte',
+  'inspect.blocker.noDeliveries': 'Keine Lieferungen – Logistikdepot in Reichweite bauen',
   'inspector.elevation': 'Höhenstufe',
   'inspector.steepSlope': 'Steilhang — nicht bebaubar',
   'inspector.terrain': 'Gelände',

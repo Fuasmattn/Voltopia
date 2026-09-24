@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { BALANCE } from '../shared/constants.ts';
+import { BALANCE, TICKS_PER_DAY } from '../shared/constants.ts';
 import { tileIndex } from '../shared/grid.ts';
 import { computeDemand, decayStep, growthStep } from './growth.ts';
 import { placePlant } from './energy.ts';
@@ -270,5 +270,27 @@ describe('fire coverage gate', () => {
     const state = readyToDensify(1);
     runGrowth(state, BALANCE.growth.densifyMinAge * 30);
     expect(state.layers.density[at(4, 4)]).toBe(2);
+  });
+});
+
+describe('delivery gate', () => {
+  const demand = { residential: 1, commercial: 1, retail: 1 };
+  function shop(age: number) {
+    const state = createSimState(3, SIZE);
+    buildRoads(state, [at(5, 5), at(6, 5)]);
+    state.layers.zone[at(5, 6)] = Zone.Retail;
+    state.layers.density[at(5, 6)] = 1;
+    state.layers.buildingAge[at(5, 6)] = BALANCE.growth.densifyMinAge;
+    state.layers.deliveryAge[at(5, 6)] = age;
+    for (let t = 0; t < 4000; t++) growthStep(state, demand);
+    return state.layers.density[at(5, 6)];
+  }
+
+  it('a shop past the supply window does not densify', () => {
+    expect(shop(BALANCE.deliveries.supplyWindowDays * TICKS_PER_DAY + 1)).toBe(1);
+  });
+
+  it('a supplied shop densifies', () => {
+    expect(shop(0)).toBeGreaterThan(1);
   });
 });

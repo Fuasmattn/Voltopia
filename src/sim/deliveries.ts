@@ -1,6 +1,7 @@
 import { BALANCE, TICK_RATE, TICKS_PER_DAY } from '../shared/constants.ts';
 import { neighbors4, tileX, tileY } from '../shared/grid.ts';
 import { DeliveryState, PlantType, Zone } from '../shared/types.ts';
+import type { DeliveryStats, DepotInfo } from '../shared/types.ts';
 import { isTileConnected } from './energy.ts';
 import { findRoadPath, roadDistances } from './routing.ts';
 import { advanceAlongPath, surplusAvailable, vehicleTile } from './vehicles.ts';
@@ -323,4 +324,44 @@ export function drivingVanCount(state: SimState): number {
   let count = 0;
   for (const v of state.vans) if (v.phase !== VanPhase.AtDepot) count++;
   return count;
+}
+
+/** City-wide delivery figures for stats and the goal. */
+export function deliveryStats(state: SimState): DeliveryStats {
+  const { tileType, deliveryAge } = state.layers;
+  const window = supplyWindowTicks();
+  let shops = 0;
+  let supplied = 0;
+  for (let i = 0; i < tileType.length; i++) {
+    if (!isShop(state, i)) continue;
+    shops++;
+    if (deliveryAge[i] <= window) supplied++;
+  }
+  return {
+    suppliedShare: shops > 0 ? supplied / shops : 1,
+    shops,
+    driving: drivingVanCount(state),
+    depots: depotTiles(state).length,
+  };
+}
+
+/** Fleet and reach of one depot for the inspector. */
+export function depotInfo(state: SimState, depot: number): DepotInfo {
+  let vansTotal = 0;
+  let vansDriving = 0;
+  let vansCharging = 0;
+  for (const van of state.vans) {
+    if (van.depot !== depot) continue;
+    vansTotal++;
+    if (van.phase !== VanPhase.AtDepot) vansDriving++;
+    if (van.charging) vansCharging++;
+  }
+  const road = depotRoadTile(state, depot);
+  const reached = new Set<number>();
+  if (road >= 0) {
+    for (const tile of roadDistances(state, road, BALANCE.deliveries.maxRouteTiles).keys()) {
+      for (const n of neighbors4(tile, state.size)) if (isShop(state, n)) reached.add(n);
+    }
+  }
+  return { vansTotal, vansDriving, vansCharging, shopsInReach: reached.size };
 }

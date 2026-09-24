@@ -8,6 +8,7 @@ import { neighbors4 } from '../shared/grid.ts';
 import { Rng } from '../shared/rng.ts';
 import type {
   DemandStats,
+  DeliveryStats,
   LifetimeSample,
   EnergyHistoryPoint,
   SaveGame,
@@ -190,6 +191,8 @@ export interface SimState {
   lastDemand: DemandStats;
   /** Coverage shares (0..1) from the last recomputeServices; transient. */
   lastServices: { fire: number; police: number };
+  /** Figures from the last deliveriesStep; transient. */
+  lastDeliveries: DeliveryStats;
   /** Achieved goal ids (persisted with the save game). */
   goalsAchieved: Set<string>;
   /** Goal progress counters; the season streaks are persisted, the rest is transient. */
@@ -304,6 +307,7 @@ export function createSimState(
     statsDirty: false,
     lastDemand: { residential: 0, commercial: 0, retail: 0 },
     lastServices: { fire: 0, police: 0 },
+    lastDeliveries: { suppliedShare: 1, shops: 0, driving: 0, depots: 0 },
     goalsAchieved: new Set(),
     goalProgress: {
       cleanDayTicks: 0,
