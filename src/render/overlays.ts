@@ -6,6 +6,7 @@ import {
   SERVICE_POLICE,
   SupplyStatus,
   TileType,
+  trafficLevel,
   Zone,
 } from '../shared/types.ts';
 import type { DiffLayer, RenderEnvironment } from './renderer.ts';
@@ -24,18 +25,21 @@ const SERVICE_COLORS = {
   none: 0xe05263,
 };
 
+const TRAFFIC_COLORS = { free: 0x4cd964, busy: 0xf4d35e, slow: 0xffb347, jammed: 0xe05263 };
+
 interface OverlayTile {
   zone: Zone;
   density: number;
   supplied: SupplyStatus;
   tileType: TileType;
   services: number;
+  trafficLoad: number;
 }
 
 /**
  * Toggleable color maps over the city: supply status of every building,
- * growth demand tinting all zoned tiles, or fire/police service coverage
- * of every building.
+ * growth demand tinting all zoned tiles, fire/police service coverage of
+ * every building, or per-tile traffic congestion on roads.
  */
 export class OverlaysMesh implements DiffLayer {
   private readonly mesh: THREE.InstancedMesh;
@@ -80,13 +84,14 @@ export class OverlaysMesh implements DiffLayer {
 
   applyDiffs(diffs: TileDiff[]): void {
     for (const diff of diffs) {
-      if (diff.zone !== Zone.None || diff.density > 0) {
+      if (diff.zone !== Zone.None || diff.density > 0 || diff.tileType === TileType.Road) {
         this.tiles.set(diff.index, {
           zone: diff.zone,
           density: diff.density,
           supplied: diff.supplied,
           tileType: diff.tileType,
           services: diff.services,
+          trafficLoad: diff.trafficLoad,
         });
       } else {
         this.tiles.delete(diff.index);
@@ -136,6 +141,18 @@ export class OverlaysMesh implements DiffLayer {
                   : police
                     ? SERVICE_COLORS.policeOnly
                     : SERVICE_COLORS.none;
+          }
+        } else if (this.mode === OverlayMode.Traffic) {
+          if (tile.tileType === TileType.Road) {
+            const level = trafficLevel(tile.trafficLoad);
+            colorHex =
+              level <= 1
+                ? TRAFFIC_COLORS.free
+                : level <= 4
+                  ? TRAFFIC_COLORS.busy
+                  : level <= 6
+                    ? TRAFFIC_COLORS.slow
+                    : TRAFFIC_COLORS.jammed;
           }
         }
         if (colorHex === null) continue;

@@ -11,6 +11,14 @@ export type TileType = (typeof TileType)[keyof typeof TileType];
 export const RoadClass = { Street: 0, Avenue: 1 } as const;
 export type RoadClass = (typeof RoadClass)[keyof typeof RoadClass];
 
+/** Number of overlay/diff buckets the 0..255 load is quantised into. */
+export const TRAFFIC_LEVELS = 8;
+
+/** 0..TRAFFIC_LEVELS-1 bucket of a load value. */
+export function trafficLevel(load: number): number {
+  return Math.min(TRAFFIC_LEVELS - 1, Math.floor((load / 256) * TRAFFIC_LEVELS));
+}
+
 /** Immutable ground type per tile, generated once per map. */
 export const Terrain = {
   Land: 0,
@@ -56,6 +64,7 @@ export const OverlayMode = {
   Supply: 1,
   Demand: 2,
   Services: 3,
+  Traffic: 4,
 } as const;
 export type OverlayMode = (typeof OverlayMode)[keyof typeof OverlayMode];
 

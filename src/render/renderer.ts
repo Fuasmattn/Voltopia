@@ -117,6 +117,7 @@ export class GameRenderer {
   /** Per-tile elevation, tracked from diffs; drives the ground height field. */
   private readonly elevation: ElevationField;
   private readonly groundMesh: GroundMesh;
+  private readonly roadsMesh: RoadsMesh;
   /** Per-tile terrain, tracked from diffs so tools can price bridges vs. roads. */
   private readonly terrain: Uint8Array;
   /** Per-tile world height of whatever stands there, tracked from diffs. */
@@ -179,7 +180,8 @@ export class GameRenderer {
     scene.add(this.groundMesh.group);
 
     this.addDiffLayer(new WaterMesh(scene, gridSize, this.elevation));
-    this.addDiffLayer(new RoadsMesh(scene, gridSize, this.elevation));
+    this.roadsMesh = new RoadsMesh(scene, gridSize, this.elevation);
+    this.addDiffLayer(this.roadsMesh);
     this.addDiffLayer(new PowerLinesMesh(scene, gridSize, this.elevation));
     this.addDiffLayer(new ZoneTilesMesh(scene, gridSize, this.elevation));
     this.addDiffLayer(new BuildingsMesh(scene, gridSize, this.elevation));
@@ -315,6 +317,11 @@ export class GameRenderer {
   /** Terrain of the given tile, tracked from diffs (build tools price bridges vs. roads). */
   terrainAt(index: number): Terrain {
     return this.terrain[index] as Terrain;
+  }
+
+  /** RoadClass of the tile (-1 no road, 0 street, 1 avenue), for build tool cost previews. */
+  roadClassAt(index: number): number {
+    return this.roadsMesh.roadClassAt(index);
   }
 
   /** Elevation level of a tile, tracked from diffs. */

@@ -1,6 +1,8 @@
 import { BALANCE } from '../shared/constants.ts';
-import { RoadClass, TileType } from '../shared/types.ts';
+import { RoadClass, TileType, trafficLevel } from '../shared/types.ts';
 import { markDirty, type SimState } from './state.ts';
+
+export { TRAFFIC_LEVELS, trafficLevel } from '../shared/types.ts';
 
 /** Lanes per road tile: one per heading (N, E, S, W). */
 export const LANES_PER_TILE = 4;
@@ -20,14 +22,6 @@ export function laneCapacity(state: SimState, tile: number): number {
   return state.layers.roadClass[tile] === RoadClass.Avenue
     ? BALANCE.vehicles.avenueMaxPerTile
     : BALANCE.vehicles.maxPerRoadTile;
-}
-
-/** Number of overlay/diff buckets the 0..255 load is quantised into. */
-export const TRAFFIC_LEVELS = 8;
-
-/** 0..TRAFFIC_LEVELS-1 bucket of a load value. */
-export function trafficLevel(load: number): number {
-  return Math.min(TRAFFIC_LEVELS - 1, Math.floor((load / 256) * TRAFFIC_LEVELS));
 }
 
 /**
