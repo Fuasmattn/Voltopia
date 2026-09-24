@@ -325,6 +325,8 @@ export interface TileDiff {
   roadMask: number;
   /** RoadClass of a road tile (0 elsewhere). */
   roadClass: number;
+  /** Smoothed traffic load 0..255 of a road tile (0 elsewhere). */
+  trafficLoad: number;
   /** Power line mask: 0 = none, else LINE_PRESENT | connection bits (N=1, E=2, S=4, W=8). */
   powerLine: number;
   zone: Zone;

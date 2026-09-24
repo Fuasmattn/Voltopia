@@ -101,6 +101,8 @@ export interface TileLayers {
   buildingAge: Uint32Array;
   /** Consecutive ticks without full supply (not persisted). */
   troubledTicks: Uint32Array;
+  /** Smoothed lane occupancy 0..255 per road tile. Derived, not persisted. */
+  trafficLoad: Uint8Array;
 }
 
 export interface SimState {
@@ -215,6 +217,7 @@ export function createTileLayers(size: number): TileLayers {
     services: new Uint8Array(tiles),
     buildingAge: new Uint32Array(tiles),
     troubledTicks: new Uint32Array(tiles),
+    trafficLoad: new Uint8Array(tiles),
   };
 }
 
@@ -341,6 +344,7 @@ export function collectDiffs(state: SimState): TileDiff[] {
       tileType: layers.tileType[index] as TileDiff['tileType'],
       roadMask: layers.roadMask[index],
       roadClass: layers.roadClass[index],
+      trafficLoad: layers.trafficLoad[index],
       powerLine: layers.powerLine[index],
       zone: layers.zone[index] as TileDiff['zone'],
       density: layers.density[index],

@@ -8,6 +8,7 @@ import {
   type SimState,
   type Vehicle,
 } from './state.ts';
+import { laneKey, updateTrafficLoad } from './traffic.ts';
 
 /**
  * Breadth-first search over road tiles. Returns the tile path from
@@ -101,13 +102,6 @@ function headingOf(from: number, to: number, size: number): number {
   if (dx < 0) return 3;
   if (dy > 0) return 2;
   return 0;
-}
-
-const HEADINGS = 4;
-
-/** Occupancy key for one lane: a road tile plus the direction of travel on it. */
-function laneKey(tile: number, heading: number): number {
-  return tile * HEADINGS + heading;
 }
 
 /**
@@ -265,6 +259,8 @@ export function vehiclesStep(state: SimState): void {
       vehicle.charge = Math.min(1, vehicle.charge + BALANCE.vehicles.chargeRatePerTick);
     }
   }
+
+  updateTrafficLoad(state, occupancy);
 }
 
 /**

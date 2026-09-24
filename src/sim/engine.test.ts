@@ -193,6 +193,7 @@ describe('SimEngine basics', () => {
     expect(first.stats.budget.avenueTiles).toBe(0);
     expect(first.stats.budget.avenueUpkeep).toBe(0);
     expect(first.diffs[0].services).toBe(0);
+    expect(first.diffs[0].trafficLoad).toBe(0);
     engine.state.tick = TICKS_PER_DAY * BALANCE.seasons.daysPerSeason - 1;
     const next = engine.tick();
     if (next.type !== 'tick') throw new Error('expected tick');

@@ -305,6 +305,14 @@ export const BALANCE = {
      * gridlocks (rings of full tiles) that would otherwise never clear.
      */
     maxWaitTicks: 40,
+    /** Vehicles per lane on an avenue tile. */
+    avenueMaxPerTile: 4,
+    /** Avenue tiles are driven this much faster than streets. */
+    avenueSpeedFactor: 1.5,
+    /** Route cost multiplier applied per tile at full traffic load. */
+    routeLoadPenalty: 2,
+    /** Traffic load smoothing per tick (EMA weight of the current tick). */
+    trafficLoadSmoothing: 0.05,
     /**
      * Commuting: vehicles drive home -> workplace in the morning and
      * back in the evening (hours of the in-game day). Departures are
@@ -409,5 +417,14 @@ export const BALANCE = {
     policePenaltyWeight: 0.1,
     /** Coverage share (per service) the safe-city goal requires. */
     goalCoverage: 0.9,
+  },
+
+  traffic: {
+    /** Congestion factor (commute time over free flow) up to which traffic counts as flowing. */
+    flowing: 1.15,
+    /** Above this factor the HUD calls it a jam. */
+    jammed: 1.5,
+    /** Population the free-flow goal requires. */
+    goalMinPopulation: 300,
   },
 } as const;
