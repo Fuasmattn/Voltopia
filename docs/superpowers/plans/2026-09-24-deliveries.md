@@ -61,7 +61,7 @@
 - Produces (`vehicles.ts`): `interface Mover { x; y; angle; path: number[]; pathIndex; charge; waitTicks }`, `vehicleTile(state, mover)`, `vehicleLane(state, mover)`, `advanceAlongPath(state, mover, step, occupancy): MoveResult` with `type MoveResult = 'moving' | 'waiting' | 'arrived' | 'lost'`, `laneOccupancy(state)`, `surplusAvailable(state)`, `vehiclesStep(state): Map<number, number>`.
 - `tick.ts` now owns the `updateTrafficLoad` call.
 
-- [ ] **Step 1: Write the failing routing test**
+- [x] **Step 1: Write the failing routing test**
 
 Create `src/sim/routing.test.ts`:
 
@@ -116,12 +116,12 @@ describe('roadDistances', () => {
 });
 ```
 
-- [ ] **Step 2: Run it to verify it fails**
+- [x] **Step 2: Run it to verify it fails**
 
 Run: `pnpm vitest run src/sim/routing.test.ts`
 Expected: FAIL — cannot resolve `./routing.ts`.
 
-- [ ] **Step 3: Create `src/sim/routing.ts`**
+- [x] **Step 3: Create `src/sim/routing.ts`**
 
 Move `tileCost` and `findRoadPath` out of `vehicles.ts` verbatim and add `roadDistances`:
 
@@ -187,7 +187,7 @@ export function roadDistances(
 
 In `vehicles.ts` delete `tileCost`, `findRoadPath` and the now-unused `MinHeap` / `RoadClass`-for-routing imports (keep `RoadClass`, it is still used in `driveAlongPath` / `startTripClock`), and add `import { findRoadPath } from './routing.ts';`.
 
-- [ ] **Step 4: Expose the movement core in `vehicles.ts`**
+- [x] **Step 4: Expose the movement core in `vehicles.ts`**
 
 Replace the private helpers `parkAt`, `vehicleTile`, `vehicleLane` and the function `driveAlongPath` with this (keep `headingOf` as is):
 
@@ -327,7 +327,7 @@ function driveAlongPath(
 
 Note the original cleared `path` after `recordCommute`; `recordCommute` reads only `tripTicks`/`tripFreeFlowTicks`, so the order change is safe.
 
-- [ ] **Step 5: Extract `laneOccupancy` and `surplusAvailable`, return the map**
+- [x] **Step 5: Extract `laneOccupancy` and `surplusAvailable`, return the map**
 
 In `vehiclesStep`:
 
@@ -378,7 +378,7 @@ export function surplusAvailable(state: SimState): boolean {
 }
 ```
 
-- [ ] **Step 6: Wire `tick.ts`**
+- [x] **Step 6: Wire `tick.ts`**
 
 ```ts
 import { updateTrafficLoad } from './traffic.ts';
@@ -388,7 +388,7 @@ updateTrafficLoad(state, vehiclesStep(state));
 energyStep(state, { chargingDemand: chargingDemand(state) });
 ```
 
-- [ ] **Step 7: Update `vehicles.test.ts`**
+- [x] **Step 7: Update `vehicles.test.ts`**
 
 Change the import line to:
 
@@ -409,12 +409,12 @@ function stepVehicles(state: SimState): void {
 
 Then replace every call (not the import): `sed -i 's/\bvehiclesStep(\([A-Za-z]*\))/stepVehicles(\1)/g' src/sim/vehicles.test.ts`. Check with `grep -n 'vehiclesStep' src/sim/vehicles.test.ts` that only the import and the helper remain.
 
-- [ ] **Step 8: Run tests, typecheck, format**
+- [x] **Step 8: Run tests, typecheck, format**
 
 Run: `pnpm typecheck && pnpm vitest run src/sim && pnpm format`
 Expected: all green, including the moved `findRoadPath` tests and the "stale traffic load still decays" test.
 
-- [ ] **Step 9: Commit**
+- [x] **Step 9: Commit**
 
 ```bash
 git add src/sim/routing.ts src/sim/routing.test.ts src/sim/vehicles.ts src/sim/vehicles.test.ts src/sim/tick.ts
@@ -447,7 +447,7 @@ Co-Authored-By: Claude Fable 5.1 <noreply@anthropic.com>"
 
 - Produces: `PlantType.LogisticsDepot = 11`; `DeliveryState = { Supplied: 0, Due: 1, Unsupplied: 2 }` (shared); `VanPhase = { AtDepot: 0, Driving: 1, Unloading: 2 }`; `interface Van` (below); `state.vans: Van[]`; `layers.deliveryAge: Uint16Array`; `state.goalProgress.wellStockedTicks`; `deliveryStateOfAge(age): DeliveryState` (state.ts); `SaveGame.wellStockedTicks?`; `BALANCE.deliveries`; tool id `plant-depot`.
 
-- [ ] **Step 1: Write the failing state tests**
+- [x] **Step 1: Write the failing state tests**
 
 Append to `src/sim/state.test.ts` (inside the existing `buildRejection` describe and the save describe respectively; reuse the file's `SIZE`/`at` helpers, `createSimState`, `buildRoads`):
 
@@ -495,12 +495,12 @@ it('round-trips wellStockedTicks and leaves it undefined when absent', () => {
 });
 ```
 
-- [ ] **Step 2: Run them to verify they fail**
+- [x] **Step 2: Run them to verify they fail**
 
 Run: `pnpm vitest run src/sim/state.test.ts src/storage/serialization.test.ts`
 Expected: FAIL — `LogisticsDepot`, `deliveryStateOfAge`, `DeliveryState`, `wellStockedTicks` missing.
 
-- [ ] **Step 3: Shared types and balance**
+- [x] **Step 3: Shared types and balance**
 
 `src/shared/types.ts`:
 
@@ -559,7 +559,7 @@ export type DeliveryState = (typeof DeliveryState)[keyof typeof DeliveryState];
   },
 ```
 
-- [ ] **Step 4: State**
+- [x] **Step 4: State**
 
 `src/sim/state.ts` — after `Vehicle`:
 
@@ -634,7 +634,7 @@ if (
 
 `src/sim/energy.ts`: add `logisticsDepots: number;` to `PlantCensus`, initialise `logisticsDepots: 0`, and `case PlantType.LogisticsDepot: census.logisticsDepots++; break;`.
 
-- [ ] **Step 5: Tool, labels, strings, meshes**
+- [x] **Step 5: Tool, labels, strings, meshes**
 
 `src/ui/useTools.ts`: add `| 'plant-depot'` to `ToolId`, `g: 'plant-depot',` to `TOOL_HOTKEYS`, `'plant-depot': PlantType.LogisticsDepot,` to `PLANT_BY_TOOL`.
 
@@ -675,12 +675,12 @@ German: `'tool.plant-depot': 'Logistikdepot',` and
 
 `src/render/minimapLayer.ts` plant colours: `[PlantType.LogisticsDepot]: '#8d99a6',`.
 
-- [ ] **Step 6: Run tests, typecheck, format**
+- [x] **Step 6: Run tests, typecheck, format**
 
 Run: `pnpm typecheck && pnpm vitest run src/sim/state.test.ts src/storage src/sim/energy.test.ts && pnpm format`
 Expected: PASS. If typecheck lists another `Record<PlantType, …>` literal, add the depot entry there too.
 
-- [ ] **Step 7: Commit**
+- [x] **Step 7: Commit**
 
 ```bash
 git add src/shared src/sim/state.ts src/sim/state.test.ts src/sim/energy.ts src/storage src/ui src/render
@@ -707,7 +707,7 @@ Co-Authored-By: Claude Fable 5.1 <noreply@anthropic.com>"
 - Consumes: `roadDistances`, `findRoadPath` (Task 1); `Van`, `VanPhase`, `deliveryStateOfAge` (Task 2).
 - Produces: `isShop(state, index)`, `deliveryState(state, index)`, `isShopSupplied(state, index)`, `supplyWindowTicks()`, `dueTicks()`, `depotTiles(state)`, `depotRoadTile(state, depot)`, `syncFleet(state)`, `ageShops(state)`, `planTour(state, van, claimed)`, `claimedStops(state)`.
 
-- [ ] **Step 1: Write the failing tests**
+- [x] **Step 1: Write the failing tests**
 
 Create `src/sim/deliveries.test.ts`:
 
@@ -901,12 +901,12 @@ describe('planTour', () => {
 });
 ```
 
-- [ ] **Step 2: Run them to verify they fail**
+- [x] **Step 2: Run them to verify they fail**
 
 Run: `pnpm vitest run src/sim/deliveries.test.ts`
 Expected: FAIL — cannot resolve `./deliveries.ts`.
 
-- [ ] **Step 3: Create `src/sim/deliveries.ts` (first half)**
+- [x] **Step 3: Create `src/sim/deliveries.ts` (first half)**
 
 ```ts
 import { BALANCE, TICK_RATE, TICKS_PER_DAY } from '../shared/constants.ts';
@@ -1109,12 +1109,12 @@ export function planTour(state: SimState, van: Van, claimed: Set<number>): numbe
 
 The unused imports (`TICK_RATE`, `isTileConnected`, `findRoadPath`, `advanceAlongPath`, `surplusAvailable`, `vehicleTile`) are used by Task 4; oxlint flags unused imports, so either add them in Task 4 or keep them and accept a lint failure only until Task 4 — do the former: import only what Step 3 uses and extend the import lines in Task 4.
 
-- [ ] **Step 4: Run the tests**
+- [x] **Step 4: Run the tests**
 
 Run: `pnpm vitest run src/sim/deliveries.test.ts && pnpm typecheck && pnpm lint && pnpm format`
 Expected: PASS (the sort-order test relies on candidate distances ascending with x on the straight street).
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add src/sim/deliveries.ts src/sim/deliveries.test.ts
@@ -1144,7 +1144,7 @@ Co-Authored-By: Claude Fable 5.1 <noreply@anthropic.com>"
 - Produces: `deliveriesStep(state, occupancy: Map<number, number>): void`, `drivingVans(state): Van[]`, `drivingVanCount(state): number`. `laneOccupancy` counts driving vans; `chargingDemand` includes vans.
 - Tick order: `const occupancy = vehiclesStep(state); deliveriesStep(state, occupancy); updateTrafficLoad(state, occupancy);`.
 
-- [ ] **Step 1: Write the failing tests**
+- [x] **Step 1: Write the failing tests**
 
 Append to `src/sim/deliveries.test.ts` (extend the imports with `deliveriesStep`, `drivingVans`, and `chargingDemand`, `laneOccupancy`, `vehiclesStep` from `./vehicles.ts`; the `shopTown` helper and `setHour` below are shared):
 
@@ -1349,12 +1349,12 @@ describe('vans in the commuter step', () => {
 });
 ```
 
-- [ ] **Step 2: Run them to verify they fail**
+- [x] **Step 2: Run them to verify they fail**
 
 Run: `pnpm vitest run src/sim/deliveries.test.ts src/sim/vehicles.test.ts`
 Expected: FAIL — `deliveriesStep`/`drivingVans` not exported; the occupancy test sees 0.
 
-- [ ] **Step 3: Vans in `laneOccupancy` and `chargingDemand` (`vehicles.ts`)**
+- [x] **Step 3: Vans in `laneOccupancy` and `chargingDemand` (`vehicles.ts`)**
 
 ```ts
 export function laneOccupancy(state: SimState): Map<number, number> {
@@ -1392,7 +1392,7 @@ export function chargingDemand(state: SimState): number {
 
 (import `VanPhase` from `./state.ts`.)
 
-- [ ] **Step 4: Second half of `deliveries.ts`**
+- [x] **Step 4: Second half of `deliveries.ts`**
 
 Extend the imports to those listed in Task 3 Step 3 and append:
 
@@ -1527,7 +1527,7 @@ export function drivingVanCount(state: SimState): number {
 
 Edge: when a `Driving` van is lost because its _last_ stop (the depot road) vanished, `routeToNextStop` empties `stops` and marks the van lost; `syncFleet` drops it next tick and spawns a replacement once the depot has a road again.
 
-- [ ] **Step 5: Wire `tick.ts`**
+- [x] **Step 5: Wire `tick.ts`**
 
 ```ts
 import { deliveriesStep } from './deliveries.ts';
@@ -1539,12 +1539,12 @@ updateTrafficLoad(state, occupancy);
 energyStep(state, { chargingDemand: chargingDemand(state) });
 ```
 
-- [ ] **Step 6: Run tests, typecheck, lint, format**
+- [x] **Step 6: Run tests, typecheck, lint, format**
 
 Run: `pnpm typecheck && pnpm lint && pnpm vitest run src/sim && pnpm format`
 Expected: PASS. If the "tours due shops" test times out on the first delivery, print `state.vans[0]` after 20 ticks: a van that never leaves `AtDepot` usually means `depotPowered` is false (check the wind turbine sits at (3,9), inside `lineSupplyRadius` of the depot) or `inWindow` is false.
 
-- [ ] **Step 7: Commit**
+- [x] **Step 7: Commit**
 
 ```bash
 git add src/sim/deliveries.ts src/sim/deliveries.test.ts src/sim/vehicles.ts src/sim/vehicles.test.ts src/sim/tick.ts
@@ -1576,7 +1576,7 @@ Co-Authored-By: Claude Fable 5.1 <noreply@anthropic.com>"
 
 - Produces: `GrowthBlocker` gains `'noDeliveries'`; `TileInfo.deliveryState: DeliveryState`, `TileInfo.deliveryAgeTicks: number`, `TileInfo.depot: DepotInfo | null` with `interface DepotInfo { vansTotal; vansDriving; vansCharging; shopsInReach }`; `GlobalStats.deliveries: DeliveryStats` with `interface DeliveryStats { suppliedShare; shops; driving; depots }`; `TileCounts.depots`; `state.lastDeliveries: DeliveryStats`; `deliveryStats(state)`, `depotInfo(state, depot)`; goal id `'wellStocked'`, `goalProgress.wellStockedTicks`.
 
-- [ ] **Step 1: Write the failing tests**
+- [x] **Step 1: Write the failing tests**
 
 `src/sim/growth.test.ts` — append (imports: `growthStep`, `createSimState`, `buildRoads`, `Zone`, `BALANCE`, `TICKS_PER_DAY`, `tileIndex`; reuse the file's `SIZE`/`at` if present, else declare `const SIZE = 24`):
 
@@ -1696,12 +1696,12 @@ expect(first.stats.deliveries).toEqual({ suppliedShare: 1, shops: 0, driving: 0,
 expect(first.stats.counts.depots).toBe(0);
 ```
 
-- [ ] **Step 2: Run them to verify they fail**
+- [x] **Step 2: Run them to verify they fail**
 
 Run: `pnpm vitest run src/sim/growth.test.ts src/sim/inspect.test.ts src/sim/goals.test.ts src/sim/engine.test.ts`
 Expected: FAIL (typecheck errors on the new fields, `shop(...)` densifies regardless).
 
-- [ ] **Step 3: Shared types**
+- [x] **Step 3: Shared types**
 
 `src/shared/types.ts`:
 
@@ -1746,7 +1746,7 @@ depot: DepotInfo | null;
 
 `TileCounts`: `depots: number;`. `GlobalStats` after `traffic`: `deliveries: DeliveryStats;`.
 
-- [ ] **Step 4: Sim**
+- [x] **Step 4: Sim**
 
 `src/sim/state.ts`: `lastDeliveries: DeliveryStats;` on `SimState` (doc: "Figures from the last deliveriesStep; transient.") and `lastDeliveries: { suppliedShare: 1, shops: 0, driving: 0, depots: 0 },` in `createSimState`.
 
@@ -1847,7 +1847,7 @@ if (!achieved.has('wellStocked') && progress.wellStockedTicks >= TICKS_PER_DAY) 
 }
 ```
 
-- [ ] **Step 5: UI strings required by typecheck**
+- [x] **Step 5: UI strings required by typecheck**
 
 `src/ui/TileInspector.tsx` `BLOCKER_LABEL`: `noDeliveries: 'inspect.blocker.noDeliveries',`.
 
@@ -1865,12 +1865,12 @@ German: `'inspect.blocker.noDeliveries': 'Keine Lieferungen – Logistikdepot in
   'goal.wellStocked.body': 'Einen ganzen Tag lang 95 % der Läden beliefert (ab 20 Läden).',
 ```
 
-- [ ] **Step 6: Run tests, typecheck, format**
+- [x] **Step 6: Run tests, typecheck, format**
 
 Run: `pnpm typecheck && pnpm lint && pnpm test && pnpm format`
 Expected: PASS. The integration tests keep passing because a city without a depot only blocks retail _densification_, not spawning; if `full gameplay integration` asserts a retail density above 1, add a depot next to its road in the test's city builder.
 
-- [ ] **Step 7: Commit**
+- [x] **Step 7: Commit**
 
 ```bash
 git add src/shared/types.ts src/sim src/ui/i18n.tsx src/ui/TileInspector.tsx
@@ -1900,7 +1900,7 @@ Co-Authored-By: Claude Fable 5.1 <noreply@anthropic.com>"
 
 - Produces: `VehicleKind = { Car: 0, Van: 1 }`; `VehicleState.kind: VehicleKind`; `TileDiff.deliveryState: number`; `OverlayMode.Deliveries = 5`.
 
-- [ ] **Step 1: Write the failing tests**
+- [x] **Step 1: Write the failing tests**
 
 `src/sim/engine.test.ts` — extend the stats test:
 
@@ -1946,12 +1946,12 @@ it('driving vans are sent to the renderer with kind Van', () => {
 
 (The van is `Unloading` with a long dwell so it neither moves nor finishes during the tick; imports: `TileType` from `./state.ts`, `PlantType`, `VehicleKind` from `../shared/types.ts`.)
 
-- [ ] **Step 2: Run it to verify it fails**
+- [x] **Step 2: Run it to verify it fails**
 
 Run: `pnpm vitest run src/sim/engine.test.ts`
 Expected: FAIL — `VehicleKind` undefined / `deliveryState` undefined.
 
-- [ ] **Step 3: Types, diffs, engine**
+- [x] **Step 3: Types, diffs, engine**
 
 `src/shared/types.ts`:
 
@@ -2010,7 +2010,7 @@ import { VehicleKind } from '../shared/types.ts';
 
 `src/agent/tileMirror.test.ts`: add `deliveryState: 0,` to the diff literal.
 
-- [ ] **Step 4: Van mesh**
+- [x] **Step 4: Van mesh**
 
 `src/render/vehiclesMesh.ts` — add a van geometry and a second instanced mesh; headlights cover both:
 
@@ -2085,7 +2085,7 @@ Size the headlight mesh `MAX_VEHICLES + MAX_VANS`. Replace `update()` with:
 
 (import `VehicleKind` as a value from `../shared/types.ts`.)
 
-- [ ] **Step 5: Deliveries overlay**
+- [x] **Step 5: Deliveries overlay**
 
 `src/render/overlays.ts`: add `DeliveryState`, `PlantType` to the value imports and
 
@@ -2138,12 +2138,12 @@ In `rebuild` after the traffic branch:
 
 Update the class doc comment to mention deliveries.
 
-- [ ] **Step 6: Run tests, typecheck, format**
+- [x] **Step 6: Run tests, typecheck, format**
 
 Run: `pnpm typecheck && pnpm lint && pnpm test && pnpm format`
 Expected: PASS (agent tests included).
 
-- [ ] **Step 7: Commit**
+- [x] **Step 7: Commit**
 
 ```bash
 git add src/shared/types.ts src/sim/state.ts src/sim/engine.ts src/sim/engine.test.ts src/render src/agent/tileMirror.test.ts
@@ -2170,7 +2170,7 @@ Co-Authored-By: Claude Fable 5.1 <noreply@anthropic.com>"
 - Consumes: `stats.deliveries`, `info.deliveryState`, `info.deliveryAgeTicks`, `info.depot` (Task 5), `OverlayMode.Deliveries` (Task 6).
 - Produces: test ids `overlay-deliveries`, `deliveries` (chip), `inspect-deliveries`, `inspect-depot`, `tool-plant-depot` (from Task 2's button, rendered as `tool-${id}` by the build bar).
 
-- [ ] **Step 1: Strings (English block, next to the traffic keys; German block likewise)**
+- [x] **Step 1: Strings (English block, next to the traffic keys; German block likewise)**
 
 English:
 
@@ -2220,7 +2220,7 @@ German:
 
 `src/ui/HelpPage.tsx` `SECTIONS`: insert `{ title: 'help.deliveries.title', body: 'help.deliveries.body' },` after the traffic entry.
 
-- [ ] **Step 2: Overlay button and chip**
+- [x] **Step 2: Overlay button and chip**
 
 `src/ui/OverlayToggle.tsx` `MODES`, after traffic:
 
@@ -2256,7 +2256,7 @@ German:
 }
 ```
 
-- [ ] **Step 3: Inspector sections**
+- [x] **Step 3: Inspector sections**
 
 `src/ui/TileInspector.tsx` — import `DeliveryState` as a value and `TICKS_PER_DAY` (already imported). Add near the other label maps:
 
@@ -2326,7 +2326,7 @@ After the traffic section:
 
 (`isBuilding`, `Row`, `Zone` exist in the file; check how `Row` names its props — `label`, `value`, `tone`, `testId` as in the traffic section.)
 
-- [ ] **Step 4: e2e and docs**
+- [x] **Step 4: e2e and docs**
 
 `e2e/game.spec.ts`: in the wide-window test add `await expect(page.getByTestId('tool-plant-depot')).toBeVisible();` after the police line; in the overlay test add before `overlay-off`:
 
@@ -2344,12 +2344,12 @@ await expect(page.getByTestId('overlay-deliveries')).toHaveClass(/active/);
   at the depot (added after the MVP; see the deliveries spec)
 ```
 
-- [ ] **Step 5: Verify**
+- [x] **Step 5: Verify**
 
 Run: `pnpm typecheck && pnpm lint && pnpm test && pnpm format && pnpm build`
 Expected: PASS. e2e (`pnpm e2e`) needs the Mac or CI; note it in the summary.
 
-- [ ] **Step 6: Commit**
+- [x] **Step 6: Commit**
 
 ```bash
 git add src/ui e2e README.md docs/idea.md
@@ -2372,7 +2372,7 @@ Co-Authored-By: Claude Fable 5.1 <noreply@anthropic.com>"
 - Modify: `docs/agent-tools.md` (conventions ~line 64, overview row ~line 80)
 - Test: `src/agent/tools.test.ts`
 
-- [ ] **Step 1: Write the failing tests**
+- [x] **Step 1: Write the failing tests**
 
 Append inside `describe('agent tools: building', …)`:
 
@@ -2394,12 +2394,12 @@ it('places a logistics depot next to a road and reports deliveries', async () =>
 
 (`overview.deliveries.depots` reads the stats after the command; if the harness's stats lag one tick, call `await call('advance_time', { ticks: 1 })` before `get_game_overview`.)
 
-- [ ] **Step 2: Run it to verify it fails**
+- [x] **Step 2: Run it to verify it fails**
 
 Run: `pnpm vitest run src/agent/tools.test.ts`
 Expected: FAIL — `logistics_depot` is not a valid plant name.
 
-- [ ] **Step 3: Implement**
+- [x] **Step 3: Implement**
 
 `PLANT_NAMES`: `logistics_depot: PlantType.LogisticsDepot,`. `PLANT_TOOL_KEY`: `logistics_depot: 'tool.plant-depot',`. `PLANT_PLACEMENT`: `logistics_depot: 'an empty land tile with a road as direct (4-)neighbour; vans serve shops within route reach',`. `plantFigures`: `case PlantType.LogisticsDepot: return { vans: BALANCE.deliveries.vansPerDepot, routeReachTiles: BALANCE.deliveries.maxRouteTiles };`. `place_plant` description: append `', logistics_depot'` to the list. `get_game_overview` result after `budgetPerTick`:
 
@@ -2424,7 +2424,7 @@ Also add `noDeliveries` to any blocker documentation string in `tools.ts` if one
 
 `docs/agent-tools.md`: add `logistics_depot` to the plant list in Conventions; extend the `get_game_overview` row with ", deliveries"; extend the `inspect_tile` row with " (incl. delivery state and depot fleet)".
 
-- [ ] **Step 4: Verify and commit**
+- [x] **Step 4: Verify and commit**
 
 Run: `pnpm typecheck && pnpm lint && pnpm vitest run src/agent && pnpm format`
 
@@ -2444,7 +2444,7 @@ Co-Authored-By: Claude Fable 5.1 <noreply@anthropic.com>"
 - Create (temporary, delete before the final commit): `src/sim/deliveries.probe.test.ts`
 - Modify (allowed values only): `BALANCE.deliveries.*`, `costs.plant[LogisticsDepot]`, `upkeepPerTick.plant[LogisticsDepot]`
 
-- [ ] **Step 1: Write the probe**
+- [x] **Step 1: Write the probe**
 
 ```ts
 import { it } from 'vitest';
@@ -2541,17 +2541,17 @@ it('probe', () => {
 });
 ```
 
-- [ ] **Step 2: Run and read**
+- [x] **Step 2: Run and read**
 
 Run: `pnpm vitest run src/sim/deliveries.probe.test.ts --reporter=verbose 2>&1 | grep -E '^(==|day)'`
 
 Targets from the spec: with one depot and 15 shops the supplied share sits above 0.95 from day 2 on; with 30 shops on one depot the share drops below 0.95 (a second depot is a real decision) and recovers with two depots; van charging is below a quarter of car charging; the congestion ratio moves by less than 0.05 versus a run with `shops = 0`.
 
-- [ ] **Step 3: Tune within the allowed values**
+- [x] **Step 3: Tune within the allowed values**
 
 If 15 shops are already underserved: raise `stopsPerTour` (6–7) or `vansPerDepot` (4) before touching speed. If 30 shops are still fully served by one depot: lower `stopsPerTour` or shrink `windowEndHour`. If van charging dominates: lower `chargingEnergyPerVan`. Re-run the unit tests after each change (`pnpm vitest run src/sim/deliveries.test.ts`); the tour-length assertions depend on `stopsPerTour` only through `BALANCE`, so they follow.
 
-- [ ] **Step 4: Delete the probe and commit the tuning (if any)**
+- [x] **Step 4: Delete the probe and commit the tuning (if any)**
 
 ```bash
 rm src/sim/deliveries.probe.test.ts
@@ -2575,12 +2575,12 @@ Skip the commit if no value changed; still delete the probe.
 
 - Modify: `docs/superpowers/plans/2026-09-24-deliveries.md`
 
-- [ ] **Step 1: Coverage**
+- [x] **Step 1: Coverage**
 
 Run: `pnpm coverage`
 Expected: PASS with ≥ 90 % on `src/sim` and `src/shared`. Under-covered branches in `deliveries.ts` (lost vans, unreachable leftovers in `planTour`, `depotInfo` without a road) get a focused unit test in `deliveries.test.ts`; never lower the gate.
 
-- [ ] **Step 2: Tick the plan and commit**
+- [x] **Step 2: Tick the plan and commit**
 
 Tick every step checkbox `- [ ]` → `- [x]` in the task sections only; leave the header sentence untouched (use `sed -i 's/^- \[ \]/- [x]/'`, which only matches lines starting with the box).
 
@@ -2592,6 +2592,6 @@ git commit -m "docs: mark the deliveries plan done
 Co-Authored-By: Claude Fable 5.1 <noreply@anthropic.com>"
 ```
 
-- [ ] **Step 3: Summary for the user**
+- [x] **Step 3: Summary for the user**
 
 Report: what was built, the probe numbers, changed balance values, the load-behaviour caveat (every shop starts supplied after a load), and that e2e (`tool-plant-depot`, `overlay-deliveries`), the smoke and a visual check of the van mesh, the depot mesh and the deliveries overlay need the Mac or CI.
