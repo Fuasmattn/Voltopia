@@ -7,3 +7,6 @@ coverage
 .DS_Store
 test-results
 playwright-report
+
+# SDD scratch workspace (subagent-driven-development)
+.superpowers/
