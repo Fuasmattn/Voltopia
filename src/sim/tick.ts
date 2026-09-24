@@ -10,6 +10,7 @@ import { happinessStep } from './happiness.ts';
 import { countPowerLineTiles } from './powerLines.ts';
 import { seasonState } from './seasons.ts';
 import { recomputeServices, serviceCoverage } from './services.ts';
+import { updateTrafficLoad } from './traffic.ts';
 import { chargingDemand, drivingVehicleCount, vehiclesStep } from './vehicles.ts';
 import { updateWeather } from './weather.ts';
 import {
@@ -42,7 +43,7 @@ export function stepTick(state: SimState): void {
     cloudCover: state.weather.cloudCover,
   });
   updateWeather(state);
-  vehiclesStep(state);
+  updateTrafficLoad(state, vehiclesStep(state));
   energyStep(state, { chargingDemand: chargingDemand(state) });
   recomputeServices(state);
   state.lastServices = serviceCoverage(state);

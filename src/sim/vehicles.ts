@@ -1,7 +1,7 @@
 import { BALANCE, TICK_RATE, TICKS_PER_DAY } from '../shared/constants.ts';
 import { neighbors4, tileIndex, tileX, tileY } from '../shared/grid.ts';
-import { MinHeap } from '../shared/heap.ts';
 import { PlantType, RoadClass, Zone } from '../shared/types.ts';
+import { findRoadPath } from './routing.ts';
 import {
   countPopulationAndJobs,
   TileType,
@@ -9,59 +9,7 @@ import {
   type SimState,
   type Vehicle,
 } from './state.ts';
-import { laneCapacity, laneKey, updateTrafficLoad } from './traffic.ts';
-
-/** Cost of driving onto a road tile: avenues are cheaper, loaded tiles dearer. */
-function tileCost(state: SimState, tile: number): number {
-  const { roadClass, trafficLoad } = state.layers;
-  const base = roadClass[tile] === RoadClass.Avenue ? 1 / BALANCE.vehicles.avenueSpeedFactor : 1;
-  return base * (1 + BALANCE.vehicles.routeLoadPenalty * (trafficLoad[tile] / 255));
-}
-
-/**
- * Cheapest route over road tiles from `from` to `to` (both included), or
- * null when they are not connected. Dijkstra with per-tile costs from
- * road class and traffic load; ties break by tile index, so the result
- * is deterministic.
- */
-export function findRoadPath(state: SimState, from: number, to: number): number[] | null {
-  const { tileType } = state.layers;
-  if (tileType[from] !== TileType.Road || tileType[to] !== TileType.Road) {
-    return null;
-  }
-  if (from === to) return [from];
-
-  const tiles = state.size * state.size;
-  const distance = new Float64Array(tiles).fill(Infinity);
-  const cameFrom = new Int32Array(tiles).fill(-1);
-  const settled = new Uint8Array(tiles);
-  const heap = new MinHeap();
-  distance[from] = 0;
-  heap.push(0, from);
-  while (heap.size > 0) {
-    const tile = heap.pop()!;
-    if (settled[tile]) continue;
-    settled[tile] = 1;
-    if (tile === to) break;
-    for (const neighbor of neighbors4(tile, state.size)) {
-      if (tileType[neighbor] !== TileType.Road || settled[neighbor]) continue;
-      const next = distance[tile] + tileCost(state, neighbor);
-      if (next < distance[neighbor]) {
-        distance[neighbor] = next;
-        cameFrom[neighbor] = tile;
-        heap.push(next, neighbor);
-      }
-    }
-  }
-  if (cameFrom[to] === -1) return null;
-  const path = [to];
-  let current = to;
-  while (current !== from) {
-    current = cameFrom[current];
-    path.push(current);
-  }
-  return path.reverse();
-}
+import { laneCapacity, laneKey } from './traffic.ts';
 
 /** Road tiles adjacent to buildings of the given zones. */
 function roadTilesNextToZones(state: SimState, zones: readonly Zone[]): number[] {
@@ -97,15 +45,32 @@ function departureTicks(startHour: number): number {
   return Math.floor((startHour / 24) * TICKS_PER_DAY);
 }
 
-function parkAt(state: SimState, vehicle: Vehicle, tile: number): void {
-  vehicle.x = tileX(tile, state.size) + 0.5;
-  vehicle.y = tileY(tile, state.size) + 0.5;
-  vehicle.path = [];
-  vehicle.pathIndex = 0;
+/** Anything that drives along a road path: commuter cars and delivery vans. */
+export interface Mover {
+  x: number;
+  y: number;
+  angle: number;
+  /** Road tiles of the current trip (empty while parked). */
+  path: number[];
+  pathIndex: number;
+  /** Battery state of charge, 0..1. Drains while driving. */
+  charge: number;
+  /** Consecutive ticks spent waiting behind a full lane (gridlock breaker). */
+  waitTicks: number;
 }
 
-function vehicleTile(state: SimState, vehicle: Vehicle): number {
-  return tileIndex(Math.floor(vehicle.x), Math.floor(vehicle.y), state.size);
+export type MoveResult = 'moving' | 'waiting' | 'arrived' | 'lost';
+
+function parkAt(state: SimState, mover: Mover, tile: number): void {
+  mover.x = tileX(tile, state.size) + 0.5;
+  mover.y = tileY(tile, state.size) + 0.5;
+  mover.path = [];
+  mover.pathIndex = 0;
+}
+
+/** The road tile under a mover. */
+export function vehicleTile(state: SimState, mover: Mover): number {
+  return tileIndex(Math.floor(mover.x), Math.floor(mover.y), state.size);
 }
 
 /** Heading from one tile to a 4-neighbour: 0 = north, 1 = east, 2 = south, 3 = west. */
@@ -119,16 +84,136 @@ function headingOf(from: number, to: number, size: number): number {
 }
 
 /**
- * The lane a driving vehicle currently occupies: its tile plus the
+ * The lane a driving mover currently occupies: its tile plus the
  * heading toward its next path tile (or the one after, while it is still
  * approaching the centre of its own tile).
  */
-function vehicleLane(state: SimState, vehicle: Vehicle): number {
-  const tile = vehicleTile(state, vehicle);
-  let target = vehicle.path[vehicle.pathIndex];
-  if (target === tile) target = vehicle.path[vehicle.pathIndex + 1];
+export function vehicleLane(state: SimState, mover: Mover): number {
+  const tile = vehicleTile(state, mover);
+  let target = mover.path[mover.pathIndex];
+  if (target === tile) target = mover.path[mover.pathIndex + 1];
   const heading = target === undefined ? 0 : headingOf(tile, target, state.size);
   return laneKey(tile, heading);
+}
+
+/**
+ * Move one tick along the path at `step` tiles per tick (avenue tiles
+ * are faster). Enforces lane capacity with the gridlock breaker, keeps
+ * the occupancy map current, drains the battery. 'lost' when the next
+ * path tile is no longer a road; 'arrived' after the last tile, with the
+ * path cleared and the lane released.
+ */
+export function advanceAlongPath(
+  state: SimState,
+  mover: Mover,
+  step: number,
+  occupancy: Map<number, number>,
+): MoveResult {
+  const target = mover.path[mover.pathIndex];
+  if (target === undefined || state.layers.tileType[target] !== TileType.Road) return 'lost';
+
+  const targetX = tileX(target, state.size) + 0.5;
+  const targetY = tileY(target, state.size) + 0.5;
+  const dx = targetX - mover.x;
+  const dy = targetY - mover.y;
+  const distance = Math.hypot(dx, dy);
+
+  // Congestion: entering a lane that is full means waiting — unless the
+  // wait has gone on so long that this is a gridlock, in which case the
+  // mover squeezes past so traffic never freezes for good.
+  const currentTile = vehicleTile(state, mover);
+  const stride =
+    state.layers.roadClass[currentTile] === RoadClass.Avenue
+      ? step * BALANCE.vehicles.avenueSpeedFactor
+      : step;
+  const move = Math.min(stride, distance);
+  const nextX = distance <= stride ? targetX : mover.x + (dx / distance) * move;
+  const nextY = distance <= stride ? targetY : mover.y + (dy / distance) * move;
+  const nextTile = tileIndex(Math.floor(nextX), Math.floor(nextY), state.size);
+  if (nextTile !== currentTile) {
+    const heading = headingOf(currentTile, nextTile, state.size);
+    const nextLane = laneKey(nextTile, heading);
+    const full = (occupancy.get(nextLane) ?? 0) >= laneCapacity(state, nextTile);
+    if (full && mover.waitTicks < BALANCE.vehicles.maxWaitTicks) {
+      mover.waitTicks++;
+      return 'waiting';
+    }
+    const currentLane = vehicleLane(state, mover);
+    occupancy.set(currentLane, Math.max(0, (occupancy.get(currentLane) ?? 1) - 1));
+    occupancy.set(nextLane, (occupancy.get(nextLane) ?? 0) + 1);
+  }
+  mover.waitTicks = 0;
+
+  mover.x = nextX;
+  mover.y = nextY;
+  if (move > 1e-9) {
+    mover.angle = Math.atan2(dy, dx);
+    mover.charge = Math.max(0, mover.charge - move * BALANCE.vehicles.batteryDrainPerTile);
+  }
+
+  if (distance <= stride) {
+    mover.pathIndex++;
+    if (mover.pathIndex >= mover.path.length) {
+      const lane = vehicleLane(state, mover);
+      occupancy.set(lane, Math.max(0, (occupancy.get(lane) ?? 1) - 1));
+      mover.path = [];
+      mover.pathIndex = 0;
+      return 'arrived';
+    }
+  }
+  return 'moving';
+}
+
+/** Commuter wrapper: park again when the route is gone, record the trip on arrival. */
+function driveAlongPath(
+  state: SimState,
+  vehicle: Vehicle,
+  step: number,
+  occupancy: Map<number, number>,
+): void {
+  const result = advanceAlongPath(state, vehicle, step, occupancy);
+  if (result === 'lost') {
+    // A bulldozed tile on the route: abort the trip and re-plan next tick.
+    const parked = vehicle.phase === VehiclePhase.ToWork ? vehicle.homeRoad : vehicle.workRoad;
+    vehicle.phase =
+      vehicle.phase === VehiclePhase.ToWork ? VehiclePhase.ParkedHome : VehiclePhase.ParkedWork;
+    parkAt(state, vehicle, parked);
+    return;
+  }
+  if (result === 'arrived') {
+    vehicle.phase =
+      vehicle.phase === VehiclePhase.ToWork ? VehiclePhase.ParkedWork : VehiclePhase.ParkedHome;
+    recordCommute(state, vehicle);
+  }
+}
+
+/**
+ * How many driving movers occupy each lane (road tile and heading) at
+ * the start of the tick. Oncoming traffic uses the other lane, so it
+ * never blocks; only movers going the same way queue up.
+ */
+export function laneOccupancy(state: SimState): Map<number, number> {
+  const occupancy = new Map<number, number>();
+  for (const vehicle of state.vehicles) {
+    if (vehicle.phase === VehiclePhase.ToWork || vehicle.phase === VehiclePhase.ToHome) {
+      const lane = vehicleLane(state, vehicle);
+      occupancy.set(lane, (occupancy.get(lane) ?? 0) + 1);
+    }
+  }
+  return occupancy;
+}
+
+/**
+ * Smart charging gate: was there renewable surplus last tick? Compared
+ * against buildings plus heating and cooling load (not charging itself,
+ * or the gate would feed back on its own dispatch decision).
+ */
+export function surplusAvailable(state: SimState): boolean {
+  const e = state.lastEnergy;
+  return (
+    e.solar + e.wind + e.rooftop + e.hydro >
+    e.buildingConsumption + e.heatingConsumption + e.coolingConsumption
+  );
 }
 
 /**
@@ -138,7 +223,7 @@ function vehicleLane(state: SimState, vehicle: Vehicle): number {
  * emerges from what the fleet actually does. Congestion: at most a few
  * vehicles fit on a road tile; followers wait, so queues form.
  */
-export function vehiclesStep(state: SimState): void {
+export function vehiclesStep(state: SimState): Map<number, number> {
   const { population, jobs } = countPopulationAndJobs(state);
   const targetCount = Math.min(
     BALANCE.vehicles.maxVehicles,
@@ -150,8 +235,7 @@ export function vehiclesStep(state: SimState): void {
 
   if (homeRoads.length === 0) {
     state.vehicles.length = 0;
-    updateTrafficLoad(state, new Map()); // let a stale load decay even without commuters
-    return;
+    return laneOccupancy(state);
   }
 
   while (state.vehicles.length > targetCount) state.vehicles.pop();
@@ -186,32 +270,13 @@ export function vehiclesStep(state: SimState): void {
   const morningDeparture = departureTicks(BALANCE.vehicles.commute.morningStartHour);
   const eveningDeparture = departureTicks(BALANCE.vehicles.commute.eveningStartHour);
 
-  // Congestion: how many driving vehicles occupy each lane (road tile
-  // and heading). Oncoming traffic uses the other lane, so it never
-  // blocks; only cars going the same way queue up.
-  const occupancy = new Map<number, number>();
-  for (const vehicle of state.vehicles) {
-    if (vehicle.phase === VehiclePhase.ToWork || vehicle.phase === VehiclePhase.ToHome) {
-      const lane = vehicleLane(state, vehicle);
-      occupancy.set(lane, (occupancy.get(lane) ?? 0) + 1);
-    }
-  }
+  const occupancy = laneOccupancy(state);
 
   // Work charging: hubs serve nearby workplaces up to their capacity.
   const hubs = chargingHubTiles(state);
   const hubLoad = new Map<number, number>();
 
-  // Smart charging gate: is there renewable surplus right now (last tick)?
-  // Compared against buildings plus heating and cooling load (not charging
-  // itself, or the gate would feed back on its own dispatch decision).
-  const surplusAvailable =
-    state.lastEnergy.solar +
-      state.lastEnergy.wind +
-      state.lastEnergy.rooftop +
-      state.lastEnergy.hydro >
-    state.lastEnergy.buildingConsumption +
-      state.lastEnergy.heatingConsumption +
-      state.lastEnergy.coolingConsumption;
+  const surplus = surplusAvailable(state);
 
   for (const vehicle of state.vehicles) {
     // Reassign endpoints that were bulldozed or lost their buildings.
@@ -269,13 +334,13 @@ export function vehiclesStep(state: SimState): void {
       }
     }
 
-    vehicle.charging = decideCharging(state, vehicle, hubs, hubLoad, surplusAvailable);
+    vehicle.charging = decideCharging(state, vehicle, hubs, hubLoad, surplus);
     if (vehicle.charging) {
       vehicle.charge = Math.min(1, vehicle.charge + BALANCE.vehicles.chargeRatePerTick);
     }
   }
 
-  updateTrafficLoad(state, occupancy);
+  return occupancy;
 }
 
 /**
@@ -313,75 +378,6 @@ function decideCharging(
     }
   }
   return false;
-}
-
-function driveAlongPath(
-  state: SimState,
-  vehicle: Vehicle,
-  step: number,
-  occupancy: Map<number, number>,
-): void {
-  // A bulldozed tile on the route: abort the trip and re-plan next tick.
-  const target = vehicle.path[vehicle.pathIndex];
-  if (target === undefined || state.layers.tileType[target] !== TileType.Road) {
-    const parked = vehicle.phase === VehiclePhase.ToWork ? vehicle.homeRoad : vehicle.workRoad;
-    vehicle.phase =
-      vehicle.phase === VehiclePhase.ToWork ? VehiclePhase.ParkedHome : VehiclePhase.ParkedWork;
-    parkAt(state, vehicle, parked);
-    return;
-  }
-
-  const targetX = tileX(target, state.size) + 0.5;
-  const targetY = tileY(target, state.size) + 0.5;
-  const dx = targetX - vehicle.x;
-  const dy = targetY - vehicle.y;
-  const distance = Math.hypot(dx, dy);
-
-  // Congestion: entering a lane that is full means waiting — unless the
-  // wait has gone on so long that this is a gridlock, in which case the
-  // car squeezes past so traffic never freezes for good.
-  const currentTile = vehicleTile(state, vehicle);
-  const stride =
-    state.layers.roadClass[currentTile] === RoadClass.Avenue
-      ? step * BALANCE.vehicles.avenueSpeedFactor
-      : step;
-  const move = Math.min(stride, distance);
-  const nextX = distance <= stride ? targetX : vehicle.x + (dx / distance) * move;
-  const nextY = distance <= stride ? targetY : vehicle.y + (dy / distance) * move;
-  const nextTile = tileIndex(Math.floor(nextX), Math.floor(nextY), state.size);
-  if (nextTile !== currentTile) {
-    const heading = headingOf(currentTile, nextTile, state.size);
-    const nextLane = laneKey(nextTile, heading);
-    const full = (occupancy.get(nextLane) ?? 0) >= laneCapacity(state, nextTile);
-    if (full && vehicle.waitTicks < BALANCE.vehicles.maxWaitTicks) {
-      vehicle.waitTicks++;
-      return; // queue behind the jam, try again next tick
-    }
-    const currentLane = vehicleLane(state, vehicle);
-    occupancy.set(currentLane, Math.max(0, (occupancy.get(currentLane) ?? 1) - 1));
-    occupancy.set(nextLane, (occupancy.get(nextLane) ?? 0) + 1);
-  }
-  vehicle.waitTicks = 0;
-
-  vehicle.x = nextX;
-  vehicle.y = nextY;
-  if (move > 1e-9) {
-    vehicle.angle = Math.atan2(dy, dx);
-    vehicle.charge = Math.max(0, vehicle.charge - move * BALANCE.vehicles.batteryDrainPerTile);
-  }
-
-  if (distance <= stride) {
-    vehicle.pathIndex++;
-    if (vehicle.pathIndex >= vehicle.path.length) {
-      const arrivedAtWork = vehicle.phase === VehiclePhase.ToWork;
-      vehicle.phase = arrivedAtWork ? VehiclePhase.ParkedWork : VehiclePhase.ParkedHome;
-      const lane = vehicleLane(state, vehicle);
-      occupancy.set(lane, Math.max(0, (occupancy.get(lane) ?? 1) - 1));
-      recordCommute(state, vehicle);
-      vehicle.path = [];
-      vehicle.pathIndex = 0;
-    }
-  }
 }
 
 /**

@@ -4,8 +4,10 @@ import { tileIndex } from '../shared/grid.ts';
 import { PlantType, RoadClass, Zone } from '../shared/types.ts';
 import { placePlant } from './energy.ts';
 import { buildRoads } from './roads.ts';
+import { findRoadPath } from './routing.ts';
 import { createSimState, TileType, VehiclePhase, type SimState } from './state.ts';
-import { chargingDemand, drivingVehicles, findRoadPath, vehiclesStep } from './vehicles.ts';
+import { updateTrafficLoad } from './traffic.ts';
+import { chargingDemand, drivingVehicles, vehiclesStep } from './vehicles.ts';
 
 const SIZE = 24;
 const at = (x: number, y: number) => tileIndex(x, y, SIZE);
@@ -41,9 +43,14 @@ function setHour(state: SimState, hour: number): void {
 function runHours(state: SimState, hours: number): void {
   const ticks = Math.round((hours / 24) * TICKS_PER_DAY);
   for (let i = 0; i < ticks; i++) {
-    vehiclesStep(state);
+    stepVehicles(state);
     state.tick++;
   }
+}
+
+/** One tick of commuting plus the traffic-load fold that tick.ts performs. */
+function stepVehicles(state: SimState): void {
+  updateTrafficLoad(state, vehiclesStep(state));
 }
 
 describe('findRoadPath', () => {
@@ -77,15 +84,15 @@ describe('vehiclesStep (commuting)', () => {
   it('fleet size scales with population', () => {
     const small = commuterTown(1, 60);
     const large = commuterTown(1, 250);
-    vehiclesStep(small);
-    vehiclesStep(large);
+    stepVehicles(small);
+    stepVehicles(large);
     expect(large.vehicles.length).toBeGreaterThan(small.vehicles.length);
   });
 
   it('no vehicles without residential buildings next to roads', () => {
     const state = createSimState(1, SIZE);
     buildRoads(state, [at(2, 2), at(3, 2)]);
-    vehiclesStep(state);
+    stepVehicles(state);
     expect(state.vehicles).toHaveLength(0);
   });
 
@@ -94,14 +101,14 @@ describe('vehiclesStep (commuting)', () => {
     const road = at(2, 2);
     buildRoads(state, [road, at(3, 2)]);
     state.layers.trafficLoad[road] = 255;
-    for (let i = 0; i < 400; i++) vehiclesStep(state);
+    for (let i = 0; i < 400; i++) stepVehicles(state);
     expect(state.layers.trafficLoad[road]).toBe(0);
   });
 
   it('vehicles drive to work in the morning and are parked before dawn', () => {
     const state = commuterTown(7, 200);
     setHour(state, 5);
-    vehiclesStep(state);
+    stepVehicles(state);
     expect(drivingVehicles(state)).toHaveLength(0);
 
     setHour(state, BALANCE.vehicles.commute.morningStartHour);
@@ -112,7 +119,7 @@ describe('vehiclesStep (commuting)', () => {
   it('vehicles arrive at work and later return home', () => {
     const state = commuterTown(3, 200);
     setHour(state, BALANCE.vehicles.commute.morningStartHour);
-    vehiclesStep(state); // spawn fleet
+    stepVehicles(state); // spawn fleet
     runHours(state, 4); // morning window + travel time
     const atWork = state.vehicles.filter((v) => v.phase === VehiclePhase.ParkedWork);
     expect(atWork.length).toBe(state.vehicles.length);
@@ -128,7 +135,7 @@ describe('vehiclesStep (commuting)', () => {
     setHour(state, BALANCE.vehicles.commute.morningStartHour);
     const ticks = Math.round((3 / 24) * TICKS_PER_DAY);
     for (let i = 0; i < ticks; i++) {
-      vehiclesStep(state);
+      stepVehicles(state);
       state.tick++;
       for (const v of drivingVehicles(state)) {
         const tile = at(Math.floor(v.x), Math.floor(v.y));
@@ -178,9 +185,9 @@ describe('vehiclesStep (commuting)', () => {
     setHour(a, 6);
     setHour(b, 6);
     for (let i = 0; i < 800; i++) {
-      vehiclesStep(a);
+      stepVehicles(a);
       a.tick++;
-      vehiclesStep(b);
+      stepVehicles(b);
       b.tick++;
     }
     expect(a.vehicles).toEqual(b.vehicles);
@@ -191,7 +198,7 @@ describe('vehiclesStep (commuting)', () => {
 function runDays(state: SimState, days: number, sample?: (hour: number) => void): void {
   const ticks = days * TICKS_PER_DAY;
   for (let i = 0; i < ticks; i++) {
-    vehiclesStep(state);
+    stepVehicles(state);
     if (sample) sample(((state.tick % TICKS_PER_DAY) / TICKS_PER_DAY) * 24);
     state.tick++;
   }
@@ -201,7 +208,7 @@ describe('emergent charging', () => {
   it('driving drains the battery', () => {
     const state = commuterTown(3, 200);
     setHour(state, BALANCE.vehicles.commute.morningStartHour);
-    vehiclesStep(state);
+    stepVehicles(state);
     const before = state.vehicles.map((v) => v.charge);
     runHours(state, 4);
     const drained = state.vehicles.filter((v, i) => v.charge < before[i]);
@@ -243,13 +250,13 @@ describe('emergent charging', () => {
     placePlant(state, at(17, 11), PlantType.ChargingHub);
     setHour(state, 12);
     // Everyone parked at work with an empty-ish battery.
-    vehiclesStep(state);
+    stepVehicles(state);
     for (const v of state.vehicles) {
       v.phase = VehiclePhase.ParkedWork;
       v.charge = 0.3;
       v.path = [];
     }
-    vehiclesStep(state);
+    stepVehicles(state);
     const charging = state.vehicles.filter((v) => v.charging).length;
     expect(charging).toBeGreaterThan(0);
     expect(charging).toBeLessThanOrEqual(BALANCE.vehicles.vehiclesPerHub);
@@ -259,7 +266,7 @@ describe('emergent charging', () => {
     const state = commuterTown(5, 200);
     state.smartCharging = true;
     setHour(state, 3); // everyone parked at home
-    vehiclesStep(state);
+    stepVehicles(state);
     for (const v of state.vehicles) v.charge = 0.8; // above the floor
 
     // No renewable surplus: nobody charges.
@@ -267,18 +274,18 @@ describe('emergent charging', () => {
     state.lastEnergy.wind = 0;
     state.lastEnergy.rooftop = 0;
     state.lastEnergy.buildingConsumption = 50;
-    vehiclesStep(state);
+    stepVehicles(state);
     expect(chargingDemand(state)).toBe(0);
 
     // Surplus appears: charging follows it.
     state.lastEnergy.wind = 500;
-    vehiclesStep(state);
+    stepVehicles(state);
     expect(chargingDemand(state)).toBeGreaterThan(0);
 
     // Below the floor, vehicles charge even without surplus.
     state.lastEnergy.wind = 0;
     for (const v of state.vehicles) v.charge = BALANCE.vehicles.smartChargeFloor - 0.1;
-    vehiclesStep(state);
+    stepVehicles(state);
     expect(chargingDemand(state)).toBeGreaterThan(0);
   });
 
@@ -286,7 +293,7 @@ describe('emergent charging', () => {
     const state = commuterTown(5, 200);
     state.smartCharging = true;
     setHour(state, 3); // everyone parked at home
-    vehiclesStep(state);
+    stepVehicles(state);
     for (const v of state.vehicles) v.charge = 0.8; // above the floor
 
     // Only hydro is generating, but it covers the load: this is a
@@ -297,7 +304,7 @@ describe('emergent charging', () => {
     state.lastEnergy.rooftop = 0;
     state.lastEnergy.hydro = 500;
     state.lastEnergy.buildingConsumption = 50;
-    vehiclesStep(state);
+    stepVehicles(state);
     expect(chargingDemand(state)).toBeGreaterThan(0);
   });
 
@@ -305,7 +312,7 @@ describe('emergent charging', () => {
     const state = commuterTown(5, 200);
     state.smartCharging = true;
     setHour(state, 3); // everyone parked at home
-    vehiclesStep(state);
+    stepVehicles(state);
     for (const v of state.vehicles) v.charge = 0.8; // above the floor
 
     // Generation covers buildings alone, but the cooling load eats the
@@ -318,21 +325,21 @@ describe('emergent charging', () => {
     state.lastEnergy.buildingConsumption = 50;
     state.lastEnergy.heatingConsumption = 0;
     state.lastEnergy.coolingConsumption = 20;
-    vehiclesStep(state);
+    stepVehicles(state);
     expect(chargingDemand(state)).toBe(0);
 
     // With cooling load at 0, the same generation is a real surplus.
     state.lastEnergy.coolingConsumption = 0;
-    vehiclesStep(state);
+    stepVehicles(state);
     expect(chargingDemand(state)).toBeGreaterThan(0);
   });
 
   it('full batteries stop charging', () => {
     const state = commuterTown(5, 200);
     setHour(state, 3);
-    vehiclesStep(state);
+    stepVehicles(state);
     for (const v of state.vehicles) v.charge = 1;
-    vehiclesStep(state);
+    stepVehicles(state);
     expect(chargingDemand(state)).toBe(0);
   });
 });
@@ -384,7 +391,7 @@ describe('congestion', () => {
     makeDriver(state, 102, b, [b, c], c);
     const [follower, ...blockers] = state.vehicles;
     for (let i = 0; i < 5; i++) {
-      vehiclesStep(state);
+      stepVehicles(state);
       for (const blocker of blockers) {
         blocker.x = (b % SIZE) + 0.5;
         blocker.pathIndex = 0;
@@ -405,14 +412,14 @@ describe('congestion', () => {
     state.layers.zone[at(16, 9)] = Zone.Commercial;
     state.layers.density[at(16, 9)] = 3;
     setHour(state, BALANCE.vehicles.commute.morningStartHour);
-    vehiclesStep(state);
+    stepVehicles(state);
     for (const v of state.vehicles) v.departureOffset = 0; // rush together
 
     let sawWaiting = false;
     const positions = new Map<number, number>();
     for (let i = 0; i < TICKS_PER_DAY / 4; i++) {
       for (const v of drivingVehicles(state)) positions.set(v.id, v.x);
-      vehiclesStep(state);
+      stepVehicles(state);
       state.tick++;
       for (const v of drivingVehicles(state)) {
         if (positions.get(v.id) === v.x && v.path.length > 0) sawWaiting = true;
@@ -436,7 +443,7 @@ describe('congestion', () => {
     makeDriver(state, 102, b, [b, a], a);
     const follower = state.vehicles[0];
     const xBefore = follower.x;
-    vehiclesStep(state);
+    stepVehicles(state);
     expect(follower.x).toBeGreaterThan(xBefore);
   });
 
@@ -453,7 +460,7 @@ describe('congestion', () => {
     makeDriver(state, 103, at(7, 5), west, road[0]);
     state.tick = TICKS_PER_DAY / 2; // noon: no scheduled departures interfere
     for (let i = 0; i < 200; i++) {
-      vehiclesStep(state);
+      stepVehicles(state);
       state.tick++;
     }
     // Everyone got past the oncoming pair and finished the trip.
@@ -481,12 +488,12 @@ describe('congestion', () => {
     };
     // One tick to reach the edge of a, then maxWaitTicks ticks of waiting.
     for (let i = 0; i < BALANCE.vehicles.maxWaitTicks + 1; i++) {
-      vehiclesStep(state);
+      stepVehicles(state);
       freeze();
     }
     expect(follower.x).toBeGreaterThan(xBefore);
     expect(follower.x).toBeLessThan(4);
-    vehiclesStep(state);
+    stepVehicles(state);
     expect(follower.x).toBeGreaterThanOrEqual(4); // squeezed into b
   });
 });
@@ -513,7 +520,7 @@ describe('commute congestion metric', () => {
     state.layers.zone[at(16, 9)] = Zone.Commercial;
     state.layers.density[at(16, 9)] = 3;
     setHour(state, 6);
-    vehiclesStep(state);
+    stepVehicles(state);
     for (const v of state.vehicles) v.departureOffset = 0; // rush together
     runDays(state, 1);
     const jammed = state.commuteCongestion;
@@ -619,7 +626,7 @@ describe('avenues on the road', () => {
     }
     const follower = state.vehicles[0];
     for (let i = 0; i < 3; i++) {
-      vehiclesStep(state);
+      stepVehicles(state);
       for (const blocker of state.vehicles.slice(1)) {
         blocker.x = (b % SIZE) + 0.5;
         blocker.pathIndex = 0;
@@ -640,7 +647,7 @@ describe('avenues on the road', () => {
       state.tick = TICKS_PER_DAY / 2;
       let ticks = 0;
       while (car.phase === VehiclePhase.ToWork && ticks < 200) {
-        vehiclesStep(state);
+        stepVehicles(state);
         state.tick++;
         ticks++;
       }
@@ -660,9 +667,9 @@ describe('avenues on the road', () => {
         }
       }
       setHour(state, BALANCE.vehicles.commute.morningStartHour);
-      vehiclesStep(state); // spawn the fleet
+      stepVehicles(state); // spawn the fleet
       for (const v of state.vehicles) v.departureOffset = 0;
-      vehiclesStep(state); // everyone departs; same seed → same homes and workplaces
+      stepVehicles(state); // everyone departs; same seed → same homes and workplaces
       return state.vehicles[0].tripFreeFlowTicks;
     };
     const street = estimate(false);
@@ -685,7 +692,7 @@ describe('avenues on the road', () => {
       state.tick = TICKS_PER_DAY / 2; // noon: departs at once, no evening departure to interfere
       let ticks = 0;
       while (car.phase !== VehiclePhase.ParkedWork && ticks < 200) {
-        vehiclesStep(state);
+        stepVehicles(state);
         state.tick++;
         ticks++;
       }
