@@ -13,7 +13,7 @@ const INSTANCES_PER_TILE = 5;
 
 /** Avenue tiles get a wider pad and arms than streets. */
 const AVENUE_CENTER_SIZE = 0.8;
-/** Width of the dashed centre line painted along avenue arms. */
+/** Width of the solid centre line painted along avenue arms. */
 const LINE_WIDTH = 0.04;
 const LINE_COLOR = 0xe8e2c8;
 const LINE_HEIGHT = 0.012;

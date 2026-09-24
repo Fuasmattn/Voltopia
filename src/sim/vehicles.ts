@@ -422,6 +422,15 @@ export function drivingVehicles(state: SimState): Vehicle[] {
   );
 }
 
+/** Count of vehicles currently on the road, without allocating an array. */
+export function drivingVehicleCount(state: SimState): number {
+  let count = 0;
+  for (const v of state.vehicles) {
+    if (v.phase === VehiclePhase.ToWork || v.phase === VehiclePhase.ToHome) count++;
+  }
+  return count;
+}
+
 /**
  * EV charging demand for this tick: the number of vehicles actually
  * plugged in right now times the charger power. The evening peak, the

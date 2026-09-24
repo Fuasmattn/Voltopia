@@ -50,9 +50,13 @@ export function CityVitals({ stats }: { stats: GlobalStats }) {
       <div
         className={`hud-stat ${stats.traffic.congestion > BALANCE.traffic.jammed ? 'negative' : ''}`}
         data-testid="traffic"
-        title={`${t('hud.traffic')}: ${t(trafficLabel(stats.traffic.congestion))}`}
+        title={t('hud.traffic.title', {
+          label: t(trafficLabel(stats.traffic.congestion)),
+          driving: stats.traffic.driving,
+          avenues: Math.round(stats.traffic.avenueShare * 100),
+        })}
       >
-        <span className="hud-stat-value">🚗 {stats.traffic.congestion.toFixed(2)}×</span>
+        <span className="hud-stat-value">🚗 {stats.traffic.congestion.toFixed(1)}×</span>
         <span className="hud-stat-label">{t('hud.traffic')}</span>
       </div>
       <DemandBars demand={stats.demand} />

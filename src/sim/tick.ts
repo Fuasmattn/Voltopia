@@ -10,7 +10,7 @@ import { happinessStep } from './happiness.ts';
 import { countPowerLineTiles } from './powerLines.ts';
 import { seasonState } from './seasons.ts';
 import { recomputeServices, serviceCoverage } from './services.ts';
-import { chargingDemand, drivingVehicles, vehiclesStep } from './vehicles.ts';
+import { chargingDemand, drivingVehicleCount, vehiclesStep } from './vehicles.ts';
 import { updateWeather } from './weather.ts';
 import {
   countPopulationAndJobs,
@@ -175,7 +175,7 @@ export function buildStats(state: SimState): GlobalStats {
     services: { ...state.lastServices },
     traffic: {
       congestion: state.commuteCongestion,
-      driving: drivingVehicles(state).length,
+      driving: drivingVehicleCount(state),
       avenueShare: counts.roadTiles > 0 ? counts.avenueTiles / counts.roadTiles : 0,
     },
     goals: goalStates(state),

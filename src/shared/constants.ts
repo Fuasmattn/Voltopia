@@ -25,9 +25,9 @@ export const BALANCE = {
   costs: {
     roadPerTile: 10,
     bridgePerTile: 40,
-    /** Avenue on land / over the river; upgrading a street pays the difference. */
+    /** Avenue on land; upgrading a street pays the difference to roadPerTile. */
     avenuePerTile: 30,
-    /** Avenue on land / over the river; upgrading a street pays the difference. */
+    /** Avenue over the river; upgrading a bridge pays the difference to bridgePerTile. */
     avenueBridgePerTile: 90,
     /** Power line per tile on land; over river or lake it is an overhead crossing. */
     powerLinePerTile: 4,
