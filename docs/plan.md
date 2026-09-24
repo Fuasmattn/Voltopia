@@ -27,42 +27,71 @@
 ```
 src/
   shared/        # types, constants, message protocol, seeded RNG
-    constants.ts   # grid size, tick rate, costs, tuning tables
+    constants.ts   # tick rate + the central BALANCE tuning table (all numbers)
     grid.ts        # index<->xy helpers, direction masks
+    daylight.ts    # seasonal daylight window shared by sim and render
+    heap.ts        # binary heap for pathfinding
     messages.ts    # SimCommand / SimEvent discriminated unions
     rng.ts         # mulberry32 + helpers
-    types.ts       # TileType, Zone, ToolId, GlobalStats, Weather, ...
+    types.ts       # TileType, Zone, Terrain, PlantType, GlobalStats, SaveGame, ...
   sim/           # pure simulation (worker-side), no DOM/three
-    state.ts       # SimState: typed-array layers + serialization
-    roads.ts       # road placement, bitmask auto-tiling
+    state.ts       # SimState: typed-array layers, placement rules (incl. tooSteep)
+    terrain.ts     # seeded relief 0..maxLevel with cliff stretch, buildable guarantee
+    water.ts       # river carved downhill, lake, bridges, shore rules
+    roads.ts       # road placement, street/avenue classes, bitmask auto-tiling
+    routing.ts     # BFS/heap pathfinding on the road graph
     zones.ts       # zone painting, road adjacency
-    growth.ts      # demand model, building spawn/densify/decay
-    economy.ts     # taxes, upkeep, construction costs
-    energy.ts      # generation (PV/wind/biogas), battery, balance, supply radius
-    weather.ts     # smooth seeded cloud cover + wind speed, day/night clock
-    vehicles.ts    # random-walk EVs on road graph, charging load
-    happiness.ts   # happiness from supply/taxes
+    growth.ts      # demand model, building spawn/densify/decay, abandonment
+    economy.ts     # taxes, upkeep, construction costs, slope surcharge
+    energy.ts      # plants (PV/wind/biogas/hydro/pumped), storage, balance, market
+    powerGrid.ts   # connectivity: which tiles are energised
+    powerLines.ts  # pylon placement, water crossings
+    weather.ts     # seeded fronts, cloud/wind/rain, Dunkelflaute, day/night clock
+    seasons.ts     # season phase, snowpack, river flow
+    vehicles.ts    # EV commutes on the road graph, charging load
+    transit.ts     # bus stops, lines and ridership
+    traffic.ts     # per-tile traffic load from trips
+    deliveries.ts  # logistics depot, van tours, shop supply
+    services.ts    # fire/police coverage
+    happiness.ts   # happiness from supply/taxes/services/parks
+    goals.ts       # staged city goals
+    inspect.ts     # per-tile inspector data
     tick.ts        # orchestrates one tick, produces diffs
+    engine.ts      # headless SimEngine: init/commands/tick (worker + agent tools)
     worker.ts      # worker entry: command handling, tick scheduling, diff posting
   render/        # three.js, main thread
-    scene.ts       # scene, lights, day/night lighting
+    scene.ts       # scene, lights, day/night lighting, palette
     camera.ts      # ortho isometric camera: rotate 90°, zoom, pan
-    terrain.ts     # ground plane + grid overlay
-    roadsMesh.ts   # instanced road tiles (variant by bitmask)
+    elevationField.ts # per-tile heights from diffs; ground triangles, normals
+    terrain.ts     # height-field ground mesh + terrain-following grid overlay
+    decal.ts       # boxes/prisms fitted flush onto the sloped ground triangles
+    waterMesh.ts   # river/lake surfaces
+    roadsMesh.ts   # instanced road pads/arms, avenue centre lines, bridges, lamps
     buildingsMesh.ts # instanced procedural low-poly buildings
-    plantsMesh.ts  # solar/wind/battery/biogas/charging hub meshes (wind rotors spin)
-    vehiclesMesh.ts# instanced cars + headlights
-    overlays.ts    # supply/demand color overlays
-    picking.ts     # pointer -> tile raycasting
-    renderer.ts    # ties it together, applies diffs
-  ui/            # React
-    App.tsx, HUD.tsx, Toolbar.tsx, EnergyPanel.tsx, SpeedControls.tsx,
-    DemandBars.tsx, TaxSlider.tsx, useSimBridge.ts (worker hook)
+    plantsMesh.ts  # plant meshes (wind rotors spin), storage, hubs
+    powerLinesMesh.ts # pylons + catenary wires
+    vehiclesMesh.ts# instanced cars/vans/buses + headlights, slope pitch
+    zoneTilesMesh.ts # zone paint decals
+    iconsMesh.ts   # floating status icons
+    overlays.ts    # supply/services/traffic/deliveries overlays
+    weatherFx.ts   # rain, snow, cloud shadows
+    minimapLayer.ts# minimap texture
+    picking.ts     # pointer -> tile: analytic height-field raycast (2D DDA)
+    renderer.ts    # ties it together, applies diffs, input handling
+  ui/            # React 19; all strings via i18n.tsx (EN + DE)
+    App.tsx, GameView.tsx, BuildBar.tsx, EnergyPanel.tsx, StatsPage.tsx,
+    TileInspector.tsx, Tutorial.tsx, SettingsPage.tsx, HelpPage.tsx, ...
+    useSimBridge.ts (worker hook), useTools.ts, sound.ts, settings.ts
+  agent/         # WebMCP window.voltopia tools (docs/agent-tools.md)
+    tools.ts       # DOM-free tool implementations against SimEngine
+    tileMirror.ts  # main-thread mirror of tile state for tools
+    webmcp.ts      # DOM/window wiring
   storage/
     storage.ts     # SaveStorage interface
+    serialization.ts # SaveGame <-> SimState, SAVE_VERSION
     indexeddb.ts   # IndexedDB impl, autosave
   main.tsx
-tests/ (vitest colocated as *.test.ts under src/sim, src/shared)
+tests/ (vitest colocated as *.test.ts throughout src/)
 e2e/   (playwright)
 ```
 
