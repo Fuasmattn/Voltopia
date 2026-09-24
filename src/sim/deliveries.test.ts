@@ -256,14 +256,12 @@ describe('deliveriesStep', () => {
 
   it('no tour starts below minTripCharge', () => {
     const state = shopTown(1, 3);
+    setHour(state, 3); // outside the delivery window: spawn without dispatching
+    stepAll(state); // spawn the fleet
+    for (const van of state.vans) van.charge = 0.1;
     setHour(state, 8);
     for (let i = 0; i < 3; i++) state.layers.deliveryAge[at(6 + i, 11)] = dueTicks();
-    stepAll(state); // spawn the fleet (dispatches once at the high spawn charge)
-    for (const van of state.vans) van.charge = 0.1;
-    // The van already on tour still finishes it (charge isn't checked mid-trip),
-    // then never redispatches at 0.1 charge: needs the full 3-stop round trip
-    // (~76 ticks with the per-leg dispatch tick) to get back to the depot.
-    for (let t = 0; t < 90; t++) stepAll(state);
+    for (let t = 0; t < 60; t++) stepAll(state);
     expect(state.vans.every((v) => v.phase === VanPhase.AtDepot)).toBe(true);
   });
 
@@ -349,6 +347,23 @@ describe('deliveriesStep', () => {
     bulldozeTiles(state, [at(9, 10)]);
     for (let t = 0; t < 200; t++) stepAll(state);
     expect(state.layers.deliveryAge[at(12, 11)]).toBeGreaterThan(dueTicks());
+    expect(state.vans.every((v) => v.phase === VanPhase.AtDepot)).toBe(true);
+  });
+
+  it('a shop whose only road neighbour is the depot road still gets served', () => {
+    const state = shopTown(1, 0);
+    state.layers.zone[at(2, 11)] = Zone.Retail;
+    state.layers.density[at(2, 11)] = 1;
+    powerDepot(state);
+    setHour(state, 8);
+    state.layers.deliveryAge[at(2, 11)] = dueTicks();
+    let delivered = false;
+    for (let t = 0; t < 100 && !delivered; t++) {
+      stepAll(state);
+      delivered = state.layers.deliveryAge[at(2, 11)] < 50;
+    }
+    expect(delivered).toBe(true);
+    for (let t = 0; t < 50; t++) stepAll(state); // let the van finish its way home
     expect(state.vans.every((v) => v.phase === VanPhase.AtDepot)).toBe(true);
   });
 

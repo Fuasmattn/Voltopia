@@ -164,7 +164,7 @@ export function planTour(state: SimState, van: Van, claimed: Set<number>): numbe
   const minAge = Math.floor(dueTicks() / 2);
   const candidates: Array<{ tile: number; age: number; distance: number }> = [];
   for (const [tile, distance] of distances) {
-    if (tile === van.depotRoad || claimed.has(tile)) continue;
+    if (claimed.has(tile)) continue;
     const age = oldestShopAge(state, tile);
     if (age < minAge) continue;
     candidates.push({ tile, age, distance });
@@ -225,6 +225,8 @@ function routeToNextStop(state: SimState, van: Van): void {
     van.stops.shift();
   }
   van.depot = -1;
+  van.path = [];
+  van.pathIndex = 0;
 }
 
 /** Mark every shop next to the van's road tile as delivered right now. */
@@ -284,6 +286,7 @@ export function deliveriesStep(state: SimState, occupancy: Map<number, number>):
           if (stops.length > 0) {
             for (const stop of stops) if (stop !== van.depotRoad) claimed.add(stop);
             van.stops = stops;
+            van.charging = false;
             routeToNextStop(state, van);
           }
         }
