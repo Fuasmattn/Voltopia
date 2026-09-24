@@ -184,7 +184,10 @@ describe('tidal site factor', () => {
     });
     const estuary = paintedState((terrain, size) => {
       for (let x = 0; x < size; x++) terrain[x] = Terrain.Sea;
-      terrain[1 * 16 + 8] = Terrain.River;
+      // Chebyshev distance 2 from tile 8: outside the 8-neighbour ring
+      // (so the narrowness term is identical to `plain`) but inside
+      // estuaryRadius (2), so only the estuary bonus itself shows up.
+      terrain[2 * 16 + 8] = Terrain.River;
     });
     expect(tidalSiteFactor(estuary, 8) - tidalSiteFactor(plain, 8)).toBeCloseTo(
       cfg.estuaryBonus,
@@ -199,6 +202,23 @@ describe('tidal site factor', () => {
     });
     expect(tidalSiteFactor(enclosed, 5 * 16 + 5)).toBeLessThanOrEqual(
       BALANCE.sea.tidal.maxSiteFactor,
+    );
+  });
+
+  it('scores a water neighbour lower than a land one (water never narrows the current)', () => {
+    // Same ring, one tile swapped for water with no estuary bonus in
+    // play (a lake doesn't trigger it): only the land-vs-water swap can
+    // explain the difference. Pins the rule so a future change that
+    // treats river/lake neighbours as narrowing fails loudly.
+    const allLand = paintedState((terrain) => {
+      terrain[5 * 16 + 5] = Terrain.Sea;
+    });
+    const withLakeNeighbour = paintedState((terrain) => {
+      terrain[5 * 16 + 5] = Terrain.Sea;
+      terrain[4 * 16 + 5] = Terrain.Lake; // one ring neighbour is water, not land
+    });
+    expect(tidalSiteFactor(withLakeNeighbour, 5 * 16 + 5)).toBeLessThan(
+      tidalSiteFactor(allLand, 5 * 16 + 5),
     );
   });
 });

@@ -145,10 +145,10 @@ export function isCoastalSea(state: SimState, index: number): boolean {
  * the more of the eight neighbours are land, the stronger the current.
  * A river mouth within `estuaryRadius` adds its own bonus. Off-map
  * neighbours count as open water, so the map edge is never a narrows.
- * A river bank still narrows the channel like land does — only open sea
- * (or the map edge) counts as open water — so replacing a land neighbour
- * with the river tile that earns the estuary bonus doesn't also cost a
- * narrowness point.
+ * Water neighbours (river, lake, sea) never narrow the channel — only
+ * actual land does — so a river or lake tile in the ring costs a
+ * narrowness point same as open sea would; the estuary bonus below is
+ * the river's own, separate reward.
  */
 export function tidalSiteFactor(state: SimState, index: number): number {
   const cfg = BALANCE.sea.tidal;
@@ -164,7 +164,7 @@ export function tidalSiteFactor(state: SimState, index: number): number {
       const x = cx + dx;
       const y = cy + dy;
       if (!inBounds(x, y, size)) continue;
-      if (terrain[tileIndex(x, y, size)] !== Terrain.Sea) land++;
+      if (terrain[tileIndex(x, y, size)] === Terrain.Land) land++;
     }
   }
   let factor = 1 + cfg.currentBonus * (land / 8);
