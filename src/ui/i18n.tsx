@@ -157,6 +157,7 @@ const en = {
   'rejection.cannotBuildOnWater': 'Cannot build on water',
   'rejection.needsLineSite': 'Power lines need free land, a road or water',
   'rejection.needsRoad': 'Needs a road next to it',
+  'rejection.needsRoadTile': 'Bus stops go on road tiles',
   'rejection.alreadyInsulated': 'Building insulation is already installed',
   'rejection.tooSteep': 'Too steep to build on',
 
@@ -547,6 +548,7 @@ const de: Record<TranslationKey, string> = {
   'rejection.cannotBuildOnWater': 'Auf Wasser kann nicht gebaut werden',
   'rejection.needsLineSite': 'Leitungen brauchen freies Land, eine Straße oder Wasser',
   'rejection.needsRoad': 'Braucht eine Straße daneben',
+  'rejection.needsRoadTile': 'Haltestellen gehören auf Straßenkacheln',
   'rejection.alreadyInsulated': 'Die Gebäudedämmung ist bereits installiert',
   'rejection.tooSteep': 'Zu steil zum Bebauen',
 

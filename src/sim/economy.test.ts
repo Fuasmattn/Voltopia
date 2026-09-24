@@ -9,6 +9,7 @@ import { happinessStep } from './happiness.ts';
 import { buildPowerLines } from './powerLines.ts';
 import { buildRoads } from './roads.ts';
 import { createSimState, PlantType, SupplyStatus, Zone } from './state.ts';
+import { buildBusStops } from './transit.ts';
 
 const SIZE = 16;
 const at = (x: number, y: number) => tileIndex(x, y, SIZE);
@@ -106,6 +107,18 @@ describe('economyStep', () => {
     expect(breakdown.avenueTiles).toBe(1);
     expect(breakdown.avenueUpkeep).toBeCloseTo(avenuePerTile, 9);
     expect(breakdown.gridUpkeep).toBeCloseTo(2 * roadPerTile + avenuePerTile, 9);
+  });
+
+  it('charges bus stop upkeep as part of the grid upkeep and reports the count', () => {
+    const state = createSimState(1, SIZE);
+    state.layers.elevation.fill(0);
+    buildRoads(state, [at(1, 1), at(2, 1)]);
+    buildBusStops(state, [at(1, 1)]);
+    const breakdown = economyStep(state, 0, 0);
+    const { roadPerTile, busStop } = BALANCE.upkeepPerTick;
+    expect(breakdown.busStops).toBe(1);
+    expect(breakdown.busStopUpkeep).toBeCloseTo(busStop, 9);
+    expect(breakdown.gridUpkeep).toBeCloseTo(2 * roadPerTile + busStop, 9);
   });
 });
 

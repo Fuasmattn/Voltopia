@@ -28,6 +28,7 @@ type SimCommandBody =
   | { type: 'setSpeed'; speed: Speed }
   | { type: 'buildRoad'; tiles: number[]; avenue?: boolean }
   | { type: 'buildPowerLine'; tiles: number[] }
+  | { type: 'buildBusStop'; tiles: number[] }
   | { type: 'paintZone'; tiles: number[]; zone: Zone }
   | { type: 'placePlant'; tile: number; plant: PlantType }
   | { type: 'bulldoze'; tiles: number[] }

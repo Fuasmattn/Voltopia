@@ -7,6 +7,7 @@ import { buyInsulation } from './economy.ts';
 import { drivingVans } from './deliveries.ts';
 import { placePlant } from './energy.ts';
 import { buildPowerLines } from './powerLines.ts';
+import { buildBusStops } from './transit.ts';
 import { drivingVehicles } from './vehicles.ts';
 import { paintZones } from './zones.ts';
 import {
@@ -74,6 +75,8 @@ export class SimEngine {
         return this.toEvents(buildRoads(state, command.tiles, command.avenue ?? false));
       case 'buildPowerLine':
         return this.toEvents(buildPowerLines(state, command.tiles));
+      case 'buildBusStop':
+        return this.toEvents(buildBusStops(state, command.tiles));
       case 'bulldoze':
         return this.toEvents(bulldozeTiles(state, command.tiles));
       case 'undo':

@@ -2,6 +2,7 @@ import { BALANCE } from '../shared/constants.ts';
 import { DIRECTIONS, inBounds, tileIndex, tileX, tileY } from '../shared/grid.ts';
 import { RoadClass, Terrain } from '../shared/types.ts';
 import { clearPowerLines } from './powerLines.ts';
+import { clearBusStops } from './transit.ts';
 import {
   BuildIntent,
   bumpGridVersion,
@@ -99,28 +100,31 @@ function roadPrice(state: SimState, index: number, avenue: boolean): number {
 
 /**
  * Remove roads, zones, buildings and plants from the given tiles. A tile
- * that carries a power line loses only the line; whatever else stands
- * there survives for a second pass.
+ * that carries a power line or a bus stop loses only those; whatever else
+ * stands there survives for a second pass.
  */
 export function bulldozeTiles(state: SimState, tiles: number[]): BuildResult {
   const { layers } = state;
   const lineTiles = tiles.filter((index) => layers.powerLine[index] !== 0);
+  const stopTiles = tiles.filter((index) => layers.busStop[index] !== 0);
   const clearable = tiles.filter(
     (index) =>
       layers.powerLine[index] === 0 &&
+      layers.busStop[index] === 0 &&
       (layers.tileType[index] !== TileType.Empty ||
         layers.zone[index] !== Zone.None ||
         layers.density[index] !== 0),
   );
-  if (lineTiles.length === 0 && clearable.length === 0) return {};
+  if (lineTiles.length === 0 && stopTiles.length === 0 && clearable.length === 0) return {};
 
-  const affected = withNeighbors(state, [...lineTiles, ...clearable]);
+  const affected = withNeighbors(state, [...lineTiles, ...stopTiles, ...clearable]);
   const undo: UndoEntry = {
     moneyDelta: 0,
     tiles: [...affected].map((index) => snapshotTile(state, index)),
   };
 
   if (lineTiles.length > 0) clearPowerLines(state, lineTiles);
+  if (stopTiles.length > 0) clearBusStops(state, stopTiles);
   for (const index of clearable) {
     layers.tileType[index] = TileType.Empty;
     layers.roadClass[index] = RoadClass.Street;
@@ -129,6 +133,7 @@ export function bulldozeTiles(state: SimState, tiles: number[]): BuildResult {
     layers.variant[index] = 0;
     layers.plantType[index] = 0;
     layers.buildingAge[index] = 0;
+    layers.busStop[index] = 0;
     markDirty(state, index);
   }
   for (const index of affected) recomputeRoadMask(state, index);
@@ -150,6 +155,7 @@ export function undoLastAction(state: SimState): BuildResult {
     layers.tileType[tile.index] = tile.tileType;
     layers.roadMask[tile.index] = tile.roadMask;
     layers.roadClass[tile.index] = tile.roadClass;
+    layers.busStop[tile.index] = tile.busStop;
     layers.powerLine[tile.index] = tile.powerLine;
     layers.zone[tile.index] = tile.zone;
     layers.density[tile.index] = tile.density;

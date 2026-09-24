@@ -3,6 +3,7 @@ import { PlantType, RoadClass, TileType } from '../shared/types.ts';
 import { countPowerLineTiles } from './powerLines.ts';
 import type { BuildResult } from './roads.ts';
 import type { SimState } from './state.ts';
+import { countBusStops } from './transit.ts';
 
 export interface EconomyBreakdown {
   taxIncome: number;
@@ -79,11 +80,14 @@ export function economyStep(state: SimState, population: number, jobs: number): 
     }
   }
   const avenueUpkeep = avenueTiles * BALANCE.upkeepPerTick.avenuePerTile;
-  // Grid upkeep: roads, avenues and power lines share one line item.
+  const busStops = countBusStops(state);
+  const busStopUpkeep = busStops * BALANCE.upkeepPerTick.busStop;
+  // Grid upkeep: roads, avenues, power lines and bus stops share one line item.
   const gridUpkeep =
     (roadTiles - avenueTiles) * BALANCE.upkeepPerTick.roadPerTile +
     avenueUpkeep +
-    countPowerLineTiles(state) * BALANCE.upkeepPerTick.powerLinePerTile;
+    countPowerLineTiles(state) * BALANCE.upkeepPerTick.powerLinePerTile +
+    busStopUpkeep;
   const biogasFuelCost =
     state.lastEnergy.biogas * BALANCE.upkeepPerTick.biogasFuelCostPerEnergyUnit;
   const gridImportCost = state.lastEnergy.gridImport * BALANCE.market.importCostPerEnergyUnit;
@@ -103,8 +107,8 @@ export function economyStep(state: SimState, population: number, jobs: number): 
     gridImportCost,
     gridExportRevenue,
     avenueUpkeep,
-    busStops: 0,
-    busStopUpkeep: 0,
+    busStops,
+    busStopUpkeep,
   };
   state.lastEconomy = breakdown;
   return breakdown;

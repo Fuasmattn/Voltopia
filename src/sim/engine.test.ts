@@ -308,6 +308,17 @@ describe('SimEngine basics', () => {
     ]);
     expect(engine.state.insulation).toBe(false);
   });
+
+  it('builds bus stops through the buildBusStop command and rejects off-road tiles', () => {
+    const engine = makeEngine();
+    const road = tileIndex(3, 3, 16);
+    buildRoads(engine.state, [road]);
+    expect(engine.applyCommand({ type: 'buildBusStop', tiles: [road] })).toEqual([]);
+    expect(engine.state.layers.busStop[road]).toBe(1);
+    expect(engine.applyCommand({ type: 'buildBusStop', tiles: [tileIndex(9, 9, 16)] })).toEqual([
+      { type: 'rejected', reason: 'needsRoadTile' },
+    ]);
+  });
 });
 
 describe('time helpers', () => {
