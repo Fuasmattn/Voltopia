@@ -42,8 +42,7 @@ const PLANT_LABEL: Record<PlantType, TranslationKey | null> = {
   [PlantType.PoliceStation]: 'tool.plant-police',
   [PlantType.LogisticsDepot]: 'tool.plant-depot',
   [PlantType.BusDepot]: 'tool.plant-busdepot',
-  // Stopgap: no build tool for tidal plants yet (task 10 adds the label).
-  [PlantType.TidalPlant]: null,
+  [PlantType.TidalPlant]: 'tool.plant-tidal',
 };
 
 const ZONE_LABEL: Record<Zone, TranslationKey | null> = {
@@ -170,7 +169,9 @@ export function TileInspector({ info, onClose }: { info: TileInfo; onClose: () =
         </button>
       </header>
 
-      {(info.terrain === Terrain.Land || info.terrainBonus > 1 || info.forest > 0) && (
+      {(info.terrain === Terrain.Land ||
+        (info.terrainBonus > 1 && info.plantType !== PlantType.TidalPlant) ||
+        info.forest > 0) && (
         <section>
           <h3>{t('inspector.terrain')}</h3>
           {info.terrain === Terrain.Land && (
@@ -180,7 +181,7 @@ export function TileInspector({ info, onClose }: { info: TileInfo; onClose: () =
               testId="inspect-elevation"
             />
           )}
-          {info.terrainBonus > 1 && (
+          {info.terrainBonus > 1 && info.plantType !== PlantType.TidalPlant && (
             <Row
               label={t('inspector.terrainBonus')}
               value={`+${Math.round((info.terrainBonus - 1) * 100)} %`}
@@ -272,6 +273,23 @@ export function TileInspector({ info, onClose }: { info: TileInfo; onClose: () =
             tone="positive"
             testId="inspect-generation"
           />
+        )}
+        {info.plantType === PlantType.TidalPlant && (
+          <>
+            <Row
+              label={t('inspect.tideFactor')}
+              value={`${Math.round(
+                (info.peakGeneration > 0 ? info.generation / info.peakGeneration : 0) * 100,
+              )}%`}
+              testId="inspect-tide-factor"
+            />
+            <Row
+              label={t('inspect.siteFactor')}
+              value={`+${Math.round((info.terrainBonus - 1) * 100)} %`}
+              tone="positive"
+              testId="inspect-site-factor"
+            />
+          </>
         )}
         {info.storageCapacity > 0 && (
           <Row

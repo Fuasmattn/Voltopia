@@ -3,7 +3,7 @@
  * to a new city. Docked into the top-right corner, opposite the vitals.
  */
 import { BALANCE } from '../shared/constants.ts';
-import type { GlobalStats, SeasonId, Speed } from '../shared/types.ts';
+import type { GlobalStats, SeasonId, Speed, TideState } from '../shared/types.ts';
 import { Clock } from './Clock.tsx';
 import { useI18n, type TranslationKey } from './i18n.tsx';
 import { SpeedControls } from './SpeedControls.tsx';
@@ -14,6 +14,12 @@ const SEASON_GLYPH: Record<SeasonId, string> = {
   autumn: '🍂',
   winter: '❄️',
 };
+
+/** Slack water reads as high/low; otherwise it's simply on its way there. */
+function tideStateKey(tide: TideState): TranslationKey {
+  if (tide.factor < 0.05) return tide.level > 0 ? 'tide.high' : 'tide.low';
+  return tide.rising ? 'tide.rising' : 'tide.falling';
+}
 
 export function TimeControls({
   stats,
@@ -40,6 +46,17 @@ export function TimeControls({
         </span>
         <span>☁️ {Math.round(stats.weather.cloudCover * 100)}%</span>
         <span>💨 {Math.round(stats.weather.windSpeed * 100)}%</span>
+      </div>
+      <div
+        className="hud-stat"
+        data-testid="tide"
+        title={t('hud.tide.title', {
+          state: t(tideStateKey(stats.tide)),
+          percent: Math.round(stats.tide.factor * 100),
+        })}
+      >
+        <span className="hud-stat-value">🌊 {t(tideStateKey(stats.tide))}</span>
+        <span className="hud-stat-label">{t('hud.tide')}</span>
       </div>
       <SpeedControls speed={stats.speed as Speed} onChange={onSetSpeed} />
       <button type="button" className="new-game-button" data-testid="new-game" onClick={onNewGame}>

@@ -26,6 +26,7 @@ export type ToolId =
   | 'plant-depot'
   | 'plant-busdepot'
   | 'plant-hydro'
+  | 'plant-tidal'
   | 'plant-pumped'
   | 'plant-hydrogen'
   | 'plant-forest'
@@ -81,6 +82,7 @@ export const PLANT_BY_TOOL: Partial<Record<ToolId, PlantType>> = {
   'plant-depot': PlantType.LogisticsDepot,
   'plant-busdepot': PlantType.BusDepot,
   'plant-hydro': PlantType.RunOfRiver,
+  'plant-tidal': PlantType.TidalPlant,
   'plant-pumped': PlantType.PumpedStorage,
   'plant-hydrogen': PlantType.HydrogenPlant,
 };
