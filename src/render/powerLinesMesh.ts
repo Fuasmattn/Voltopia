@@ -86,7 +86,11 @@ export class PowerLinesMesh implements DiffLayer {
     const tz = Math.floor(index / this.gridSize);
     const onRoad = this.tileTypes[index] === TileType.Road;
     const offset = onRoad ? KERB_OFFSET : 0.5;
-    return { x: tx + offset, z: tz + offset, y: this.elevation.centerY(index) };
+    const x = tx + offset;
+    const z = tz + offset;
+    // The foot stands on the ground under it: on a slope the kerb corner
+    // sits well above or below the tile's nominal level.
+    return { x, z, y: this.elevation.surfaceY(x, z) };
   }
 
   private rebuild(): void {

@@ -84,3 +84,68 @@ describe('ElevationField ground triangles', () => {
     expect(ElevationField.inHighTriangle(0.5, 0.5)).toBe(false); // on the crease counts as low
   });
 });
+
+describe('ElevationField smooth normals', () => {
+  const len = (n: { x: number; y: number; z: number }) => Math.hypot(n.x, n.y, n.z);
+
+  it('points straight up on level ground', () => {
+    const f = field(() => 2);
+    expect(f.smoothNormal(2.3, 2.6)).toEqual({ x: 0, y: 1, z: 0 });
+    expect(f.cornerNormal(0, 0)).toEqual({ x: 0, y: 1, z: 0 });
+  });
+
+  it('matches the single plane normal on a uniform ramp, everywhere', () => {
+    const f = field((x) => x);
+    const gx = LEVEL_HEIGHT;
+    const expected = { x: -gx / Math.hypot(gx, 1), y: 1 / Math.hypot(gx, 1), z: 0 };
+    for (const [x, z] of [
+      [2.1, 2.1],
+      [2.9, 2.9],
+      [2.5, 2.5],
+      [3, 3],
+    ]) {
+      const n = f.smoothNormal(x, z);
+      expect(n.x).toBeCloseTo(expected.x, 9);
+      expect(n.y).toBeCloseTo(expected.y, 9);
+      expect(n.z).toBeCloseTo(expected.z, 9);
+    }
+  });
+
+  it('is unit length and continuous across the crease of a saddle', () => {
+    const f = field((x, z) => ((x === 2 && z === 2) || (x === 3 && z === 3) ? 3 : 0));
+    const low = f.trianglePlane(at(2, 2), false);
+    const high = f.trianglePlane(at(2, 2), true);
+    expect(low).not.toEqual(high);
+    const a = f.smoothNormal(2.5 - 1e-6, 2.5);
+    const b = f.smoothNormal(2.5 + 1e-6, 2.5);
+    expect(len(a)).toBeCloseTo(1, 9);
+    expect(Math.abs(a.x - b.x) + Math.abs(a.y - b.y) + Math.abs(a.z - b.z)).toBeLessThan(1e-4);
+  });
+
+  it('corner normals average the surrounding triangle normals like computeVertexNormals', () => {
+    const f = field((x, z) => ((x === 2 && z === 2) || (x === 3 && z === 3) ? 3 : 0));
+    // Vertex (3, 3) touches six triangles: the low one of tile (3,3), both of
+    // tiles (2,3) and (3,2), and the high one of tile (2,2).
+    let sx = 0;
+    let sy = 0;
+    let sz = 0;
+    for (const [index, high] of [
+      [at(3, 3), false],
+      [at(2, 3), false],
+      [at(2, 3), true],
+      [at(3, 2), false],
+      [at(3, 2), true],
+      [at(2, 2), true],
+    ] as const) {
+      const { gx, gz } = f.trianglePlane(index, high);
+      sx -= gx;
+      sy += 1;
+      sz -= gz;
+    }
+    const l = Math.hypot(sx, sy, sz);
+    const n = f.cornerNormal(3, 3);
+    expect(n.x).toBeCloseTo(sx / l, 9);
+    expect(n.y).toBeCloseTo(sy / l, 9);
+    expect(n.z).toBeCloseTo(sz / l, 9);
+  });
+});

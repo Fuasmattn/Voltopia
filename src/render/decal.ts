@@ -47,16 +47,24 @@ function setBasis(
   matrix: THREE.Matrix4,
   gx: number,
   gz: number,
+  normal: { x: number; y: number; z: number },
   scaleX: number,
   scaleY: number,
   scaleZ: number,
   flip: boolean,
 ): void {
-  // Edges follow the plane; the thickness follows its normal.
+  // Edges follow the plane of the ground triangle, so the decal lies flush.
+  // The thickness follows the ground's SMOOTH normal instead of the facet's:
+  // three.js lights instances with the instance matrix applied to the
+  // geometry normals, so this axis is what the decal is shaded by, and the
+  // ground itself is shaded with interpolated vertex normals. Using the
+  // facet normal made every saddle tile show a light/dark triangle pair
+  // that the ground beneath it hides. The tilt between the two normals is
+  // a few degrees at most, invisible on a slab a few hundredths thick.
   const sign = flip ? -1 : 1;
   xAxis.set(sign, sign * gx, 0).multiplyScalar(scaleX);
   zAxis.set(0, sign * gz, sign).multiplyScalar(scaleZ);
-  yAxis.set(-gx, 1, -gz).normalize();
+  yAxis.set(normal.x, normal.y, normal.z);
   thickness.copy(yAxis).multiplyScalar(scaleY);
   matrix.makeBasis(xAxis, thickness, zAxis);
 }
@@ -81,7 +89,7 @@ export function composeBoxOnGround(
   const fx = cx - (index % size);
   const fz = cz - Math.floor(index / size);
   const { gx, gz } = elevation.trianglePlane(index, ElevationField.inHighTriangle(fx, fz));
-  setBasis(matrix, gx, gz, sizeX, sizeY, sizeZ, false);
+  setBasis(matrix, gx, gz, elevation.smoothNormal(cx, cz), sizeX, sizeY, sizeZ, false);
   const along = lift + sizeY / 2;
   matrix.setPosition(
     cx + yAxis.x * along,
@@ -110,9 +118,13 @@ export function composePrismOnGround(
   const tz = Math.floor(index / grid);
   const margin = (1 - size) / 2;
   const { gx, gz } = elevation.trianglePlane(index, high);
-  setBasis(matrix, gx, gz, size, sizeY, size, high);
   const ox = high ? tx + 1 - margin : tx + margin;
   const oz = high ? tz + 1 - margin : tz + margin;
+  // Lit like the ground at the prism's centroid (a third of the way along
+  // both legs from the right-angle corner).
+  const inward = (high ? -1 : 1) * (size / 3);
+  const normal = elevation.smoothNormal(ox + inward, oz + inward);
+  setBasis(matrix, gx, gz, normal, size, sizeY, size, high);
   matrix.setPosition(
     ox + yAxis.x * lift,
     elevation.surfaceY(ox, oz) + yAxis.y * lift,

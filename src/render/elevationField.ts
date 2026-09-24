@@ -123,6 +123,76 @@ export class ElevationField implements DiffLayer {
   }
 
   /**
+   * Normal of the ground mesh at integer corner (vx, vz): the sum of the
+   * (area-weighted, unnormalised) normals of the up to six triangles that
+   * meet there, normalised — exactly what BufferGeometry.computeVertexNormals
+   * produces for the indexed ground plane, so decals lit with it match the
+   * ground's smooth shading.
+   */
+  cornerNormal(vx: number, vz: number): { x: number; y: number; z: number } {
+    const size = this.size;
+    let nx = 0;
+    let ny = 0;
+    let nz = 0;
+    const add = (x: number, z: number, high: boolean) => {
+      if (x < 0 || z < 0 || x >= size || z >= size) return;
+      const { gx, gz } = this.trianglePlane(z * size + x, high);
+      nx -= gx;
+      ny += 1;
+      nz -= gz;
+    };
+    // The vertex is corner (x, z) of the tile to its south-east (low
+    // triangle only), corner (x+1, z+1) of the tile to its north-west (high
+    // only), and lies on the crease of the two remaining tiles (both).
+    add(vx, vz, false);
+    add(vx - 1, vz - 1, true);
+    add(vx - 1, vz, false);
+    add(vx - 1, vz, true);
+    add(vx, vz - 1, false);
+    add(vx, vz - 1, true);
+    const length = Math.hypot(nx, ny, nz);
+    return length > 0 ? { x: nx / length, y: ny / length, z: nz / length } : { x: 0, y: 1, z: 0 };
+  }
+
+  /**
+   * Ground normal at a continuous tile-space position as the renderer
+   * shades it: the corner normals of the containing triangle blended
+   * barycentrically, then normalised. Continuous across creases, unlike
+   * the facet normal of trianglePlane.
+   */
+  smoothNormal(x: number, z: number): { x: number; y: number; z: number } {
+    const size = this.size;
+    const cx = Math.min(size - 1, Math.max(0, Math.floor(x)));
+    const cz = Math.min(size - 1, Math.max(0, Math.floor(z)));
+    const fx = Math.min(1, Math.max(0, x - cx));
+    const fz = Math.min(1, Math.max(0, z - cz));
+    // Every triangle has corners (cx, cz+1) and (cx+1, cz); the third is
+    // (cx+1, cz+1) in the high triangle and (cx, cz) in the low one.
+    const b = this.cornerNormal(cx, cz + 1);
+    const d = this.cornerNormal(cx + 1, cz);
+    let wb: number;
+    let wd: number;
+    let third: { x: number; y: number; z: number };
+    let wt: number;
+    if (ElevationField.inHighTriangle(fx, fz)) {
+      third = this.cornerNormal(cx + 1, cz + 1);
+      wt = fx + fz - 1;
+      wb = 1 - fx;
+      wd = 1 - fz;
+    } else {
+      third = this.cornerNormal(cx, cz);
+      wt = 1 - fx - fz;
+      wb = fz;
+      wd = fx;
+    }
+    const nx = wb * b.x + wd * d.x + wt * third.x;
+    const ny = wb * b.y + wd * d.y + wt * third.y;
+    const nz = wb * b.z + wd * d.z + wt * third.z;
+    const length = Math.hypot(nx, ny, nz);
+    return { x: nx / length, y: ny / length, z: nz / length };
+  }
+
+  /**
    * Ground height at a continuous tile-space position, piecewise planar
    * exactly like the rendered ground mesh (see trianglePlane).
    */
