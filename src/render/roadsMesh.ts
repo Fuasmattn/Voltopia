@@ -5,7 +5,7 @@ import { RoadClass, Terrain, TileType } from '../shared/types.ts';
 import { PALETTE } from './scene.ts';
 import type { DiffLayer, RenderEnvironment } from './renderer.ts';
 import type { ElevationField } from './elevationField.ts';
-import { composeGroundDecal } from './decal.ts';
+import { composeBoxOnGround, composePrismOnGround, createHalfTilePrism } from './decal.ts';
 
 const ROAD_HEIGHT = 0.05;
 const CENTER_SIZE = 0.62;
@@ -33,6 +33,8 @@ const RAIL_HEIGHT = 0.14;
  */
 export class RoadsMesh implements DiffLayer {
   readonly mesh: THREE.InstancedMesh;
+  /** Centre pads on land: two prisms per tile, each flush with one ground triangle. */
+  private readonly pads: THREE.InstancedMesh;
   private readonly centreLines: THREE.InstancedMesh;
   private readonly lampPoles: THREE.InstancedMesh;
   private readonly lampHeads: THREE.InstancedMesh;
@@ -67,6 +69,14 @@ export class RoadsMesh implements DiffLayer {
     this.mesh.receiveShadow = true;
     this.mesh.count = 0;
     scene.add(this.mesh);
+
+    this.pads = new THREE.InstancedMesh(createHalfTilePrism(), material, gridSize * gridSize * 2);
+    // Instance transforms live across the whole grid; the base geometry's
+    // bounds would wrongly cull the mesh, so culling is disabled.
+    this.pads.frustumCulled = false;
+    this.pads.receiveShadow = true;
+    this.pads.count = 0;
+    scene.add(this.pads);
 
     this.centreLines = new THREE.InstancedMesh(
       geometry,
@@ -162,6 +172,7 @@ export class RoadsMesh implements DiffLayer {
 
   private rebuild(): void {
     let count = 0;
+    let padCount = 0;
     let lineCount = 0;
     for (let index = 0; index < this.roadMasks.length; index++) {
       const mask = this.roadMasks[index];
@@ -172,7 +183,14 @@ export class RoadsMesh implements DiffLayer {
       const size = isAvenue ? AVENUE_CENTER_SIZE : CENTER_SIZE;
       const armLength = (1 - size) / 2;
 
-      this.setInstance(count++, index, x, z, size, size);
+      if (this.isBridge(index)) {
+        this.setInstance(count++, index, x, z, size, size);
+      } else {
+        for (const high of [false, true]) {
+          composePrismOnGround(this.matrix, this.elevation, index, high, size, ROAD_HEIGHT, 0);
+          this.pads.setMatrixAt(padCount++, this.matrix);
+        }
+      }
       for (const { dx, dy, bit } of DIRECTIONS) {
         if ((mask & bit) === 0) continue;
         const offset = size / 2 + armLength / 2;
@@ -197,6 +215,8 @@ export class RoadsMesh implements DiffLayer {
     }
     this.mesh.count = count;
     this.mesh.instanceMatrix.needsUpdate = true;
+    this.pads.count = padCount;
+    this.pads.instanceMatrix.needsUpdate = true;
     this.centreLines.count = lineCount;
     this.centreLines.instanceMatrix.needsUpdate = true;
     this.rebuildLamps();
@@ -271,7 +291,7 @@ export class RoadsMesh implements DiffLayer {
     this.rails.instanceMatrix.needsUpdate = true;
   }
 
-  /** Bridges are flat slabs at the bank's height; everything else follows the ground. */
+  /** Bridges are flat slabs at the bank's height; everything else lies on the ground triangles. */
   private isBridge(index: number): boolean {
     return this.terrain[index] === Terrain.River;
   }
@@ -288,7 +308,7 @@ export class RoadsMesh implements DiffLayer {
       this.matrix.makeScale(sizeX, ROAD_HEIGHT, sizeZ);
       this.matrix.setPosition(x, ROAD_HEIGHT / 2 + this.elevation.maxCornerY(index), z);
     } else {
-      composeGroundDecal(this.matrix, this.elevation, index, x, z, sizeX, ROAD_HEIGHT, sizeZ, 0);
+      composeBoxOnGround(this.matrix, this.elevation, index, x, z, sizeX, ROAD_HEIGHT, sizeZ, 0);
     }
     this.mesh.setMatrixAt(slot, this.matrix);
   }
@@ -309,7 +329,7 @@ export class RoadsMesh implements DiffLayer {
         z,
       );
     } else {
-      composeGroundDecal(
+      composeBoxOnGround(
         this.matrix,
         this.elevation,
         index,

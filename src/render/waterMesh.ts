@@ -4,7 +4,7 @@ import { Terrain } from '../shared/types.ts';
 import { PALETTE } from './scene.ts';
 import type { DiffLayer, RenderEnvironment } from './renderer.ts';
 import type { ElevationField } from './elevationField.ts';
-import { composeGroundDecal } from './decal.ts';
+import { composePrismOnGround, createHalfTilePrism } from './decal.ts';
 
 /** Just above the ground plane, below roads (0.05) and the build grid. */
 const WATER_HEIGHT = 0.015;
@@ -20,7 +20,10 @@ const NIGHT_DIM = 0.55;
  * arrive (new game / load). A slow brightness wobble keeps it alive.
  */
 export class WaterMesh implements DiffLayer {
+  /** Lake tiles: flat unit boxes on the shared lake level. */
   private readonly mesh: THREE.InstancedMesh;
+  /** River tiles: two prisms per tile, each flush with one ground triangle of the bed. */
+  private readonly riverMesh: THREE.InstancedMesh;
   private readonly material: THREE.MeshLambertMaterial;
   private readonly terrain: Uint8Array;
   private readonly gridSize: number;
@@ -44,6 +47,18 @@ export class WaterMesh implements DiffLayer {
     this.mesh.receiveShadow = true;
     this.mesh.count = 0;
     scene.add(this.mesh);
+
+    this.riverMesh = new THREE.InstancedMesh(
+      createHalfTilePrism(),
+      this.material,
+      gridSize * gridSize * 2,
+    );
+    // Instance transforms live across the whole grid; the base geometry's
+    // bounds would wrongly cull the mesh, so culling is disabled.
+    this.riverMesh.frustumCulled = false;
+    this.riverMesh.receiveShadow = true;
+    this.riverMesh.count = 0;
+    scene.add(this.riverMesh);
   }
 
   applyDiffs(diffs: TileDiff[]): void {
@@ -73,43 +88,47 @@ export class WaterMesh implements DiffLayer {
 
   private rebuild(): void {
     const color = new THREE.Color();
-    let count = 0;
+    let lakeCount = 0;
+    let riverCount = 0;
     for (let index = 0; index < this.terrain.length; index++) {
       const terrain = this.terrain[index];
       if (terrain === Terrain.Land) continue;
-      const x = (index % this.gridSize) + 0.5;
-      const z = Math.floor(index / this.gridSize) + 0.5;
       if (terrain === Terrain.Lake) {
         // Every lake tile shares one level: one flat surface, banks rise around it.
+        const x = (index % this.gridSize) + 0.5;
+        const z = Math.floor(index / this.gridSize) + 0.5;
         this.matrix.makeScale(1, WATER_THICKNESS, 1);
         this.matrix.setPosition(
           x,
           this.elevation.centerY(index) + WATER_HEIGHT + WATER_THICKNESS / 2,
           z,
         );
-      } else {
-        // The river bed is carved into the ground; the water follows it downhill.
-        composeGroundDecal(
+        this.mesh.setMatrixAt(lakeCount, this.matrix);
+        this.mesh.setColorAt(lakeCount, color.setHex(PALETTE.lake));
+        lakeCount++;
+        continue;
+      }
+      // The river bed is carved into the ground; the water follows it downhill.
+      for (const high of [false, true]) {
+        composePrismOnGround(
           this.matrix,
           this.elevation,
           index,
-          x,
-          z,
+          high,
           1,
           WATER_THICKNESS,
-          1,
           WATER_HEIGHT,
         );
+        this.riverMesh.setMatrixAt(riverCount, this.matrix);
+        this.riverMesh.setColorAt(riverCount, color.setHex(PALETTE.river));
+        riverCount++;
       }
-      this.mesh.setMatrixAt(count, this.matrix);
-      this.mesh.setColorAt(
-        count,
-        color.setHex(terrain === Terrain.River ? PALETTE.river : PALETTE.lake),
-      );
-      count++;
     }
-    this.mesh.count = count;
+    this.mesh.count = lakeCount;
     this.mesh.instanceMatrix.needsUpdate = true;
     if (this.mesh.instanceColor) this.mesh.instanceColor.needsUpdate = true;
+    this.riverMesh.count = riverCount;
+    this.riverMesh.instanceMatrix.needsUpdate = true;
+    if (this.riverMesh.instanceColor) this.riverMesh.instanceColor.needsUpdate = true;
   }
 }

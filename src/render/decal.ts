@@ -1,5 +1,17 @@
 import * as THREE from 'three';
-import type { ElevationField } from './elevationField.ts';
+import { ElevationField } from './elevationField.ts';
+
+/**
+ * Flat decals (road pads, water, zone paint) laid on the ground.
+ *
+ * The ground mesh is piecewise planar: two triangles per tile, split
+ * along the diagonal from (x, z+1) to (x+1, z). A decal only lies flush
+ * when every part of it is fitted to the plane of the ground triangle it
+ * sits in. Rectangles that stay inside one triangle (road arms, centre
+ * lines) become sheared boxes; a square centred on the tile (road pad,
+ * water, zone tint) straddles the crease along its own diagonal, so it
+ * is drawn as two right-angled prisms, one per ground triangle.
+ */
 
 const xAxis = new THREE.Vector3();
 const yAxis = new THREE.Vector3();
@@ -7,36 +19,103 @@ const zAxis = new THREE.Vector3();
 const thickness = new THREE.Vector3();
 
 /**
- * Lay a flat box decal on the ground plane of a tile: the box is sheared
- * so its x and z edges follow the tile's slope while staying aligned
- * with the tile grid, its thickness points along the plane normal, and
- * its footprint stays exactly sizeX by sizeZ tiles when seen from above.
- * `lift` raises the box's base along the normal (0 = resting on the
- * ground). Only the matrix is written; the caller stores it.
+ * Right-angled triangular prism: legs along +x and +z of length 1 from
+ * the origin, thickness along +y from 0 to 1. Instanced twice per tile
+ * square: once as the low triangle, once rotated onto the high one.
  */
-export function composeGroundDecal(
+export function createHalfTilePrism(): THREE.BufferGeometry {
+  // prettier-ignore
+  const positions = new Float32Array([
+    // bottom (y = 0), wound to face down
+    0, 0, 0,  0, 0, 1,  1, 0, 0,
+    // top (y = 1), wound to face up
+    0, 1, 0,  1, 1, 0,  0, 1, 1,
+    // side along x (z = 0)
+    0, 0, 0,  1, 0, 0,  1, 1, 0,   0, 0, 0,  1, 1, 0,  0, 1, 0,
+    // side along z (x = 0)
+    0, 0, 0,  0, 1, 0,  0, 1, 1,   0, 0, 0,  0, 1, 1,  0, 0, 1,
+    // hypotenuse side
+    1, 0, 0,  0, 0, 1,  0, 1, 1,   1, 0, 0,  0, 1, 1,  1, 1, 0,
+  ]);
+  const geometry = new THREE.BufferGeometry();
+  geometry.setAttribute('position', new THREE.BufferAttribute(positions, 3));
+  geometry.computeVertexNormals();
+  return geometry;
+}
+
+function setBasis(
+  matrix: THREE.Matrix4,
+  gx: number,
+  gz: number,
+  scaleX: number,
+  scaleY: number,
+  scaleZ: number,
+  flip: boolean,
+): void {
+  // Edges follow the plane; the thickness follows its normal.
+  const sign = flip ? -1 : 1;
+  xAxis.set(sign, sign * gx, 0).multiplyScalar(scaleX);
+  zAxis.set(0, sign * gz, sign).multiplyScalar(scaleZ);
+  yAxis.set(-gx, 1, -gz).normalize();
+  thickness.copy(yAxis).multiplyScalar(scaleY);
+  matrix.makeBasis(xAxis, thickness, zAxis);
+}
+
+/**
+ * A unit box (centred on its origin) laid on the ground triangle that
+ * contains the rectangle's centre (cx, cz). Only valid for rectangles
+ * that do not cross the tile's crease.
+ */
+export function composeBoxOnGround(
   matrix: THREE.Matrix4,
   elevation: ElevationField,
   index: number,
-  x: number,
-  z: number,
+  cx: number,
+  cz: number,
   sizeX: number,
   sizeY: number,
   sizeZ: number,
   lift: number,
 ): void {
-  const { gx, gz } = elevation.tileSlope(index);
-  xAxis.set(1, gx, 0).multiplyScalar(sizeX);
-  zAxis.set(0, gz, 1).multiplyScalar(sizeZ);
-  yAxis.set(-gx, 1, -gz).normalize();
-  const baseY = elevation.surfaceY(x, z);
-  // The box is centred on its origin: shift half a thickness up the normal.
-  const centreLift = lift + sizeY / 2;
-  thickness.copy(yAxis).multiplyScalar(sizeY);
-  matrix.makeBasis(xAxis, thickness, zAxis);
+  const size = elevation.gridSize;
+  const fx = cx - (index % size);
+  const fz = cz - Math.floor(index / size);
+  const { gx, gz } = elevation.trianglePlane(index, ElevationField.inHighTriangle(fx, fz));
+  setBasis(matrix, gx, gz, sizeX, sizeY, sizeZ, false);
+  const along = lift + sizeY / 2;
   matrix.setPosition(
-    x + yAxis.x * centreLift,
-    baseY + yAxis.y * centreLift,
-    z + yAxis.z * centreLift,
+    cx + yAxis.x * along,
+    elevation.surfaceY(cx, cz) + yAxis.y * along,
+    cz + yAxis.z * along,
+  );
+}
+
+/**
+ * One half of a square decal centred on the tile: the low prism starts
+ * at the square's (x0, z0) corner, the high prism at its (x1, z1) corner
+ * with its legs pointing back toward the centre. `size` is the square's
+ * edge in tiles, `lift` the gap to the ground along the normal.
+ */
+export function composePrismOnGround(
+  matrix: THREE.Matrix4,
+  elevation: ElevationField,
+  index: number,
+  high: boolean,
+  size: number,
+  sizeY: number,
+  lift: number,
+): void {
+  const grid = elevation.gridSize;
+  const tx = index % grid;
+  const tz = Math.floor(index / grid);
+  const margin = (1 - size) / 2;
+  const { gx, gz } = elevation.trianglePlane(index, high);
+  setBasis(matrix, gx, gz, size, sizeY, size, high);
+  const ox = high ? tx + 1 - margin : tx + margin;
+  const oz = high ? tz + 1 - margin : tz + margin;
+  matrix.setPosition(
+    ox + yAxis.x * lift,
+    elevation.surfaceY(ox, oz) + yAxis.y * lift,
+    oz + yAxis.z * lift,
   );
 }

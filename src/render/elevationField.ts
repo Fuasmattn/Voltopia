@@ -15,9 +15,12 @@ export class ElevationField implements DiffLayer {
   version = 0;
   private readonly levels: Uint8Array;
   private readonly size: number;
+  /** Tiles per side of the map. */
+  readonly gridSize: number;
 
   constructor(gridSize: number) {
     this.size = gridSize;
+    this.gridSize = gridSize;
     this.levels = new Uint8Array(gridSize * gridSize);
   }
 
@@ -96,12 +99,14 @@ export class ElevationField implements DiffLayer {
   }
 
   /**
-   * Rise of the ground across a tile, in world units per tile, along +x
-   * and +z: the plane through the tile's four corners. Decals (roads,
-   * water, zone paint) are sheared onto this plane so they lie flush on
-   * slopes instead of floating above the lower corners.
+   * Slopes (world units per tile along +x and +z) of one of the two
+   * ground triangles of a tile. The ground mesh is a PlaneGeometry, which
+   * splits every cell along the diagonal from corner (x, z+1) to
+   * (x+1, z): the "low" triangle holds corner (x, z) and the "high"
+   * triangle holds corner (x+1, z+1). Each triangle is a plane, so a
+   * decal fitted to it lies flush with the ground.
    */
-  tileSlope(index: number): { gx: number; gz: number } {
+  trianglePlane(index: number, high: boolean): { gx: number; gz: number } {
     const size = this.size;
     const x = index % size;
     const z = Math.floor(index / size);
@@ -109,22 +114,30 @@ export class ElevationField implements DiffLayer {
     const h10 = this.cornerY(x + 1, z);
     const h01 = this.cornerY(x, z + 1);
     const h11 = this.cornerY(x + 1, z + 1);
-    return { gx: (h10 + h11 - h00 - h01) / 2, gz: (h01 + h11 - h00 - h10) / 2 };
+    return high ? { gx: h11 - h01, gz: h11 - h10 } : { gx: h10 - h00, gz: h01 - h00 };
   }
 
-  /** Smooth ground height at a continuous tile-space position. */
+  /** True when a point inside a tile lies in the tile's high ground triangle. */
+  static inHighTriangle(fx: number, fz: number): boolean {
+    return fx + fz > 1;
+  }
+
+  /**
+   * Ground height at a continuous tile-space position, piecewise planar
+   * exactly like the rendered ground mesh (see trianglePlane).
+   */
   surfaceY(x: number, z: number): number {
     const size = this.size;
     const cx = Math.min(size - 1, Math.max(0, Math.floor(x)));
     const cz = Math.min(size - 1, Math.max(0, Math.floor(z)));
-    const tx = Math.min(1, Math.max(0, x - cx));
-    const tz = Math.min(1, Math.max(0, z - cz));
-    const h00 = this.cornerY(cx, cz);
-    const h10 = this.cornerY(cx + 1, cz);
-    const h01 = this.cornerY(cx, cz + 1);
-    const h11 = this.cornerY(cx + 1, cz + 1);
-    const top = h00 + (h10 - h00) * tx;
-    const bottom = h01 + (h11 - h01) * tx;
-    return top + (bottom - top) * tz;
+    const fx = Math.min(1, Math.max(0, x - cx));
+    const fz = Math.min(1, Math.max(0, z - cz));
+    const index = cz * size + cx;
+    if (ElevationField.inHighTriangle(fx, fz)) {
+      const { gx, gz } = this.trianglePlane(index, true);
+      return this.cornerY(cx + 1, cz + 1) - gx * (1 - fx) - gz * (1 - fz);
+    }
+    const { gx, gz } = this.trianglePlane(index, false);
+    return this.cornerY(cx, cz) + gx * fx + gz * fz;
   }
 }

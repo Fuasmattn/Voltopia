@@ -17,45 +17,70 @@ function field(levelOf: (x: number, z: number) => number): ElevationField {
   return f;
 }
 
-describe('ElevationField.tileSlope', () => {
-  it('is zero on flat ground', () => {
+const at = (x: number, z: number) => z * SIZE + x;
+
+describe('ElevationField ground triangles', () => {
+  it('is flat with zero slopes on level ground', () => {
     const f = field(() => 2);
-    expect(f.tileSlope(2 * SIZE + 2)).toEqual({ gx: 0, gz: 0 });
+    expect(f.trianglePlane(at(2, 2), false)).toEqual({ gx: 0, gz: 0 });
+    expect(f.trianglePlane(at(2, 2), true)).toEqual({ gx: 0, gz: 0 });
     expect(f.surfaceY(2.5, 2.5)).toBeCloseTo(2 * LEVEL_HEIGHT, 9);
   });
 
-  it('follows a ramp along x with one level per tile', () => {
+  it('both triangles share the plane of a uniform ramp', () => {
     const f = field((x) => x);
-    const { gx, gz } = f.tileSlope(2 * SIZE + 2); // interior tile
-    expect(gx).toBeCloseTo(LEVEL_HEIGHT, 9);
-    expect(gz).toBeCloseTo(0, 9);
-    // The plane through the corners passes through the tile centre height.
+    const low = f.trianglePlane(at(2, 2), false);
+    const high = f.trianglePlane(at(2, 2), true);
+    expect(low.gx).toBeCloseTo(LEVEL_HEIGHT, 9);
+    expect(low.gz).toBeCloseTo(0, 9);
+    expect(high).toEqual(low);
     expect(f.surfaceY(2.5, 2.5)).toBeCloseTo(2 * LEVEL_HEIGHT, 9);
   });
 
-  it('follows a ramp along z and reports both components on a diagonal', () => {
-    const alongZ = field((_x, z) => z);
-    expect(alongZ.tileSlope(2 * SIZE + 2).gz).toBeCloseTo(LEVEL_HEIGHT, 9);
-    expect(alongZ.tileSlope(2 * SIZE + 2).gx).toBeCloseTo(0, 9);
-    const diagonal = field((x, z) => x + z);
-    const { gx, gz } = diagonal.tileSlope(2 * SIZE + 2);
-    expect(gx).toBeCloseTo(LEVEL_HEIGHT, 9);
-    expect(gz).toBeCloseTo(LEVEL_HEIGHT, 9);
+  it('surfaceY interpolates each triangle exactly through its three corners', () => {
+    // A saddle: two diagonal neighbours are hills, so the tile between
+    // them has one high corner and the two triangles are different planes.
+    const f = field((x, z) => ((x === 2 && z === 2) || (x === 3 && z === 3) ? 3 : 0));
+    const index = at(2, 2);
+    const c00 = f.cornerY(2, 2);
+    const c10 = f.cornerY(3, 2);
+    const c01 = f.cornerY(2, 3);
+    const c11 = f.cornerY(3, 3);
+    expect(c00 + c11).not.toBeCloseTo(c10 + c01, 6); // genuinely non-planar
+    expect(f.surfaceY(2, 2)).toBeCloseTo(c00, 9);
+    expect(f.surfaceY(3 - 1e-9, 2)).toBeCloseTo(c10, 6);
+    expect(f.surfaceY(2, 3 - 1e-9)).toBeCloseTo(c01, 6);
+    expect(f.surfaceY(3 - 1e-9, 3 - 1e-9)).toBeCloseTo(c11, 6);
+    // The crease from (2,3) to (3,2) is shared by both triangles.
+    const low = f.trianglePlane(index, false);
+    const high = f.trianglePlane(index, true);
+    const onCreaseLow = c00 + low.gx * 0.5 + low.gz * 0.5;
+    const onCreaseHigh = c11 - high.gx * 0.5 - high.gz * 0.5;
+    expect(onCreaseLow).toBeCloseTo(onCreaseHigh, 9);
+    expect(f.surfaceY(2.5, 2.5)).toBeCloseTo(onCreaseLow, 9);
   });
 
-  it('a decal on the slope plane meets the ground at every corner of a uniform ramp', () => {
-    const f = field((x) => x);
-    const index = 2 * SIZE + 2;
-    const { gx, gz } = f.tileSlope(index);
-    const centre = f.surfaceY(2.5, 2.5);
+  it('a rectangle inside one triangle lies flush when fitted to that plane', () => {
+    const f = field((x, z) => ((x === 2 && z === 2) || (x === 3 && z === 3) ? 3 : 0));
+    const index = at(2, 2);
+    // East road arm: x in [2.81, 3], z in [2.19, 2.81] — inside the high triangle.
+    const { gx, gz } = f.trianglePlane(index, true);
+    const cx = 2.905;
+    const cz = 2.5;
+    const centre = f.surfaceY(cx, cz);
     for (const [dx, dz] of [
-      [-0.5, -0.5],
-      [0.5, -0.5],
-      [-0.5, 0.5],
-      [0.5, 0.5],
+      [-0.095, -0.31],
+      [0.095, -0.31],
+      [-0.095, 0.31],
+      [0.095, 0.31],
     ]) {
-      const onPlane = centre + gx * dx + gz * dz;
-      expect(onPlane).toBeCloseTo(f.surfaceY(2.5 + dx, 2.5 + dz), 9);
+      expect(centre + gx * dx + gz * dz).toBeCloseTo(f.surfaceY(cx + dx, cz + dz), 9);
     }
+  });
+
+  it('classifies points against the crease', () => {
+    expect(ElevationField.inHighTriangle(0.2, 0.2)).toBe(false);
+    expect(ElevationField.inHighTriangle(0.8, 0.8)).toBe(true);
+    expect(ElevationField.inHighTriangle(0.5, 0.5)).toBe(false); // on the crease counts as low
   });
 });

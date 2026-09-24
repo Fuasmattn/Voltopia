@@ -3,7 +3,7 @@ import type { TileDiff } from '../shared/types.ts';
 import { TileType, Zone } from '../shared/types.ts';
 import type { DiffLayer } from './renderer.ts';
 import type { ElevationField } from './elevationField.ts';
-import { composeGroundDecal } from './decal.ts';
+import { composePrismOnGround, createHalfTilePrism } from './decal.ts';
 
 /** Footprint of the tint within its tile, its slab thickness and lift above the ground. */
 const ZONE_SIZE = 0.92;
@@ -22,7 +22,6 @@ const ZONE_TINTS: Record<number, THREE.Color> = {
  */
 export class ZoneTilesMesh implements DiffLayer {
   readonly mesh: THREE.InstancedMesh;
-  private readonly gridSize: number;
   private readonly zones = new Map<number, Zone>();
   private readonly matrix = new THREE.Matrix4();
 
@@ -31,15 +30,14 @@ export class ZoneTilesMesh implements DiffLayer {
     gridSize: number,
     private readonly elevation: ElevationField,
   ) {
-    this.gridSize = gridSize;
-    // A unit box, sheared onto the ground per tile (see composeGroundDecal).
-    const geometry = new THREE.BoxGeometry(1, 1, 1);
+    // Two prisms per tile, each flush with one ground triangle (see decal.ts).
+    const geometry = createHalfTilePrism();
     const material = new THREE.MeshBasicMaterial({
       transparent: true,
       opacity: 0.28,
       depthWrite: false,
     });
-    this.mesh = new THREE.InstancedMesh(geometry, material, gridSize * gridSize);
+    this.mesh = new THREE.InstancedMesh(geometry, material, gridSize * gridSize * 2);
     // Instance transforms live across the whole grid; the base geometry's
     // bounds would wrongly cull the mesh, so culling is disabled.
     this.mesh.frustumCulled = false;
@@ -68,20 +66,20 @@ export class ZoneTilesMesh implements DiffLayer {
   private rebuild(): void {
     let slot = 0;
     for (const [index, zone] of this.zones) {
-      composeGroundDecal(
-        this.matrix,
-        this.elevation,
-        index,
-        (index % this.gridSize) + 0.5,
-        Math.floor(index / this.gridSize) + 0.5,
-        ZONE_SIZE,
-        ZONE_THICKNESS,
-        ZONE_SIZE,
-        ZONE_LIFT,
-      );
-      this.mesh.setMatrixAt(slot, this.matrix);
-      this.mesh.setColorAt(slot, ZONE_TINTS[zone] ?? new THREE.Color(0xffffff));
-      slot++;
+      for (const high of [false, true]) {
+        composePrismOnGround(
+          this.matrix,
+          this.elevation,
+          index,
+          high,
+          ZONE_SIZE,
+          ZONE_THICKNESS,
+          ZONE_LIFT,
+        );
+        this.mesh.setMatrixAt(slot, this.matrix);
+        this.mesh.setColorAt(slot, ZONE_TINTS[zone] ?? new THREE.Color(0xffffff));
+        slot++;
+      }
     }
     this.mesh.count = slot;
     this.mesh.instanceMatrix.needsUpdate = true;
