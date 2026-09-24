@@ -83,6 +83,7 @@ export const PLANT_NAMES = {
   park: PlantType.Park,
   run_of_river: PlantType.RunOfRiver,
   pumped_storage: PlantType.PumpedStorage,
+  logistics_depot: PlantType.LogisticsDepot,
 } as const;
 export type PlantName = keyof typeof PLANT_NAMES;
 
@@ -123,6 +124,7 @@ const PLANT_TOOL_KEY: Record<PlantName, TranslationKey> = {
   park: 'tool.plant-park',
   run_of_river: 'tool.plant-hydro',
   pumped_storage: 'tool.plant-pumped',
+  logistics_depot: 'tool.plant-depot',
 };
 
 const PLANT_PLACEMENT: Record<PlantName, string> = {
@@ -134,6 +136,8 @@ const PLANT_PLACEMENT: Record<PlantName, string> = {
   park: 'any empty land tile; raises happiness of buildings within its radius',
   run_of_river: 'an empty river tile',
   pumped_storage: 'an empty land tile with a lake tile as direct (4-)neighbour',
+  logistics_depot:
+    'an empty land tile with a road as direct (4-)neighbour; vans serve shops within route reach',
 };
 
 export const MAP_LAYERS = ['overview', 'terrain', 'supply', 'density', 'power'] as const;
@@ -317,6 +321,7 @@ function overviewGlyph(tiles: TileMirror, i: number): string {
       park: 'P',
       run_of_river: 'F',
       pumped_storage: 'U',
+      logistics_depot: 'D',
     };
     const name = PLANT_NAME_BY_TYPE.get(tiles.plantType[i] as PlantType);
     return name && name !== 'none' ? glyph[name] : '?';
@@ -336,7 +341,8 @@ const OVERVIEW_LEGEND =
   '. empty land, ~ river, # lake, + road (or bridge), = power line on empty land, ' +
   'r/c/s zoned but unbuilt (residential/commercial/retail), R/C/S building, ' +
   'plants: V solar, W wind, B battery, G biogas, H charging hub, P park, ' +
-  'F run-of-river, U pumped storage. Roads may also carry a power line (see the power layer).';
+  'F run-of-river, U pumped storage, D logistics depot. ' +
+  'Roads may also carry a power line (see the power layer).';
 
 function layerGlyph(tiles: TileMirror, i: number, layer: MapLayer): string {
   const terrain = tiles.terrain[i];
@@ -458,6 +464,12 @@ export function createAgentTools(ctx: AgentContext): AgentTool[] {
             gridExportRevenue: round(s.budget.gridExportRevenue, 3),
             net: round(s.budget.net, 3),
             ticksPerDay: TICKS_PER_DAY,
+          },
+          deliveries: {
+            suppliedShare: round(s.deliveries.suppliedShare, 2),
+            shops: s.deliveries.shops,
+            vansDriving: s.deliveries.driving,
+            depots: s.deliveries.depots,
           },
           taxRate: s.taxRate,
           maxTaxRate: BALANCE.tax.maxRate,
@@ -739,7 +751,7 @@ export function createAgentTools(ctx: AgentContext): AgentTool[] {
       name: 'place_plant',
       description:
         'Place a plant on one tile: solar, wind, battery, biogas, charging_hub, park, ' +
-        'run_of_river (river tile) or pumped_storage (land tile next to the lake). ' +
+        'run_of_river (river tile), pumped_storage (land tile next to the lake), logistics_depot. ' +
         'See get_build_catalog for costs and roles.',
       inputSchema: {
         type: 'object',
@@ -973,6 +985,11 @@ function plantFigures(type: PlantType): Record<string, number> {
       return { serviceRadius: BALANCE.vehicles.hubRadius };
     case PlantType.Park:
       return { happinessRadius: BALANCE.happiness.parkRadius };
+    case PlantType.LogisticsDepot:
+      return {
+        vans: BALANCE.deliveries.vansPerDepot,
+        routeReachTiles: BALANCE.deliveries.maxRouteTiles,
+      };
     default:
       return {};
   }
@@ -998,6 +1015,9 @@ function liveFigures(info: TileInfo): Record<string, unknown> {
     buildingAge: info.buildingAge,
     troubledTicks: info.troubledTicks,
     growthBlockers: info.growthBlockers,
+    deliveryState: info.deliveryState,
+    deliveryAgeDays: round(info.deliveryAgeTicks / TICKS_PER_DAY, 2),
+    depot: info.depot,
   };
 }
 

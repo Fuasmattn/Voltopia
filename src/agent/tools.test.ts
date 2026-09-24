@@ -360,4 +360,19 @@ describe('agent tools: building', () => {
     await call('start_new_city');
     expect(newCities[1]).toEqual({ size: 64, startingMoney: BALANCE.startingMoney, seed: null });
   });
+
+  it('places a logistics depot next to a road and reports deliveries', async () => {
+    const { call, engine } = createHarness();
+    const { x, y } = findLand(engine);
+    await call('build_road', { from: { x, y }, to: { x: x + 3, y } });
+    const depot = await call('place_plant', { plant: 'logistics_depot', x, y: y + 1 });
+    expect(depot).toMatchObject({ ok: true });
+    expect(engine.state.layers.plantType[tileIndex(x, y + 1, SIZE)]).toBe(PlantType.LogisticsDepot);
+    await call('advance_time', { ticks: 1 });
+    const overview = await call('get_game_overview');
+    expect(overview.deliveries).toMatchObject({ shops: 0, depots: 1 });
+    const info = await call('inspect_tile', { x, y: y + 1 });
+    expect(info).toMatchObject({ ok: true, plant: 'logistics_depot' });
+    expect(info.depot).toMatchObject({ vansTotal: BALANCE.deliveries.vansPerDepot });
+  });
 });
