@@ -730,6 +730,45 @@ describe('tidal plants', () => {
   });
 });
 
+describe('offshore wind', () => {
+  /** A generated map: elevation and water (river, lake, sea) but no zoning. */
+  function generatedState(seed: number, size: number): SimState {
+    const state = createSimState(seed, size);
+    generateTerrain(state);
+    generateWater(state);
+    return state;
+  }
+
+  /** First sea tile on this map. */
+  function firstSeaTile(state: SimState): number {
+    for (let i = 0; i < state.layers.terrain.length; i++) {
+      if (state.layers.terrain[i] === Terrain.Sea) return i;
+    }
+    throw new Error('no sea tile on this map');
+  }
+
+  it('gives offshore turbines their bonus instead of the elevation bonus', () => {
+    const state = generatedState(1, 64);
+    state.money = 1_000_000;
+    const sea = firstSeaTile(state);
+    expect(placePlant(state, sea, PlantType.WindTurbine).rejected).toBeUndefined();
+    const census = censusPlants(state);
+    expect(census.windCapacity).toBeCloseTo(1 + BALANCE.sea.offshoreWindBonus, 5);
+  });
+
+  it('charges the offshore surcharge for building at sea', () => {
+    const state = generatedState(1, 64);
+    state.money = 1_000_000;
+    const before = state.money;
+    const sea = firstSeaTile(state);
+    expect(placePlant(state, sea, PlantType.WindTurbine).rejected).toBeUndefined();
+    const expected = Math.round(
+      BALANCE.costs.plant[PlantType.WindTurbine] * BALANCE.sea.offshoreCostFactor,
+    );
+    expect(before - state.money).toBe(expected);
+  });
+});
+
 describe('heating load', () => {
   const { comfortTemperature, heatingRange, weightByZone, insulationFactor } =
     BALANCE.seasons.heating;

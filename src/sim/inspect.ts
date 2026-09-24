@@ -46,7 +46,10 @@ function plantGeneration(
     case PlantType.SolarFarm:
       return { generation: e.solarPeakOutput * currentSolarFactor(state), peak: e.solarPeakOutput };
     case PlantType.WindTurbine: {
-      const bonus = 1 + BALANCE.terrain.windBonusPerLevel * state.layers.elevation[index];
+      const bonus =
+        state.layers.terrain[index] === Terrain.Sea
+          ? 1 + BALANCE.sea.offshoreWindBonus
+          : 1 + BALANCE.terrain.windBonusPerLevel * state.layers.elevation[index];
       return {
         generation: e.windPeakOutput * currentWindFactor(state) * bonus,
         peak: e.windPeakOutput * bonus,

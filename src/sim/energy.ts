@@ -1,5 +1,5 @@
 import { BALANCE, TICKS_PER_HISTORY_SAMPLE } from '../shared/constants.ts';
-import { PlantType, Zone } from '../shared/types.ts';
+import { PlantType, Terrain, Zone } from '../shared/types.ts';
 import { clearForest, fellingCost, windForestFactor } from './forest.ts';
 import { isSupplySource, recomputeGrid } from './powerGrid.ts';
 import type { BuildResult } from './roads.ts';
@@ -48,9 +48,12 @@ export function placePlant(state: SimState, tile: number, plant: PlantType): Bui
   if (plant === PlantType.None) return { rejected: 'noPlantSelected' };
   const rejection = buildRejection(state, tile, BuildIntent.Plant, plant);
   if (rejection) return { rejected: rejection };
+  const offshore = state.layers.terrain[tile] === Terrain.Sea;
   const cost =
-    Math.round(BALANCE.costs.plant[plant] * slopeCostMultiplier(state, tile)) +
-    fellingCost(state, tile);
+    Math.round(
+      BALANCE.costs.plant[plant] *
+        (offshore ? BALANCE.sea.offshoreCostFactor : slopeCostMultiplier(state, tile)),
+    ) + fellingCost(state, tile);
   if (cost > state.money) {
     return { rejected: 'notEnoughMoney' };
   }
@@ -124,10 +127,13 @@ export function censusPlants(state: SimState): PlantCensus {
         break;
       case PlantType.WindTurbine:
         census.windTurbines++;
-        // Height helps, sheltering woods hurt (turbulence and lower wind).
+        // Offshore: free wind, no shelter, no height to gain. On land:
+        // height helps, sheltering woods hurt (turbulence and lower wind).
         census.windCapacity +=
-          (1 + BALANCE.terrain.windBonusPerLevel * state.layers.elevation[i]) *
-          windForestFactor(state, i);
+          state.layers.terrain[i] === Terrain.Sea
+            ? 1 + BALANCE.sea.offshoreWindBonus
+            : (1 + BALANCE.terrain.windBonusPerLevel * state.layers.elevation[i]) *
+              windForestFactor(state, i);
         break;
       case PlantType.Battery:
         census.batteries++;
