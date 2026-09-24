@@ -16,6 +16,9 @@ const INSTANCES_PER_TILE = 5;
 const AVENUE_CENTER_SIZE = 0.8;
 /** Width of the solid centre line painted along avenue arms. */
 const LINE_WIDTH = 0.04;
+/** Avenue centre line: dashes per arm (centre to tile edge) and their length. */
+const LINE_DASHES_PER_ARM = 2;
+const LINE_DASH_LENGTH = 0.15;
 const LINE_COLOR = 0xe8e2c8;
 const LINE_HEIGHT = 0.012;
 
@@ -81,7 +84,7 @@ export class RoadsMesh implements DiffLayer {
     this.centreLines = new THREE.InstancedMesh(
       geometry,
       new THREE.MeshBasicMaterial({ color: LINE_COLOR }),
-      gridSize * gridSize * 4,
+      gridSize * gridSize * 4 * LINE_DASHES_PER_ARM,
     );
     // Instance transforms live across the whole grid; the base geometry's
     // bounds would wrongly cull the mesh, so culling is disabled.
@@ -203,12 +206,32 @@ export class RoadsMesh implements DiffLayer {
           dy !== 0 ? armLength : size,
         );
         if (isAvenue) {
+          // Dashed centre line from the tile centre to the edge: each dash
+          // sits between half gaps, so neighbouring tiles meet with a full
+          // gap at the edge and the crossing itself stays clear.
           const along = armLength + AVENUE_CENTER_SIZE / 2;
-          const armOffset = AVENUE_CENTER_SIZE / 4 + armLength / 2;
-          if (dx !== 0) {
-            this.setLineInstance(lineCount++, index, x + dx * armOffset, z, along, LINE_WIDTH);
-          } else {
-            this.setLineInstance(lineCount++, index, x, z + dy * armOffset, LINE_WIDTH, along);
+          const gap = (along - LINE_DASHES_PER_ARM * LINE_DASH_LENGTH) / LINE_DASHES_PER_ARM;
+          for (let dash = 0; dash < LINE_DASHES_PER_ARM; dash++) {
+            const dashOffset = gap / 2 + LINE_DASH_LENGTH / 2 + dash * (LINE_DASH_LENGTH + gap);
+            if (dx !== 0) {
+              this.setLineInstance(
+                lineCount++,
+                index,
+                x + dx * dashOffset,
+                z,
+                LINE_DASH_LENGTH,
+                LINE_WIDTH,
+              );
+            } else {
+              this.setLineInstance(
+                lineCount++,
+                index,
+                x,
+                z + dy * dashOffset,
+                LINE_WIDTH,
+                LINE_DASH_LENGTH,
+              );
+            }
           }
         }
       }
