@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import * as THREE from 'three';
 import type { TileDiff } from '../shared/types.ts';
-import { composeBoxOnGround, composePrismOnGround } from './decal.ts';
+import { composeBoxOnGround, composePrismOnGround, createHalfTilePrism } from './decal.ts';
 import { ElevationField } from './elevationField.ts';
 
 const SIZE = 6;
@@ -31,6 +31,8 @@ describe('decals on the ground', () => {
     const p = new THREE.Vector3();
     for (const high of [false, true]) {
       composePrismOnGround(m, f, at(2, 2), high, 0.62, 0.05, 0);
+      // A mirrored instance matrix would flip the winding back inside out.
+      expect(m.determinant()).toBeGreaterThan(0);
       for (const [lx, lz] of [
         [0, 0],
         [1, 0],
@@ -77,5 +79,33 @@ describe('decals on the ground', () => {
     // The box bottom centre sits on the ground (unit box is centred on its origin).
     const p = new THREE.Vector3(0, -0.5, 0).applyMatrix4(m);
     expect(p.y).toBeCloseTo(f.surfaceY(p.x, p.z), 6);
+  });
+});
+
+describe('half-tile prism geometry', () => {
+  it('winds every face outward so the top is visible from above and the walls stay hidden', () => {
+    const geometry = createHalfTilePrism();
+    const p = geometry.attributes.position;
+    // Centre of mass of the right-angled prism (legs 1, thickness 1).
+    const centre = new THREE.Vector3(1 / 3, 1 / 2, 1 / 3);
+    const a = new THREE.Vector3();
+    const b = new THREE.Vector3();
+    const c = new THREE.Vector3();
+    const normal = new THREE.Vector3();
+    const toFace = new THREE.Vector3();
+    for (let i = 0; i < p.count; i += 3) {
+      a.fromBufferAttribute(p, i);
+      b.fromBufferAttribute(p, i + 1);
+      c.fromBufferAttribute(p, i + 2);
+      normal.subVectors(b, a).cross(c.clone().sub(a));
+      toFace.addVectors(a, b).add(c).divideScalar(3).sub(centre);
+      expect(normal.dot(toFace)).toBeGreaterThan(0);
+    }
+    // The top face is the one whose normal points up.
+    geometry.computeVertexNormals();
+    const n = geometry.attributes.normal;
+    let ups = 0;
+    for (let i = 0; i < n.count; i++) if (n.getY(i) > 0.99) ups++;
+    expect(ups).toBe(3);
   });
 });

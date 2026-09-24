@@ -24,18 +24,23 @@ const thickness = new THREE.Vector3();
  * square: once as the low triangle, once rotated onto the high one.
  */
 export function createHalfTilePrism(): THREE.BufferGeometry {
+  // Every face is wound counter-clockwise seen from OUTSIDE the prism
+  // (three.js front faces), so the top is what the camera sees and the
+  // thin walls stay hidden under it. decal.test.ts checks each face's
+  // normal against the centre of mass; an inside-out prism shows its
+  // walls as dark seams along every tile diagonal.
   // prettier-ignore
   const positions = new Float32Array([
-    // bottom (y = 0), wound to face down
-    0, 0, 0,  0, 0, 1,  1, 0, 0,
-    // top (y = 1), wound to face up
-    0, 1, 0,  1, 1, 0,  0, 1, 1,
-    // side along x (z = 0)
-    0, 0, 0,  1, 0, 0,  1, 1, 0,   0, 0, 0,  1, 1, 0,  0, 1, 0,
-    // side along z (x = 0)
-    0, 0, 0,  0, 1, 0,  0, 1, 1,   0, 0, 0,  0, 1, 1,  0, 0, 1,
-    // hypotenuse side
-    1, 0, 0,  0, 0, 1,  0, 1, 1,   1, 0, 0,  0, 1, 1,  1, 1, 0,
+    // bottom (y = 0), facing down
+    0, 0, 0,  1, 0, 0,  0, 0, 1,
+    // top (y = 1), facing up
+    0, 1, 0,  0, 1, 1,  1, 1, 0,
+    // side along x (z = 0), facing -z
+    0, 0, 0,  1, 1, 0,  1, 0, 0,   0, 0, 0,  0, 1, 0,  1, 1, 0,
+    // side along z (x = 0), facing -x
+    0, 0, 0,  0, 1, 1,  0, 1, 0,   0, 0, 0,  0, 0, 1,  0, 1, 1,
+    // hypotenuse side, facing +x+z
+    1, 0, 0,  0, 1, 1,  0, 0, 1,   1, 0, 0,  1, 1, 0,  0, 1, 1,
   ]);
   const geometry = new THREE.BufferGeometry();
   geometry.setAttribute('position', new THREE.BufferAttribute(positions, 3));
