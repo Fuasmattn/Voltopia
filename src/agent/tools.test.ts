@@ -193,8 +193,12 @@ describe('agent tools: reading', () => {
     for (let i = 0; i < SIZE * SIZE; i++) {
       const glyph = terrainRows[Math.floor(i / SIZE)][i % SIZE];
       const t = engine.state.layers.terrain[i];
-      expect(glyph).toBe(t === Terrain.River ? '~' : t === Terrain.Lake ? '#' : '.');
+      const expected =
+        t === Terrain.River ? '~' : t === Terrain.Lake ? '#' : t === Terrain.Sea ? '%' : '.';
+      expect(glyph).toBe(expected);
     }
+    // The map always carves a sea band, so the fix-up above is exercised for real.
+    expect(engine.state.layers.terrain.some((t) => t === Terrain.Sea)).toBe(true);
     const window = await call('get_map', { origin: { x: 20, y: 21 }, width: 10, height: 10 });
     expect(window.width).toBe(4);
     expect(window.height).toBe(3);
@@ -216,6 +220,11 @@ describe('agent tools: reading', () => {
     }
     const shore = await call('find_tiles', { kind: 'lake_shore' });
     expect(shore.total).toBeGreaterThan(0);
+    const coastalSea = await call('find_tiles', { kind: 'coastal_sea' });
+    expect(coastalSea.total).toBeGreaterThan(0);
+    for (const { x, y } of coastalSea.tiles as Array<{ x: number; y: number }>) {
+      expect(isCoastalSea(engine.state, tileIndex(x, y, SIZE))).toBe(true);
+    }
     const land = await call('find_tiles', { kind: 'empty_land', near: { x: 5, y: 5 }, limit: 3 });
     const tiles = land.tiles as Array<{ x: number; y: number }>;
     expect(tiles).toHaveLength(3);

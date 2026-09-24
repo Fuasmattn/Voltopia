@@ -166,6 +166,7 @@ export const FIND_KINDS = [
   'empty_land',
   'river',
   'lake_shore',
+  'coastal_sea',
   'road',
   'power_line',
   'plant',
@@ -328,6 +329,12 @@ function isLakeShore(tiles: TileMirror, index: number): boolean {
   return neighbors4(index, tiles.size).some((n) => tiles.terrain[n] === Terrain.Lake);
 }
 
+/** True on a sea tile that touches land — where a tidal plant may stand. */
+function isCoastalSeaTile(tiles: TileMirror, index: number): boolean {
+  if (tiles.terrain[index] !== Terrain.Sea) return false;
+  return neighbors4(index, tiles.size).some((n) => tiles.terrain[n] === Terrain.Land);
+}
+
 function overviewGlyph(tiles: TileMirror, i: number): string {
   const terrain = tiles.terrain[i];
   if (tiles.tileType[i] === TileType.Road) return tiles.busStop[i] !== 0 ? 'o' : '+';
@@ -374,7 +381,13 @@ function layerGlyph(tiles: TileMirror, i: number, layer: MapLayer): string {
     case 'overview':
       return overviewGlyph(tiles, i);
     case 'terrain':
-      return terrain === Terrain.River ? '~' : terrain === Terrain.Lake ? '#' : '.';
+      return terrain === Terrain.River
+        ? '~'
+        : terrain === Terrain.Lake
+          ? '#'
+          : terrain === Terrain.Sea
+            ? '%'
+            : '.';
     case 'supply': {
       if (terrain === Terrain.River) return '~';
       if (terrain === Terrain.Lake) return '#';
@@ -417,7 +430,7 @@ function layerGlyph(tiles: TileMirror, i: number, layer: MapLayer): string {
 
 const LAYER_LEGEND: Record<MapLayer, string> = {
   overview: OVERVIEW_LEGEND,
-  terrain: '. land, ~ river, # lake',
+  terrain: '. land, ~ river, # lake, % sea',
   supply:
     '. no building, 0 building not connected to any plant, 1 building undersupplied, ' +
     '2 building fully supplied, ~ river, # lake',
@@ -709,8 +722,9 @@ export function createAgentTools(ctx: AgentContext): AgentTool[] {
       name: 'find_tiles',
       description:
         'Coordinates of tiles matching a kind: empty_land, river, lake_shore (land next to the ' +
-        'lake, for pumped storage), road, power_line, plant, zoned_empty, building, ' +
-        'not_connected_building, undersupplied_building, bus_stop. Optionally nearest to a point first.',
+        'lake, for pumped storage), coastal_sea (empty sea tile touching land, for tidal plants), ' +
+        'road, power_line, plant, zoned_empty, building, not_connected_building, ' +
+        'undersupplied_building, bus_stop. Optionally nearest to a point first.',
       inputSchema: {
         type: 'object',
         properties: {
@@ -1157,6 +1171,8 @@ function matchesKind(tiles: TileMirror, i: number, kind: FindKind): boolean {
       return terrain === Terrain.River && tiles.tileType[i] === TileType.Empty;
     case 'lake_shore':
       return terrain === Terrain.Land && empty && isLakeShore(tiles, i);
+    case 'coastal_sea':
+      return tiles.tileType[i] === TileType.Empty && isCoastalSeaTile(tiles, i);
     case 'road':
       return tiles.tileType[i] === TileType.Road;
     case 'power_line':
