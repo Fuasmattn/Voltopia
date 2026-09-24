@@ -47,8 +47,13 @@ export const PlantType = {
   PumpedStorage: 8,
   FireStation: 9,
   PoliceStation: 10,
+  LogisticsDepot: 11,
 } as const;
 export type PlantType = (typeof PlantType)[keyof typeof PlantType];
+
+/** Delivery status of a retail building (TileDiff.deliveryState, overlay). */
+export const DeliveryState = { Supplied: 0, Due: 1, Unsupplied: 2 } as const;
+export type DeliveryState = (typeof DeliveryState)[keyof typeof DeliveryState];
 
 export const SupplyStatus = {
   NotConnected: 0,
@@ -404,6 +409,8 @@ export interface SaveGame {
   summerTicks?: number;
   /** Consecutive flowing-commute ticks so far (absent in older saves → 0). */
   freeFlowTicks?: number;
+  /** Consecutive well-stocked ticks so far (absent in older saves → 0). */
+  wellStockedTicks?: number;
   /** Raw copies of the tile layers. */
   layers: {
     tileType: ArrayBuffer;

@@ -76,6 +76,7 @@ const CATEGORIES: Category[] = [
       { id: 'plant-park', icon: '🌳', cost: BALANCE.costs.plant[PlantType.Park] },
       { id: 'plant-fire', icon: '🚒', cost: BALANCE.costs.plant[PlantType.FireStation] },
       { id: 'plant-police', icon: '🚓', cost: BALANCE.costs.plant[PlantType.PoliceStation] },
+      { id: 'plant-depot', icon: '🚚', cost: BALANCE.costs.plant[PlantType.LogisticsDepot] },
     ],
   },
 ];

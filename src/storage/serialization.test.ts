@@ -161,6 +161,13 @@ describe('save game JSON export/import', () => {
     expect(saveFromJson(saveToJson(makeSave())).freeFlowTicks).toBeUndefined();
   });
 
+  it('round-trips wellStockedTicks and leaves it undefined when absent', () => {
+    const save = makeSave();
+    save.wellStockedTicks = 321;
+    expect(saveFromJson(saveToJson(save)).wellStockedTicks).toBe(321);
+    expect(saveFromJson(saveToJson(makeSave())).wellStockedTicks).toBeUndefined();
+  });
+
   it('accepts exports without season fields', () => {
     const restored = saveFromJson(saveToJson(makeSave()));
     expect(restored.seasonOriginDay).toBeUndefined();

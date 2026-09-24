@@ -73,6 +73,7 @@ interface PlantCensus {
   pumpedStoragePlants: number;
   fireStations: number;
   policeStations: number;
+  logisticsDepots: number;
   /** Sum of wind turbines' elevation bonus factors (== count on flat maps). */
   windCapacity: number;
   /** Sum of run-of-river plants' drop bonus factors (== count on flat maps). */
@@ -94,6 +95,7 @@ export function censusPlants(state: SimState): PlantCensus {
     pumpedStoragePlants: 0,
     fireStations: 0,
     policeStations: 0,
+    logisticsDepots: 0,
     windCapacity: 0,
     hydroCapacity: 0,
     pumpedCapacity: 0,
@@ -134,6 +136,9 @@ export function censusPlants(state: SimState): PlantCensus {
         break;
       case PlantType.PoliceStation:
         census.policeStations++;
+        break;
+      case PlantType.LogisticsDepot:
+        census.logisticsDepots++;
         break;
       case PlantType.None:
         break;

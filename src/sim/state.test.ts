@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { BALANCE, TICKS_PER_DAY } from '../shared/constants.ts';
 import { LINE_PRESENT, tileIndex } from '../shared/grid.ts';
-import { RoadClass, Terrain } from '../shared/types.ts';
+import { DeliveryState, RoadClass, Terrain } from '../shared/types.ts';
 import { recomputeGrid } from './powerGrid.ts';
 import { buildRoads } from './roads.ts';
 import { generateTerrain } from './terrain.ts';
@@ -11,6 +11,7 @@ import {
   buildRejection,
   collectDiffs,
   createSimState,
+  deliveryStateOfAge,
   deserializeState,
   isBuildable,
   isLakeShore,
@@ -81,6 +82,15 @@ describe('buildRejection', () => {
       'needsLakeShore',
     );
     expect(isBuildable(state, at(8, 7), BuildIntent.Plant, PlantType.PumpedStorage)).toBe(true);
+  });
+
+  it('a logistics depot needs a road next to it, like the stations', () => {
+    const state = createSimState(1, SIZE);
+    expect(buildRejection(state, at(5, 5), BuildIntent.Plant, PlantType.LogisticsDepot)).toBe(
+      'needsRoad',
+    );
+    buildRoads(state, [at(5, 6)]);
+    expect(buildRejection(state, at(5, 5), BuildIntent.Plant, PlantType.LogisticsDepot)).toBeNull();
   });
 
   it('accepts power lines on land, roads, river and lake but not on plants or buildings', () => {
@@ -263,6 +273,26 @@ describe('save round trip', () => {
     const save = serializeState(state);
     delete save.freeFlowTicks;
     expect(deserializeState(save).goalProgress.freeFlowTicks).toBe(0);
+  });
+
+  it('persists the well-stocked streak and starts fresh shops at delivery age 0', () => {
+    const state = createSimState(1, SIZE);
+    state.goalProgress.wellStockedTicks = 77;
+    state.layers.deliveryAge[at(1, 1)] = 500;
+    const restored = deserializeState(serializeState(state));
+    expect(restored.goalProgress.wellStockedTicks).toBe(77);
+    expect(restored.layers.deliveryAge[at(1, 1)]).toBe(0);
+    expect(restored.vans).toEqual([]);
+  });
+
+  it('deliveryStateOfAge buckets by the due and supply windows', () => {
+    const day = TICKS_PER_DAY;
+    expect(deliveryStateOfAge(0)).toBe(DeliveryState.Supplied);
+    expect(deliveryStateOfAge(BALANCE.deliveries.dueAfterDays * day)).toBe(DeliveryState.Supplied);
+    expect(deliveryStateOfAge(BALANCE.deliveries.dueAfterDays * day + 1)).toBe(DeliveryState.Due);
+    expect(deliveryStateOfAge(BALANCE.deliveries.supplyWindowDays * day + 1)).toBe(
+      DeliveryState.Unsupplied,
+    );
   });
 
   it('starts a save without season data on the first spring day', () => {

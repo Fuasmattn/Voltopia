@@ -26,6 +26,7 @@ const PLANT_LABEL: Record<PlantType, TranslationKey | null> = {
   [PlantType.PumpedStorage]: 'tool.plant-pumped',
   [PlantType.FireStation]: 'tool.plant-fire',
   [PlantType.PoliceStation]: 'tool.plant-police',
+  [PlantType.LogisticsDepot]: 'tool.plant-depot',
 };
 
 /** Distinct colors per expense slice (also used for the row bullets). */

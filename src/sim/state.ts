@@ -16,7 +16,14 @@ import type {
   TileDiff,
   Weather,
 } from '../shared/types.ts';
-import { PlantType, SupplyStatus, Terrain, TileType, Zone } from '../shared/types.ts';
+import {
+  DeliveryState,
+  PlantType,
+  SupplyStatus,
+  Terrain,
+  TileType,
+  Zone,
+} from '../shared/types.ts';
 import { emptyPlantMap, type EconomyBreakdown } from './economy.ts';
 import { grantLegacyNetwork } from './powerGrid.ts';
 import { seasonState } from './seasons.ts';
@@ -57,6 +64,37 @@ export interface Vehicle {
   charging: boolean;
   /** Consecutive ticks spent waiting behind a full lane (gridlock breaker). */
   waitTicks: number;
+}
+
+/** Tour phases of a delivery van. */
+export const VanPhase = { AtDepot: 0, Driving: 1, Unloading: 2 } as const;
+export type VanPhase = (typeof VanPhase)[keyof typeof VanPhase];
+
+/** One delivery van. Satisfies vehicles.ts' Mover. Not persisted. */
+export interface Van {
+  /** Stable id (shares nextVehicleId with cars). */
+  id: number;
+  /** Depot plant tile; -1 once the van is lost and awaits removal. */
+  depot: number;
+  /** Road tile next to the depot the van parks on. */
+  depotRoad: number;
+  x: number;
+  y: number;
+  angle: number;
+  phase: VanPhase;
+  /** Remaining stops of the tour (road tiles); the last one is depotRoad. */
+  stops: number[];
+  /** Road tiles from the current position to stops[0]. */
+  path: number[];
+  pathIndex: number;
+  /** Battery state of charge, 0..1. */
+  charge: number;
+  /** True while plugged in at the depot this tick. */
+  charging: boolean;
+  /** Consecutive ticks spent waiting behind a full lane (gridlock breaker). */
+  waitTicks: number;
+  /** Remaining unload / turnaround ticks. */
+  dwellTicks: number;
 }
 
 /** A reversible build action for the undo tool. */
@@ -103,6 +141,8 @@ export interface TileLayers {
   troubledTicks: Uint32Array;
   /** Smoothed lane occupancy 0..255 per road tile. Derived, not persisted. */
   trafficLoad: Uint8Array;
+  /** Ticks since the last delivery per retail building, saturating. Derived, not persisted. */
+  deliveryAge: Uint16Array;
 }
 
 export interface SimState {
@@ -133,6 +173,7 @@ export interface SimState {
   lakeLevel: number;
   layers: TileLayers;
   vehicles: Vehicle[];
+  vans: Van[];
   undoStack: UndoEntry[];
   energyHistory: EnergyHistoryPoint[];
   /** Running sums since the last history sample (not persisted). */
@@ -158,6 +199,7 @@ export interface SimState {
     winterTicks: number;
     summerTicks: number;
     freeFlowTicks: number;
+    wellStockedTicks: number;
   };
   /** Monotonic id source for vehicles (not persisted). */
   nextVehicleId: number;
@@ -219,6 +261,7 @@ export function createTileLayers(size: number): TileLayers {
     buildingAge: new Uint32Array(tiles),
     troubledTicks: new Uint32Array(tiles),
     trafficLoad: new Uint8Array(tiles),
+    deliveryAge: new Uint16Array(tiles),
   };
 }
 
@@ -253,6 +296,7 @@ export function createSimState(
     lakeLevel: 0,
     layers: createTileLayers(size),
     vehicles: [],
+    vans: [],
     undoStack: [],
     energyHistory: [],
     energyHistoryAccum: { generation: 0, consumption: 0, soc: 0, ticks: 0 },
@@ -267,6 +311,7 @@ export function createSimState(
       winterTicks: 0,
       summerTicks: 0,
       freeFlowTicks: 0,
+      wellStockedTicks: 0,
     },
     nextVehicleId: 1,
     commuteCongestion: 1,
@@ -408,6 +453,14 @@ export function slopeCostMultiplier(state: SimState, index: number): number {
   return slopeAt(state, index) > 0 ? BALANCE.terrain.slopeCostFactor : 1;
 }
 
+/** Delivery bucket of a shop given its ticks since the last delivery. */
+export function deliveryStateOfAge(age: number): DeliveryState {
+  const { supplyWindowDays, dueAfterDays } = BALANCE.deliveries;
+  if (age > supplyWindowDays * TICKS_PER_DAY) return DeliveryState.Unsupplied;
+  if (age > dueAfterDays * TICKS_PER_DAY) return DeliveryState.Due;
+  return DeliveryState.Supplied;
+}
+
 /** Levels of drop from a river tile to its lowest water 4-neighbour. */
 export function riverDropAt(state: SimState, index: number): number {
   const { terrain, elevation } = state.layers;
@@ -488,7 +541,9 @@ export function buildRejection(
   }
   if (
     intent === BuildIntent.Plant &&
-    (plant === PlantType.FireStation || plant === PlantType.PoliceStation) &&
+    (plant === PlantType.FireStation ||
+      plant === PlantType.PoliceStation ||
+      plant === PlantType.LogisticsDepot) &&
     !neighbors4(index, state.size).some((n) => layers.tileType[n] === TileType.Road)
   ) {
     return 'needsRoad';
@@ -530,6 +585,7 @@ export function serializeState(state: SimState): SaveGame {
     winterTicks: state.goalProgress.winterTicks,
     summerTicks: state.goalProgress.summerTicks,
     freeFlowTicks: state.goalProgress.freeFlowTicks,
+    wellStockedTicks: state.goalProgress.wellStockedTicks,
     layers: {
       tileType: copyBuffer(layers.tileType),
       roadMask: copyBuffer(layers.roadMask),
@@ -571,6 +627,7 @@ export function deserializeState(save: SaveGame): SimState {
   state.goalProgress.winterTicks = save.winterTicks ?? 0;
   state.goalProgress.summerTicks = save.summerTicks ?? 0;
   state.goalProgress.freeFlowTicks = save.freeFlowTicks ?? 0;
+  state.goalProgress.wellStockedTicks = save.wellStockedTicks ?? 0;
   // Saves from before seasons start their year on the day they are loaded.
   state.seasonOriginDay = Math.floor(save.seasonOriginDay ?? save.tick / TICKS_PER_DAY);
   state.season = seasonState({

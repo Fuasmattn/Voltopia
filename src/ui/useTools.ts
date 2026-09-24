@@ -22,6 +22,7 @@ export type ToolId =
   | 'plant-park'
   | 'plant-fire'
   | 'plant-police'
+  | 'plant-depot'
   | 'plant-hydro'
   | 'plant-pumped'
   | 'bulldoze';
@@ -51,6 +52,7 @@ export const TOOL_HOTKEYS: Record<string, ToolId> = {
   l: 'power-line',
   f: 'plant-fire',
   c: 'plant-police',
+  g: 'plant-depot',
   v: 'avenue',
 };
 
@@ -68,6 +70,7 @@ export const PLANT_BY_TOOL: Partial<Record<ToolId, PlantType>> = {
   'plant-park': PlantType.Park,
   'plant-fire': PlantType.FireStation,
   'plant-police': PlantType.PoliceStation,
+  'plant-depot': PlantType.LogisticsDepot,
   'plant-hydro': PlantType.RunOfRiver,
   'plant-pumped': PlantType.PumpedStorage,
 };

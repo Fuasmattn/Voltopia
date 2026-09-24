@@ -50,6 +50,10 @@ const COLORS = {
   policeBlock: 0x2f5fa8,
   policeRoof: 0xd7dde8,
   policeLight: 0x7fd0ff,
+  depotHall: 0x8d99a6,
+  depotRoof: 0xe4e7ea,
+  depotDoor: 0x3a4048,
+  depotRamp: 0x6f7a86,
 } as const;
 
 /** Where a plant stands: which neighbours are water (for hydro shapes). */
@@ -208,6 +212,14 @@ function plantBoxParts(plant: PlantType, site: PlantSite): BoxPart[] {
         { sx: 0.74, sy: 0.42, sz: 0.66, ox: 0, oy: 0, oz: 0, color: COLORS.policeBlock },
         { sx: 0.78, sy: 0.05, sz: 0.7, ox: 0, oy: 0.42, oz: 0, color: COLORS.policeRoof },
         { sx: 0.3, sy: 0.06, sz: 0.1, ox: 0, oy: 0.47, oz: 0, color: COLORS.policeLight },
+      ];
+    case PlantType.LogisticsDepot:
+      return [
+        // Flat warehouse with a pale roof, a dark roller door and a loading ramp.
+        { sx: 0.84, sy: 0.3, sz: 0.62, ox: 0, oy: 0, oz: 0.06, color: COLORS.depotHall },
+        { sx: 0.88, sy: 0.04, sz: 0.66, ox: 0, oy: 0.3, oz: 0.06, color: COLORS.depotRoof },
+        { sx: 0.3, sy: 0.22, sz: 0.03, ox: -0.15, oy: 0, oz: -0.26, color: COLORS.depotDoor },
+        { sx: 0.5, sy: 0.06, sz: 0.2, ox: 0, oy: 0, oz: -0.36, color: COLORS.depotRamp },
       ];
     default:
       return [];
