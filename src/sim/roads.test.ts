@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { BALANCE } from '../shared/constants.ts';
 import { DIR_E, DIR_N, DIR_S, DIR_W, tileIndex } from '../shared/grid.ts';
-import { Terrain } from '../shared/types.ts';
+import { RoadClass, Terrain } from '../shared/types.ts';
 import { buildRoads, bulldozeTiles, undoLastAction } from './roads.ts';
 import { createSimState, TileType, Zone } from './state.ts';
 
@@ -191,5 +191,75 @@ describe('bridges', () => {
     bulldozeTiles(state, [at(5, 5)]);
     expect(state.layers.tileType[at(5, 5)]).toBe(TileType.Empty);
     expect(state.layers.terrain[at(5, 5)]).toBe(Terrain.River);
+  });
+});
+
+describe('avenues', () => {
+  /** A flat land tile keeps the price arithmetic exact (no slope surcharge). */
+  function flatState() {
+    const state = createSimState(1, SIZE);
+    state.layers.elevation.fill(0);
+    state.layers.terrain.fill(Terrain.Land);
+    return state;
+  }
+
+  it('builds an avenue on empty land at the avenue price', () => {
+    const state = flatState();
+    const before = state.money;
+    expect(buildRoads(state, [at(2, 2), at(3, 2)], true)).toEqual({});
+    expect(state.layers.tileType[at(2, 2)]).toBe(TileType.Road);
+    expect(state.layers.roadClass[at(2, 2)]).toBe(RoadClass.Avenue);
+    expect(state.layers.roadMask[at(2, 2)]).not.toBe(0);
+    expect(state.money).toBe(before - 2 * BALANCE.costs.avenuePerTile);
+  });
+
+  it('upgrades a street for the price difference and keeps the mask', () => {
+    const state = flatState();
+    buildRoads(state, [at(2, 2), at(3, 2), at(4, 2)]);
+    const mask = state.layers.roadMask[at(3, 2)];
+    const before = state.money;
+    expect(buildRoads(state, [at(3, 2)], true)).toEqual({});
+    expect(state.layers.roadClass[at(3, 2)]).toBe(RoadClass.Avenue);
+    expect(state.layers.roadClass[at(2, 2)]).toBe(RoadClass.Street);
+    expect(state.layers.roadMask[at(3, 2)]).toBe(mask);
+    expect(state.money).toBe(before - (BALANCE.costs.avenuePerTile - BALANCE.costs.roadPerTile));
+  });
+
+  it('skips tiles that are already avenues', () => {
+    const state = flatState();
+    buildRoads(state, [at(2, 2)], true);
+    const before = state.money;
+    expect(buildRoads(state, [at(2, 2)], true)).toEqual({});
+    expect(state.money).toBe(before);
+  });
+
+  it('a street drag over an avenue leaves it an avenue', () => {
+    const state = flatState();
+    buildRoads(state, [at(2, 2)], true);
+    buildRoads(state, [at(2, 2), at(3, 2)]);
+    expect(state.layers.roadClass[at(2, 2)]).toBe(RoadClass.Avenue);
+    expect(state.layers.roadClass[at(3, 2)]).toBe(RoadClass.Street);
+  });
+
+  it('an avenue bridge costs the avenue bridge price', () => {
+    const state = flatState();
+    state.layers.terrain[at(5, 5)] = Terrain.River;
+    const before = state.money;
+    buildRoads(state, [at(5, 5)], true);
+    expect(state.money).toBe(before - BALANCE.costs.avenueBridgePerTile);
+  });
+
+  it('bulldozing clears the class and undo restores a street after an upgrade', () => {
+    const state = flatState();
+    buildRoads(state, [at(2, 2)]);
+    const afterStreet = state.money;
+    buildRoads(state, [at(2, 2)], true);
+    undoLastAction(state);
+    expect(state.layers.roadClass[at(2, 2)]).toBe(RoadClass.Street);
+    expect(state.layers.tileType[at(2, 2)]).toBe(TileType.Road);
+    expect(state.money).toBe(afterStreet);
+    buildRoads(state, [at(2, 2)], true);
+    bulldozeTiles(state, [at(2, 2)]);
+    expect(state.layers.roadClass[at(2, 2)]).toBe(RoadClass.Street);
   });
 });

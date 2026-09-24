@@ -69,7 +69,7 @@ export class SimEngine {
           },
         ];
       case 'buildRoad':
-        return this.toEvents(buildRoads(state, command.tiles));
+        return this.toEvents(buildRoads(state, command.tiles, command.avenue ?? false));
       case 'buildPowerLine':
         return this.toEvents(buildPowerLines(state, command.tiles));
       case 'bulldoze':

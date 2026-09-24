@@ -110,6 +110,16 @@ describe('save game JSON export/import', () => {
     expect(restored.layers.elevation).toBeUndefined();
   });
 
+  it('round-trips the optional road class layer', () => {
+    const save = makeSave();
+    save.layers.roadClass = new Uint8Array(save.size * save.size).fill(1).buffer as ArrayBuffer;
+    const restored = saveFromJson(saveToJson(save));
+    expect(new Uint8Array(restored.layers.roadClass!)).toEqual(
+      new Uint8Array(save.layers.roadClass),
+    );
+    expect(saveFromJson(saveToJson(makeSave())).layers.roadClass).toBeUndefined();
+  });
+
   it('round-trips season origin, snowpack and insulation', () => {
     const save = makeSave();
     save.seasonOriginDay = 9;

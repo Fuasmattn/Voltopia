@@ -7,6 +7,10 @@ export const TileType = {
 } as const;
 export type TileType = (typeof TileType)[keyof typeof TileType];
 
+/** Road class of a TileType.Road tile: avenues carry more cars, faster. */
+export const RoadClass = { Street: 0, Avenue: 1 } as const;
+export type RoadClass = (typeof RoadClass)[keyof typeof RoadClass];
+
 /** Immutable ground type per tile, generated once per map. */
 export const Terrain = {
   Land: 0,
@@ -316,6 +320,8 @@ export interface TileDiff {
   tileType: TileType;
   /** 4-bit connection mask for roads (N=1, E=2, S=4, W=8). */
   roadMask: number;
+  /** RoadClass of a road tile (0 elsewhere). */
+  roadClass: number;
   /** Power line mask: 0 = none, else LINE_PRESENT | connection bits (N=1, E=2, S=4, W=8). */
   powerLine: number;
   zone: Zone;
@@ -385,5 +391,7 @@ export interface SaveGame {
     powerLine?: ArrayBuffer;
     /** Elevation layer; absent in older saves (flat map). */
     elevation?: ArrayBuffer;
+    /** Road class layer; absent in older saves (all streets). */
+    roadClass?: ArrayBuffer;
   };
 }

@@ -68,6 +68,7 @@ export interface UndoEntry {
     index: number;
     tileType: number;
     roadMask: number;
+    roadClass: number;
     powerLine: number;
     zone: number;
     density: number;
@@ -79,6 +80,8 @@ export interface UndoEntry {
 export interface TileLayers {
   tileType: Uint8Array;
   roadMask: Uint8Array;
+  /** RoadClass per road tile (persisted). */
+  roadClass: Uint8Array;
   zone: Uint8Array;
   density: Uint8Array;
   variant: Uint8Array;
@@ -199,6 +202,7 @@ export function createTileLayers(size: number): TileLayers {
   return {
     tileType: new Uint8Array(tiles),
     roadMask: new Uint8Array(tiles),
+    roadClass: new Uint8Array(tiles),
     zone: new Uint8Array(tiles),
     density: new Uint8Array(tiles),
     variant: new Uint8Array(tiles),
@@ -306,6 +310,7 @@ export function snapshotTile(state: SimState, index: number): UndoEntry['tiles']
     index,
     tileType: layers.tileType[index],
     roadMask: layers.roadMask[index],
+    roadClass: layers.roadClass[index],
     powerLine: layers.powerLine[index],
     zone: layers.zone[index],
     density: layers.density[index],
@@ -333,6 +338,7 @@ export function collectDiffs(state: SimState): TileDiff[] {
       index,
       tileType: layers.tileType[index] as TileDiff['tileType'],
       roadMask: layers.roadMask[index],
+      roadClass: layers.roadClass[index],
       powerLine: layers.powerLine[index],
       zone: layers.zone[index] as TileDiff['zone'],
       density: layers.density[index],
@@ -521,6 +527,7 @@ export function serializeState(state: SimState): SaveGame {
       terrain: copyBuffer(layers.terrain),
       powerLine: copyBuffer(layers.powerLine),
       elevation: copyBuffer(layers.elevation),
+      roadClass: copyBuffer(layers.roadClass),
     },
   };
 }
@@ -564,6 +571,7 @@ export function deserializeState(save: SaveGame): SimState {
     grantLegacyNetwork(state);
   }
   if (save.layers.elevation) state.layers.elevation.set(new Uint8Array(save.layers.elevation));
+  if (save.layers.roadClass) state.layers.roadClass.set(new Uint8Array(save.layers.roadClass));
   state.lakeLevel = computeLakeLevel(state);
   // Advance the RNG deterministically past the founding state so a loaded
   // game does not replay the exact random sequence from tick zero.

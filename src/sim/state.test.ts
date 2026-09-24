@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { BALANCE, TICKS_PER_DAY } from '../shared/constants.ts';
 import { LINE_PRESENT, tileIndex } from '../shared/grid.ts';
-import { Terrain } from '../shared/types.ts';
+import { RoadClass, Terrain } from '../shared/types.ts';
 import { recomputeGrid } from './powerGrid.ts';
 import { buildRoads } from './roads.ts';
 import { generateTerrain } from './terrain.ts';
@@ -301,6 +301,17 @@ describe('save round trip', () => {
     const loaded = deserializeState(save);
     expect(loaded.layers.elevation.every((v) => v === 0)).toBe(true);
     expect(loaded.lakeLevel).toBe(0);
+  });
+
+  it('round-trips the road class layer and loads old saves as streets', () => {
+    const state = makeState();
+    state.layers.tileType[at(1, 1)] = TileType.Road;
+    state.layers.roadClass[at(1, 1)] = RoadClass.Avenue;
+    const loaded = deserializeState(serializeState(state));
+    expect(loaded.layers.roadClass[at(1, 1)]).toBe(RoadClass.Avenue);
+    const save = serializeState(state);
+    delete save.layers.roadClass;
+    expect(deserializeState(save).layers.roadClass.every((v) => v === 0)).toBe(true);
   });
 });
 

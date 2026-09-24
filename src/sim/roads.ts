@@ -1,5 +1,6 @@
 import { BALANCE } from '../shared/constants.ts';
 import { DIRECTIONS, inBounds, tileIndex, tileX, tileY } from '../shared/grid.ts';
+import { RoadClass, Terrain } from '../shared/types.ts';
 import { clearPowerLines } from './powerLines.ts';
 import {
   BuildIntent,
@@ -8,7 +9,6 @@ import {
   markDirty,
   slopeCostMultiplier,
   snapshotTile,
-  Terrain,
   TileType,
   withNeighbors,
   Zone,
@@ -42,21 +42,24 @@ export interface BuildResult {
 
 /**
  * Build roads on the given tiles. Only empty, unbuilt tiles are paved;
- * existing roads on the path are kept (and not charged again).
+ * existing roads on the path are kept (and not charged again). With
+ * `avenue`, empty tiles become avenues and existing streets are
+ * upgraded for the price difference; existing avenues are skipped.
  */
-export function buildRoads(state: SimState, tiles: number[]): BuildResult {
+export function buildRoads(state: SimState, tiles: number[], avenue = false): BuildResult {
   const { layers } = state;
-  const buildable = tiles.filter((index) => isBuildable(state, index, BuildIntent.Road));
+  const isUpgrade = (index: number): boolean =>
+    avenue &&
+    layers.tileType[index] === TileType.Road &&
+    layers.roadClass[index] === RoadClass.Street;
+  const buildable = tiles.filter(
+    (index) => isUpgrade(index) || isBuildable(state, index, BuildIntent.Road),
+  );
   if (buildable.length === 0) return {};
 
-  const { roadPerTile, bridgePerTile } = BALANCE.costs;
   const cost = buildable.reduce(
     (sum, index) =>
-      sum +
-      Math.round(
-        (layers.terrain[index] === Terrain.River ? bridgePerTile : roadPerTile) *
-          slopeCostMultiplier(state, index),
-      ),
+      sum + Math.round(roadPrice(state, index, avenue) * slopeCostMultiplier(state, index)),
     0,
   );
   if (cost > state.money) {
@@ -72,6 +75,7 @@ export function buildRoads(state: SimState, tiles: number[]): BuildResult {
   state.money -= cost;
   for (const index of buildable) {
     layers.tileType[index] = TileType.Road;
+    layers.roadClass[index] = avenue ? RoadClass.Avenue : RoadClass.Street;
     layers.zone[index] = Zone.None;
     layers.density[index] = 0;
     layers.variant[index] = 0;
@@ -81,6 +85,16 @@ export function buildRoads(state: SimState, tiles: number[]): BuildResult {
 
   state.undoStack.push(undo);
   return {};
+}
+
+/** Base price of paving (or upgrading) one tile, before the slope surcharge. */
+function roadPrice(state: SimState, index: number, avenue: boolean): number {
+  const { roadPerTile, bridgePerTile, avenuePerTile, avenueBridgePerTile } = BALANCE.costs;
+  const river = state.layers.terrain[index] === Terrain.River;
+  if (!avenue) return river ? bridgePerTile : roadPerTile;
+  const full = river ? avenueBridgePerTile : avenuePerTile;
+  const alreadyRoad = state.layers.tileType[index] === TileType.Road;
+  return alreadyRoad ? full - (river ? bridgePerTile : roadPerTile) : full;
 }
 
 /**
@@ -109,6 +123,7 @@ export function bulldozeTiles(state: SimState, tiles: number[]): BuildResult {
   if (lineTiles.length > 0) clearPowerLines(state, lineTiles);
   for (const index of clearable) {
     layers.tileType[index] = TileType.Empty;
+    layers.roadClass[index] = RoadClass.Street;
     layers.zone[index] = Zone.None;
     layers.density[index] = 0;
     layers.variant[index] = 0;
@@ -134,6 +149,7 @@ export function undoLastAction(state: SimState): BuildResult {
   for (const tile of entry.tiles) {
     layers.tileType[tile.index] = tile.tileType;
     layers.roadMask[tile.index] = tile.roadMask;
+    layers.roadClass[tile.index] = tile.roadClass;
     layers.powerLine[tile.index] = tile.powerLine;
     layers.zone[tile.index] = tile.zone;
     layers.density[tile.index] = tile.density;

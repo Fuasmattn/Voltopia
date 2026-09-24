@@ -20,7 +20,7 @@ export type SimCommand =
       startingMoney?: number;
     }
   | { type: 'setSpeed'; speed: Speed }
-  | { type: 'buildRoad'; tiles: number[] }
+  | { type: 'buildRoad'; tiles: number[]; avenue?: boolean }
   | { type: 'buildPowerLine'; tiles: number[] }
   | { type: 'paintZone'; tiles: number[]; zone: Zone }
   | { type: 'placePlant'; tile: number; plant: PlantType }
