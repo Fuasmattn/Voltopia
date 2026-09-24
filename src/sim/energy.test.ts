@@ -14,6 +14,7 @@ import {
 } from './energy.ts';
 import { buildPowerLines } from './powerLines.ts';
 import { buildRoads, bulldozeTiles, undoLastAction } from './roads.ts';
+import { isCoastalSea, tideFactor, tidalSiteFactor } from './sea.ts';
 import { pendingHistoryPoint } from './tick.ts';
 import {
   createSimState,
@@ -26,6 +27,8 @@ import {
   Zone,
   type SimState,
 } from './state.ts';
+import { generateTerrain } from './terrain.ts';
+import { generateWater } from './water.ts';
 import { timeOfDay } from './tick.ts';
 import { SUNRISE, SUNSET } from './weather.ts';
 
@@ -668,6 +671,62 @@ describe('terrain energy bonuses', () => {
     placeDirect(state, shore, PlantType.PumpedStorage);
     expect(pumpedHeadAt(state, shore)).toBe(0);
     expect(totalPumpedStorageCapacity(state)).toBeCloseTo(BALANCE.energy.pumpedStorageCapacity);
+  });
+});
+
+describe('tidal plants', () => {
+  /** A generated map: elevation and water (river, lake, sea) but no zoning. */
+  function generatedState(seed: number, size: number): SimState {
+    const state = createSimState(seed, size);
+    generateTerrain(state);
+    generateWater(state);
+    return state;
+  }
+
+  /** First coastal sea tile on the map — where a tidal plant may stand. */
+  function firstCoastalSeaTile(state: SimState): number {
+    for (let i = 0; i < state.layers.terrain.length; i++) {
+      if (isCoastalSea(state, i)) return i;
+    }
+    throw new Error('no coastal sea tile on this map');
+  }
+
+  it('generates from tidal plants and follows the tide', () => {
+    const state = generatedState(1, 64);
+    const tile = firstCoastalSeaTile(state);
+    state.money = 1_000_000;
+    expect(placePlant(state, tile, PlantType.TidalPlant).rejected).toBeUndefined();
+
+    // Slack water at tick 0, strong current a quarter period later.
+    state.tick = 0;
+    energyStep(state, { chargingDemand: 0 });
+    expect(state.lastEnergy.tidal).toBeCloseTo(0, 5);
+
+    state.tick = Math.round(TICKS_PER_DAY * (12.42 / 24) * 0.25);
+    energyStep(state, { chargingDemand: 0 });
+    expect(state.lastEnergy.tidal).toBeGreaterThan(BALANCE.energy.tidalPeakOutput * 0.7);
+  });
+
+  it('scales tidal output with the site factor', () => {
+    const state = generatedState(2, 64);
+    const tile = firstCoastalSeaTile(state);
+    state.money = 1_000_000;
+    placePlant(state, tile, PlantType.TidalPlant);
+    state.tick = Math.round(TICKS_PER_DAY * (12.42 / 24) * 0.25);
+    energyStep(state, { chargingDemand: 0 });
+    const expected =
+      BALANCE.energy.tidalPeakOutput * tidalSiteFactor(state, tile) * tideFactor(state.tick);
+    expect(state.lastEnergy.tidal).toBeCloseTo(expected, 5);
+  });
+
+  it('census counts tidal plants and sums their site factors', () => {
+    const state = generatedState(3, 64);
+    const tile = firstCoastalSeaTile(state);
+    state.money = 1_000_000;
+    placePlant(state, tile, PlantType.TidalPlant);
+    const census = censusPlants(state);
+    expect(census.tidalPlants).toBe(1);
+    expect(census.tidalCapacity).toBeCloseTo(tidalSiteFactor(state, tile), 6);
   });
 });
 

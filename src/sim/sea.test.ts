@@ -4,7 +4,7 @@ import { Terrain } from '../shared/types.ts';
 import { createSimState, type SimState } from './state.ts';
 import { generateTerrain } from './terrain.ts';
 import { generateWater } from './water.ts';
-import { tideFactor, tideLevel } from './sea.ts';
+import { tideFactor, tideLevel, tidalSiteFactor } from './sea.ts';
 
 /** A generated map: elevation and water (river, lake, sea) but no zoning. */
 function generatedState(seed: number, size: number): SimState {
@@ -150,3 +150,55 @@ function dailyMax(startTick: number): number {
   }
   return max;
 }
+
+describe('tidal site factor', () => {
+  /** A 16x16 all-land state with the terrain painted by hand. */
+  function paintedState(paint: (terrain: Uint8Array, size: number) => void) {
+    const state = createSimState(1, 16);
+    state.layers.terrain.fill(Terrain.Land);
+    paint(state.layers.terrain, state.size);
+    return state;
+  }
+
+  it('rewards a narrow inlet over a straight coast', () => {
+    const straight = paintedState((terrain, size) => {
+      for (let y = 0; y < 2; y++) {
+        for (let x = 0; x < size; x++) terrain[y * size + x] = Terrain.Sea;
+      }
+    });
+    const inlet = paintedState((terrain, size) => {
+      // A one-tile channel poking into the land: land on both sides.
+      for (let y = 0; y < 4; y++) terrain[y * size + 8] = Terrain.Sea;
+    });
+    const straightTile = 1 * 16 + 8; // coastal row of the open coast
+    const inletTile = 3 * 16 + 8; // deep in the channel
+    expect(tidalSiteFactor(inlet, inletTile)).toBeGreaterThan(
+      tidalSiteFactor(straight, straightTile),
+    );
+  });
+
+  it('adds the estuary bonus near a river tile', () => {
+    const cfg = BALANCE.sea.tidal;
+    const plain = paintedState((terrain, size) => {
+      for (let x = 0; x < size; x++) terrain[x] = Terrain.Sea;
+    });
+    const estuary = paintedState((terrain, size) => {
+      for (let x = 0; x < size; x++) terrain[x] = Terrain.Sea;
+      terrain[1 * 16 + 8] = Terrain.River;
+    });
+    expect(tidalSiteFactor(estuary, 8) - tidalSiteFactor(plain, 8)).toBeCloseTo(
+      cfg.estuaryBonus,
+      5,
+    );
+  });
+
+  it('never exceeds the cap', () => {
+    const enclosed = paintedState((terrain) => {
+      terrain[5 * 16 + 5] = Terrain.Sea; // a single sea tile ringed by land
+      terrain[4 * 16 + 5] = Terrain.River;
+    });
+    expect(tidalSiteFactor(enclosed, 5 * 16 + 5)).toBeLessThanOrEqual(
+      BALANCE.sea.tidal.maxSiteFactor,
+    );
+  });
+});

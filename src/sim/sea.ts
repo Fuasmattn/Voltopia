@@ -1,7 +1,7 @@
 import { BALANCE, TICKS_PER_DAY } from '../shared/constants.ts';
-import { neighbors4, tileIndex } from '../shared/grid.ts';
+import { inBounds, neighbors4, tileIndex, tileX, tileY } from '../shared/grid.ts';
 import { Rng } from '../shared/rng.ts';
-import { Terrain } from '../shared/types.ts';
+import { Terrain, type TideState } from '../shared/types.ts';
 import { markDirty, type SimState } from './state.ts';
 
 /** Keeps the coastline independent of terrain, river and gameplay RNG. */
@@ -138,4 +138,55 @@ export function isCoastalSea(state: SimState, index: number): boolean {
   const { terrain } = state.layers;
   if (terrain[index] !== Terrain.Sea) return false;
   return neighbors4(index, state.size).some((n) => terrain[n] === Terrain.Land);
+}
+
+/**
+ * Output factor of a tidal plant on this tile. Narrow water runs fast:
+ * the more of the eight neighbours are land, the stronger the current.
+ * A river mouth within `estuaryRadius` adds its own bonus. Off-map
+ * neighbours count as open water, so the map edge is never a narrows.
+ * A river bank still narrows the channel like land does — only open sea
+ * (or the map edge) counts as open water — so replacing a land neighbour
+ * with the river tile that earns the estuary bonus doesn't also cost a
+ * narrowness point.
+ */
+export function tidalSiteFactor(state: SimState, index: number): number {
+  const cfg = BALANCE.sea.tidal;
+  const { terrain } = state.layers;
+  const { size } = state;
+  const cx = tileX(index, size);
+  const cy = tileY(index, size);
+
+  let land = 0;
+  for (let dy = -1; dy <= 1; dy++) {
+    for (let dx = -1; dx <= 1; dx++) {
+      if (dx === 0 && dy === 0) continue;
+      const x = cx + dx;
+      const y = cy + dy;
+      if (!inBounds(x, y, size)) continue;
+      if (terrain[tileIndex(x, y, size)] !== Terrain.Sea) land++;
+    }
+  }
+  let factor = 1 + cfg.currentBonus * (land / 8);
+
+  const r = cfg.estuaryRadius;
+  for (let dy = -r; dy <= r && factor < cfg.maxSiteFactor; dy++) {
+    for (let dx = -r; dx <= r; dx++) {
+      const x = cx + dx;
+      const y = cy + dy;
+      if (!inBounds(x, y, size)) continue;
+      if (terrain[tileIndex(x, y, size)] === Terrain.River) {
+        factor += cfg.estuaryBonus;
+        dy = r + 1; // found one; stop both loops
+        break;
+      }
+    }
+  }
+  return Math.min(cfg.maxSiteFactor, factor);
+}
+
+/** The tide at a tick, ready for the HUD. */
+export function tideState(tick: number): TideState {
+  const level = tideLevel(tick);
+  return { level, factor: tideFactor(tick), rising: level > tideLevel(tick - 1) };
 }

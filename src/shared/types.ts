@@ -104,6 +104,16 @@ export interface Weather {
   snowpack: number;
 }
 
+/** Tide at this tick: water level, current strength and direction. */
+export interface TideState {
+  /** Water level, -1 (low water) .. 1 (high water). */
+  level: number;
+  /** Current strength, 0..1 — tidal generation scales with this. */
+  factor: number;
+  /** True while the water is rising (flood), false while it falls (ebb). */
+  rising: boolean;
+}
+
 /** Seasons in year order; the year starts with the first spring day. */
 export const SEASON_ORDER = ['spring', 'summer', 'autumn', 'winter'] as const;
 export type SeasonId = (typeof SEASON_ORDER)[number];
@@ -149,6 +159,8 @@ export interface EnergyStats {
     hydro: number;
     /** Fuel-cell output re-electrified from stored hydrogen. */
     hydrogen: number;
+    /** Tidal plant output this tick. */
+    tidal: number;
   };
   consumption: {
     buildings: number;
@@ -446,6 +458,8 @@ export interface GlobalStats {
   services: { fire: number; police: number };
   /** Share of the land that is wooded, weighted by growth stage (0..1). */
   forestShare: number;
+  /** Tide at this tick: water level, current strength and direction. */
+  tide: TideState;
   /** Commute health: mean commute time over free flow, cars on the road, avenue share of roads. */
   traffic: {
     congestion: number;

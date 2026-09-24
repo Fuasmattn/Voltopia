@@ -22,6 +22,7 @@ import {
 } from './energy.ts';
 import { demandFor, energySystemActive, hasRoadAccess } from './growth.ts';
 import { isSupplySource } from './powerGrid.ts';
+import { tideFactor, tidalSiteFactor } from './sea.ts';
 import { SERVICE_FIRE, SERVICE_POLICE } from './services.ts';
 import {
   countPopulationAndJobs,
@@ -72,6 +73,13 @@ function plantGeneration(
       return {
         generation: plants > 0 ? state.lastEnergy.fuelCell / plants : 0,
         peak: BALANCE.hydrogen.fuelCellPowerLimit,
+      };
+    }
+    case PlantType.TidalPlant: {
+      const bonus = tidalSiteFactor(state, index);
+      return {
+        generation: e.tidalPeakOutput * tideFactor(state.tick) * bonus,
+        peak: e.tidalPeakOutput * bonus,
       };
     }
     default:
@@ -239,7 +247,9 @@ export function inspectTile(state: SimState, index: number): TileInfo | null {
           ? 1 + BALANCE.terrain.hydroDropBonus * riverDropAt(state, index)
           : plant === PlantType.PumpedStorage
             ? 1 + BALANCE.terrain.headBonusPerLevel * pumpedHeadAt(state, index)
-            : 1
+            : plant === PlantType.TidalPlant
+              ? tidalSiteFactor(state, index)
+              : 1
       : 1;
 
   return {

@@ -22,6 +22,7 @@ describe('isSupplySource', () => {
     expect(isSupplySource(PlantType.SolarFarm)).toBe(true);
     expect(isSupplySource(PlantType.Battery)).toBe(true);
     expect(isSupplySource(PlantType.PumpedStorage)).toBe(true);
+    expect(isSupplySource(PlantType.TidalPlant)).toBe(true);
     expect(isSupplySource(PlantType.ChargingHub)).toBe(false);
     expect(isSupplySource(PlantType.Park)).toBe(false);
     expect(isSupplySource(PlantType.None)).toBe(false);
