@@ -15,7 +15,7 @@ const INSTANCES_PER_TILE = 5;
 /** Avenue tiles get a wider pad and arms than streets. */
 const AVENUE_CENTER_SIZE = 0.8;
 /** Width of the solid centre line painted along avenue arms. */
-const LINE_WIDTH = 0.04;
+const LINE_WIDTH = 0.022;
 /** Avenue centre line: dashes per arm (centre to tile edge) and their length. */
 const LINE_DASHES_PER_ARM = 2;
 const LINE_DASH_LENGTH = 0.15;
@@ -81,9 +81,10 @@ export class RoadsMesh implements DiffLayer {
     this.pads.count = 0;
     scene.add(this.pads);
 
+    // Lit like the road so the paint darkens at night instead of glowing.
     this.centreLines = new THREE.InstancedMesh(
       geometry,
-      new THREE.MeshBasicMaterial({ color: LINE_COLOR }),
+      new THREE.MeshLambertMaterial({ color: LINE_COLOR }),
       gridSize * gridSize * 4 * LINE_DASHES_PER_ARM,
     );
     // Instance transforms live across the whole grid; the base geometry's
