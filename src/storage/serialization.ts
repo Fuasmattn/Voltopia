@@ -22,6 +22,7 @@ interface SaveGameJson {
   summerTicks?: number;
   freeFlowTicks?: number;
   wellStockedTicks?: number;
+  transitTicks?: number;
   layers: Record<string, string>;
 }
 
@@ -72,6 +73,7 @@ export function saveToJson(save: SaveGame): string {
     ...(save.summerTicks !== undefined ? { summerTicks: save.summerTicks } : {}),
     ...(save.freeFlowTicks !== undefined ? { freeFlowTicks: save.freeFlowTicks } : {}),
     ...(save.wellStockedTicks !== undefined ? { wellStockedTicks: save.wellStockedTicks } : {}),
+    ...(save.transitTicks !== undefined ? { transitTicks: save.transitTicks } : {}),
     layers,
   };
   return JSON.stringify(json, null, 2);
@@ -116,7 +118,7 @@ export function saveFromJson(text: string): SaveGame {
     }
     layers[name] = buffer;
   }
-  const optionalLayers = ['terrain', 'powerLine', 'elevation', 'roadClass'] as const;
+  const optionalLayers = ['terrain', 'powerLine', 'elevation', 'roadClass', 'busStop'] as const;
   for (const name of optionalLayers) {
     const encoded = parsed.layers[name];
     if (typeof encoded !== 'string') continue;
@@ -161,6 +163,7 @@ export function saveFromJson(text: string): SaveGame {
     ...(typeof parsed.wellStockedTicks === 'number'
       ? { wellStockedTicks: parsed.wellStockedTicks }
       : {}),
+    ...(typeof parsed.transitTicks === 'number' ? { transitTicks: parsed.transitTicks } : {}),
     layers,
   };
 }

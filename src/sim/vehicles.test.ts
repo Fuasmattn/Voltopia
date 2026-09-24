@@ -363,6 +363,7 @@ describe('congestion', () => {
       tripFreeFlowTicks: 0,
       charging: false,
       waitTicks: 0,
+      riderDay: -1,
     });
   }
 
@@ -602,6 +603,7 @@ describe('avenues on the road', () => {
       tripFreeFlowTicks: 0,
       charging: false,
       waitTicks: 0,
+      riderDay: -1,
     });
   }
 

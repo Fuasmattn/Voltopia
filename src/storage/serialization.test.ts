@@ -174,4 +174,16 @@ describe('save game JSON export/import', () => {
     expect(restored.snowpack).toBeUndefined();
     expect(restored.insulation).toBeUndefined();
   });
+
+  it('round-trips transitTicks and the busStop layer, leaving both undefined when absent', () => {
+    const save = makeSave();
+    save.transitTicks = 44;
+    save.layers.busStop = new Uint8Array(save.size * save.size).fill(1).buffer as ArrayBuffer;
+    const restored = saveFromJson(saveToJson(save));
+    expect(restored.transitTicks).toBe(44);
+    expect(new Uint8Array(restored.layers.busStop!)).toEqual(new Uint8Array(save.layers.busStop));
+    const plain = saveFromJson(saveToJson(makeSave()));
+    expect(plain.transitTicks).toBeUndefined();
+    expect(plain.layers.busStop).toBeUndefined();
+  });
 });

@@ -48,6 +48,7 @@ const en = {
   'tool.plant-fire': 'Fire station',
   'tool.plant-police': 'Police station',
   'tool.plant-depot': 'Logistics depot',
+  'tool.plant-busdepot': 'Bus depot',
   'tool.plant-hydro': 'Run-of-river plant',
   'tool.plant-pumped': 'Pumped storage',
   'tool.bulldoze': 'Bulldozer',
@@ -80,6 +81,8 @@ const en = {
   'tool.plant-police.desc': 'Keeps happiness and taxes up in its ring. Needs a road and power.',
   'tool.plant-depot.desc':
     'Sends electric vans to the shops. Shops without deliveries stop growing. Needs a road and power to charge.',
+  'tool.plant-busdepot.desc':
+    'Sends three electric buses on tours over your stops. Needs a road and power to charge.',
   'tool.plant-hydro.desc': 'Built on the river. Output follows the river flow.',
   'tool.plant-pumped.desc': 'Large storage on a lake shore. Pumps up on surplus.',
   'tool.bulldoze.desc': 'Clears roads, zones and plants. Drag to clear an area.',
@@ -434,6 +437,7 @@ const de: Record<TranslationKey, string> = {
   'tool.plant-fire': 'Feuerwehr',
   'tool.plant-police': 'Polizei',
   'tool.plant-depot': 'Logistikdepot',
+  'tool.plant-busdepot': 'Busdepot',
   'tool.plant-hydro': 'Laufwasserkraftwerk',
   'tool.plant-pumped': 'Pumpspeicher',
   'tool.bulldoze': 'Abriss',
@@ -467,6 +471,8 @@ const de: Record<TranslationKey, string> = {
     'Hält Zufriedenheit und Steuern in ihrem Ring hoch. Braucht Straße und Strom.',
   'tool.plant-depot.desc':
     'Schickt E-Lieferwagen zu den Läden. Läden ohne Lieferung wachsen nicht weiter. Braucht Straße und Strom zum Laden.',
+  'tool.plant-busdepot.desc':
+    'Schickt drei Elektrobusse über deine Haltestellen. Braucht Straße und Strom zum Laden.',
   'tool.plant-hydro.desc': 'Am Fluss gebaut. Leistung folgt dem Abfluss.',
   'tool.plant-pumped.desc': 'Großer Speicher am Seeufer. Pumpt bei Überschuss hoch.',
   'tool.bulldoze.desc': 'Entfernt Straßen, Gebiete und Anlagen. Ziehen räumt eine Fläche.',

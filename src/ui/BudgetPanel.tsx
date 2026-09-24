@@ -27,6 +27,7 @@ const PLANT_LABEL: Record<PlantType, TranslationKey | null> = {
   [PlantType.FireStation]: 'tool.plant-fire',
   [PlantType.PoliceStation]: 'tool.plant-police',
   [PlantType.LogisticsDepot]: 'tool.plant-depot',
+  [PlantType.BusDepot]: 'tool.plant-busdepot',
 };
 
 /** Distinct colors per expense slice (also used for the row bullets). */
@@ -44,6 +45,7 @@ const EXPENSE_COLORS: Record<string, string> = {
   [PlantType.FireStation]: '#d9534f',
   [PlantType.PoliceStation]: '#4a7ec2',
   [PlantType.LogisticsDepot]: '#8d99a6',
+  [PlantType.BusDepot]: '#5b8fc7',
   fuel: '#d98f54',
   import: 'var(--hud-negative)',
 };

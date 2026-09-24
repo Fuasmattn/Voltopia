@@ -49,6 +49,9 @@ describe('TileMirror', () => {
         terrain: Terrain.Land,
         elevation: 0,
         deliveryState: 0,
+        busStop: 0,
+        stopState: 0,
+        transitCover: 0,
       },
     ]);
     expect(Array.from(mirror.tileType)).toEqual(Array.from({ length: 16 }, () => 0));

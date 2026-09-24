@@ -272,6 +272,7 @@ export function vehiclesStep(state: SimState): Map<number, number> {
       tripFreeFlowTicks: 0,
       charging: false,
       waitTicks: 0,
+      riderDay: -1,
     });
   }
 

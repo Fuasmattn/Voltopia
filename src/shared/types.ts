@@ -48,6 +48,7 @@ export const PlantType = {
   FireStation: 9,
   PoliceStation: 10,
   LogisticsDepot: 11,
+  BusDepot: 12,
 } as const;
 export type PlantType = (typeof PlantType)[keyof typeof PlantType];
 
@@ -57,6 +58,13 @@ export type DeliveryState = (typeof DeliveryState)[keyof typeof DeliveryState];
 
 /** deliveryAge saturates here (Uint16). */
 export const MAX_DELIVERY_AGE = 65535;
+
+/** Service status of a bus stop (TileDiff.stopState, overlay). */
+export const StopState = { Served: 0, Due: 1, Unserved: 2 } as const;
+export type StopState = (typeof StopState)[keyof typeof StopState];
+
+/** stopAge saturates here (Uint16). */
+export const MAX_STOP_AGE = 65535;
 
 export const SupplyStatus = {
   NotConnected: 0,
@@ -74,11 +82,12 @@ export const OverlayMode = {
   Services: 3,
   Traffic: 4,
   Deliveries: 5,
+  Transit: 6,
 } as const;
 export type OverlayMode = (typeof OverlayMode)[keyof typeof OverlayMode];
 
 /** Which mesh renders a VehicleState. */
-export const VehicleKind = { Car: 0, Van: 1 } as const;
+export const VehicleKind = { Car: 0, Van: 1, Bus: 2 } as const;
 export type VehicleKind = (typeof VehicleKind)[keyof typeof VehicleKind];
 
 export interface Weather {
@@ -216,6 +225,10 @@ export interface BudgetStats {
   roadTiles: number;
   avenueTiles: number;
   avenueUpkeep: number;
+  /** Bus stops on the roads. */
+  busStops: number;
+  /** Upkeep of the bus stops (part of gridUpkeep). */
+  busStopUpkeep: number;
   biogasFuelCost: number;
   gridImportCost: number;
   /** Income - expenses for this tick. */
@@ -252,6 +265,27 @@ export interface DeliveryStats {
   shops: number;
   /** Vans on the road. */
   driving: number;
+  depots: number;
+}
+
+/** Fleet figures of one bus depot (inspector). */
+export interface BusDepotInfo {
+  busesTotal: number;
+  busesDriving: number;
+  busesCharging: number;
+  /** Bus stops a tour from this depot can reach. */
+  stopsInReach: number;
+}
+
+/** City-wide public transit figures. */
+export interface TransitStats {
+  /** Riders over commuters with a workplace, 0..1 (0 when there are none). */
+  riderShare: number;
+  riders: number;
+  /** Buses on the road. */
+  driving: number;
+  stops: number;
+  stopsServed: number;
   depots: number;
 }
 
@@ -325,6 +359,16 @@ export interface TileInfo {
   deliveryAgeTicks: number;
   /** Fleet figures when this tile is a logistics depot. */
   depot: DepotInfo | null;
+  /** A bus stop is marked on this road tile. */
+  busStop: boolean;
+  /** Service status of the stop (Served when there is none). */
+  stopState: StopState;
+  /** Ticks since a bus last halted here (0 without a stop). */
+  stopAgeTicks: number;
+  /** Road tile within reach of a served bus stop. */
+  transitCovered: boolean;
+  /** Fleet of a bus depot tile, null elsewhere. */
+  busDepot: BusDepotInfo | null;
   growthBlockers: GrowthBlocker[];
   /** Elevation level 0..7 of this tile. */
   elevation: number;
@@ -369,6 +413,8 @@ export interface GlobalStats {
   };
   /** City-wide delivery figures. */
   deliveries: DeliveryStats;
+  /** City-wide public transit figures. */
+  transit: TransitStats;
   goals: GoalState[];
   counts: TileCounts;
   /** Per-tick budget breakdown for the budget panel. */
@@ -407,6 +453,12 @@ export interface TileDiff {
   elevation: number;
   /** DeliveryState of a retail building (0 elsewhere). */
   deliveryState: number;
+  /** 1 when a bus stop is marked on this road tile. */
+  busStop: number;
+  /** StopState of a bus stop (0 elsewhere). */
+  stopState: number;
+  /** 1 when this road tile is covered by a served bus stop. */
+  transitCover: number;
 }
 
 /** Position and heading of one vehicle, interpolated by the renderer. */
@@ -453,6 +505,8 @@ export interface SaveGame {
   freeFlowTicks?: number;
   /** Consecutive well-stocked ticks so far (absent in older saves → 0). */
   wellStockedTicks?: number;
+  /** Consecutive modal-shift ticks so far (absent in older saves → 0). */
+  transitTicks?: number;
   /** Raw copies of the tile layers. */
   layers: {
     tileType: ArrayBuffer;
@@ -470,5 +524,7 @@ export interface SaveGame {
     elevation?: ArrayBuffer;
     /** Road class layer; absent in older saves (all streets). */
     roadClass?: ArrayBuffer;
+    /** Bus stop layer; absent in saves from before transit. */
+    busStop?: ArrayBuffer;
   };
 }

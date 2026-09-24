@@ -188,6 +188,7 @@ export function buildStats(state: SimState): GlobalStats {
       avenueShare: counts.roadTiles > 0 ? counts.avenueTiles / counts.roadTiles : 0,
     },
     deliveries: { ...state.lastDeliveries },
+    transit: { ...state.lastTransit },
     goals: goalStates(state),
     counts,
     budget: buildBudget(state),
@@ -226,6 +227,8 @@ function buildBudget(state: SimState): GlobalStats['budget'] {
     roadTiles: b.roadTiles,
     avenueTiles: b.avenueTiles,
     avenueUpkeep: b.avenueUpkeep,
+    busStops: b.busStops,
+    busStopUpkeep: b.busStopUpkeep,
     biogasFuelCost: b.biogasFuelCost,
     gridImportCost: b.gridImportCost,
     net:

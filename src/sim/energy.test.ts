@@ -846,4 +846,16 @@ describe('service stations', () => {
     energyStep(far, { chargingDemand: 0 });
     expect(far.lastEnergy.buildingConsumption).toBe(0);
   });
+
+  it('places a bus depot next to a road for its price and rejects it elsewhere', () => {
+    const state = createSimState(1, 16);
+    state.layers.elevation.fill(0);
+    const at = (x: number, y: number) => tileIndex(x, y, 16);
+    expect(placePlant(state, at(5, 5), PlantType.BusDepot)).toEqual({ rejected: 'needsRoad' });
+    buildRoads(state, [at(5, 6)]);
+    const before = state.money;
+    expect(placePlant(state, at(5, 5), PlantType.BusDepot)).toEqual({});
+    expect(state.money).toBe(before - BALANCE.costs.plant[PlantType.BusDepot]);
+    expect(state.layers.plantType[at(5, 5)]).toBe(PlantType.BusDepot);
+  });
 });

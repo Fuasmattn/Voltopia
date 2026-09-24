@@ -15,11 +15,13 @@ import type {
   SeasonState,
   Speed,
   TileDiff,
+  TransitStats,
   Weather,
 } from '../shared/types.ts';
 import {
   DeliveryState,
   PlantType,
+  StopState,
   SupplyStatus,
   Terrain,
   TileType,
@@ -65,6 +67,8 @@ export interface Vehicle {
   charging: boolean;
   /** Consecutive ticks spent waiting behind a full lane (gridlock breaker). */
   waitTicks: number;
+  /** Day of the last decision to ride the bus instead of driving; -1 = drives. Not persisted. */
+  riderDay: number;
 }
 
 /** Tour phases of a delivery van. */
@@ -98,6 +102,37 @@ export interface Van {
   dwellTicks: number;
 }
 
+/** Tour phases of a bus. */
+export const BusPhase = { AtDepot: 0, Driving: 1, Boarding: 2 } as const;
+export type BusPhase = (typeof BusPhase)[keyof typeof BusPhase];
+
+/** One electric bus. Satisfies vehicles.ts' Mover. Not persisted. */
+export interface Bus {
+  /** Stable id (shares nextVehicleId with cars and vans). */
+  id: number;
+  /** Depot plant tile; -1 once the bus is lost and awaits removal. */
+  depot: number;
+  /** Road tile next to the depot the bus parks on. */
+  depotRoad: number;
+  x: number;
+  y: number;
+  angle: number;
+  phase: BusPhase;
+  /** Remaining stops of the tour (road tiles); the last one is depotRoad. */
+  stops: number[];
+  /** Road tiles from the current position to stops[0]. */
+  path: number[];
+  pathIndex: number;
+  /** Battery state of charge, 0..1. */
+  charge: number;
+  /** True while plugged in at the depot this tick. */
+  charging: boolean;
+  /** Consecutive ticks spent waiting behind a full lane (gridlock breaker). */
+  waitTicks: number;
+  /** Remaining boarding / turnaround ticks. */
+  dwellTicks: number;
+}
+
 /** A reversible build action for the undo tool. */
 export interface UndoEntry {
   /** Money to restore (refunds the cost of the undone action). */
@@ -113,6 +148,7 @@ export interface UndoEntry {
     density: number;
     variant: number;
     plantType: number;
+    busStop: number;
   }>;
 }
 
@@ -144,6 +180,12 @@ export interface TileLayers {
   trafficLoad: Uint8Array;
   /** Ticks since the last delivery per retail building, saturating. Derived, not persisted. */
   deliveryAge: Uint16Array;
+  /** 1 on road tiles that carry a bus stop (persisted). */
+  busStop: Uint8Array;
+  /** Ticks since a bus last halted at this stop, saturating. Derived, not persisted. */
+  stopAge: Uint16Array;
+  /** 1 on road tiles within stopRadius of a served bus stop. Derived, not persisted. */
+  transitCover: Uint8Array;
 }
 
 export interface SimState {
@@ -175,6 +217,7 @@ export interface SimState {
   layers: TileLayers;
   vehicles: Vehicle[];
   vans: Van[];
+  buses: Bus[];
   undoStack: UndoEntry[];
   energyHistory: EnergyHistoryPoint[];
   /** Running sums since the last history sample (not persisted). */
@@ -193,6 +236,8 @@ export interface SimState {
   lastServices: { fire: number; police: number };
   /** Figures from the last deliveriesStep; transient. */
   lastDeliveries: DeliveryStats;
+  /** Figures from the last transitStep; transient. */
+  lastTransit: TransitStats;
   /** Achieved goal ids (persisted with the save game). */
   goalsAchieved: Set<string>;
   /** Goal progress counters; the season streaks are persisted, the rest is transient. */
@@ -203,6 +248,7 @@ export interface SimState {
     summerTicks: number;
     freeFlowTicks: number;
     wellStockedTicks: number;
+    transitTicks: number;
   };
   /** Monotonic id source for vehicles (not persisted). */
   nextVehicleId: number;
@@ -265,6 +311,9 @@ export function createTileLayers(size: number): TileLayers {
     troubledTicks: new Uint32Array(tiles),
     trafficLoad: new Uint8Array(tiles),
     deliveryAge: new Uint16Array(tiles),
+    busStop: new Uint8Array(tiles),
+    stopAge: new Uint16Array(tiles),
+    transitCover: new Uint8Array(tiles),
   };
 }
 
@@ -300,6 +349,7 @@ export function createSimState(
     layers: createTileLayers(size),
     vehicles: [],
     vans: [],
+    buses: [],
     undoStack: [],
     energyHistory: [],
     energyHistoryAccum: { generation: 0, consumption: 0, soc: 0, ticks: 0 },
@@ -308,6 +358,7 @@ export function createSimState(
     lastDemand: { residential: 0, commercial: 0, retail: 0 },
     lastServices: { fire: 0, police: 0 },
     lastDeliveries: { suppliedShare: 1, shops: 0, driving: 0, depots: 0 },
+    lastTransit: { riderShare: 0, riders: 0, driving: 0, stops: 0, stopsServed: 0, depots: 0 },
     goalsAchieved: new Set(),
     goalProgress: {
       cleanDayTicks: 0,
@@ -316,6 +367,7 @@ export function createSimState(
       summerTicks: 0,
       freeFlowTicks: 0,
       wellStockedTicks: 0,
+      transitTicks: 0,
     },
     nextVehicleId: 1,
     commuteCongestion: 1,
@@ -335,6 +387,8 @@ export function createSimState(
       gridImportCost: 0,
       gridExportRevenue: 0,
       avenueUpkeep: 0,
+      busStops: 0,
+      busStopUpkeep: 0,
     },
     inspectedTile: -1,
     lastEnergy: {
@@ -377,6 +431,7 @@ export function snapshotTile(state: SimState, index: number): UndoEntry['tiles']
     density: layers.density[index],
     variant: layers.variant[index],
     plantType: layers.plantType[index],
+    busStop: layers.busStop[index],
   };
 }
 
@@ -411,6 +466,10 @@ export function collectDiffs(state: SimState): TileDiff[] {
       terrain: layers.terrain[index] as TileDiff['terrain'],
       elevation: layers.elevation[index],
       deliveryState: deliveryStateOfAge(layers.deliveryAge[index]),
+      busStop: layers.busStop[index],
+      stopState:
+        layers.busStop[index] !== 0 ? stopStateOfAge(layers.stopAge[index]) : StopState.Served,
+      transitCover: layers.transitCover[index],
     });
   }
   state.dirty.clear();
@@ -473,6 +532,23 @@ export function deliveryStateOfAge(age: number): DeliveryState {
   if (age > supplyWindowTicks()) return DeliveryState.Unsupplied;
   if (age > dueTicks()) return DeliveryState.Due;
   return DeliveryState.Supplied;
+}
+
+/** Ticks a bus stop stays served after a bus halted there. */
+export function stopServiceTicks(): number {
+  return Math.round(BALANCE.transit.serviceWindowDays * TICKS_PER_DAY);
+}
+
+/** Ticks after which a bus stop counts as due for a bus. */
+export function stopDueTicks(): number {
+  return Math.round(BALANCE.transit.dueAfterDays * TICKS_PER_DAY);
+}
+
+/** Service bucket of a stop given its ticks since the last bus. */
+export function stopStateOfAge(age: number): StopState {
+  if (age > stopServiceTicks()) return StopState.Unserved;
+  if (age > stopDueTicks()) return StopState.Due;
+  return StopState.Served;
 }
 
 /** Levels of drop from a river tile to its lowest water 4-neighbour. */
@@ -557,7 +633,8 @@ export function buildRejection(
     intent === BuildIntent.Plant &&
     (plant === PlantType.FireStation ||
       plant === PlantType.PoliceStation ||
-      plant === PlantType.LogisticsDepot) &&
+      plant === PlantType.LogisticsDepot ||
+      plant === PlantType.BusDepot) &&
     !neighbors4(index, state.size).some((n) => layers.tileType[n] === TileType.Road)
   ) {
     return 'needsRoad';
@@ -600,6 +677,7 @@ export function serializeState(state: SimState): SaveGame {
     summerTicks: state.goalProgress.summerTicks,
     freeFlowTicks: state.goalProgress.freeFlowTicks,
     wellStockedTicks: state.goalProgress.wellStockedTicks,
+    transitTicks: state.goalProgress.transitTicks,
     layers: {
       tileType: copyBuffer(layers.tileType),
       roadMask: copyBuffer(layers.roadMask),
@@ -612,6 +690,7 @@ export function serializeState(state: SimState): SaveGame {
       powerLine: copyBuffer(layers.powerLine),
       elevation: copyBuffer(layers.elevation),
       roadClass: copyBuffer(layers.roadClass),
+      busStop: copyBuffer(layers.busStop),
     },
   };
 }
@@ -642,6 +721,7 @@ export function deserializeState(save: SaveGame): SimState {
   state.goalProgress.summerTicks = save.summerTicks ?? 0;
   state.goalProgress.freeFlowTicks = save.freeFlowTicks ?? 0;
   state.goalProgress.wellStockedTicks = save.wellStockedTicks ?? 0;
+  state.goalProgress.transitTicks = save.transitTicks ?? 0;
   // Saves from before seasons start their year on the day they are loaded.
   state.seasonOriginDay = Math.floor(save.seasonOriginDay ?? save.tick / TICKS_PER_DAY);
   state.season = seasonState({
@@ -658,6 +738,7 @@ export function deserializeState(save: SaveGame): SimState {
   }
   if (save.layers.elevation) state.layers.elevation.set(new Uint8Array(save.layers.elevation));
   if (save.layers.roadClass) state.layers.roadClass.set(new Uint8Array(save.layers.roadClass));
+  if (save.layers.busStop) state.layers.busStop.set(new Uint8Array(save.layers.busStop));
   state.lakeLevel = computeLakeLevel(state);
   // Advance the RNG deterministically past the founding state so a loaded
   // game does not replay the exact random sequence from tick zero.

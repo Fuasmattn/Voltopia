@@ -10,7 +10,15 @@
 import { BALANCE, TICKS_PER_DAY } from '../shared/constants.ts';
 import { neighbors4, tileX, tileY } from '../shared/grid.ts';
 import type { GrowthBlocker, TileInfo } from '../shared/types.ts';
-import { PlantType, RoadClass, SupplyStatus, Terrain, TileType, Zone } from '../shared/types.ts';
+import {
+  PlantType,
+  RoadClass,
+  StopState,
+  SupplyStatus,
+  Terrain,
+  TileType,
+  Zone,
+} from '../shared/types.ts';
 import { deliveryState, depotInfo, isShopSupplied } from './deliveries.ts';
 import { policeTaxFactor } from './economy.ts';
 import {
@@ -28,6 +36,7 @@ import {
   pumpedHeadAt,
   riverDropAt,
   slopeAt,
+  stopStateOfAge,
   type SimState,
 } from './state.ts';
 import { laneCapacity } from './traffic.ts';
@@ -269,6 +278,15 @@ export function inspectTile(state: SimState, index: number): TileInfo | null {
       tileType === TileType.Plant && plant === PlantType.LogisticsDepot
         ? depotInfo(state, index)
         : null,
+    busStop: tileType === TileType.Road && layers.busStop[index] !== 0,
+    stopState:
+      tileType === TileType.Road && layers.busStop[index] !== 0
+        ? stopStateOfAge(layers.stopAge[index])
+        : StopState.Served,
+    stopAgeTicks:
+      tileType === TileType.Road && layers.busStop[index] !== 0 ? layers.stopAge[index] : 0,
+    transitCovered: tileType === TileType.Road && layers.transitCover[index] !== 0,
+    busDepot: null,
     growthBlockers: growthBlockers(state, index, connected),
     elevation,
     slope,

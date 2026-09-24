@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { BALANCE, TICKS_PER_DAY } from '../shared/constants.ts';
 import { LINE_PRESENT, tileIndex } from '../shared/grid.ts';
-import { DeliveryState, RoadClass, Terrain } from '../shared/types.ts';
+import { DeliveryState, RoadClass, StopState, Terrain } from '../shared/types.ts';
 import { recomputeGrid } from './powerGrid.ts';
 import { buildRoads } from './roads.ts';
 import { generateTerrain } from './terrain.ts';
@@ -20,6 +20,7 @@ import {
   serializeState,
   slopeAt,
   slopeCostMultiplier,
+  stopStateOfAge,
   TileType,
   Zone,
   type SimState,
@@ -423,5 +424,69 @@ describe('tooSteep', () => {
     const steep = tileIndex(3, 3, 8);
     state.layers.terrain[steep] = Terrain.River;
     expect(buildRejection(state, steep, BuildIntent.Road)).toBe('tooSteep');
+  });
+});
+
+describe('transit state', () => {
+  it('round-trips the bus stop layer and loads old saves without stops', () => {
+    const state = makeState();
+    state.layers.tileType[at(1, 1)] = TileType.Road;
+    state.layers.busStop[at(1, 1)] = 1;
+    const loaded = deserializeState(serializeState(state));
+    expect(loaded.layers.busStop[at(1, 1)]).toBe(1);
+    const save = serializeState(state);
+    delete save.layers.busStop;
+    expect(deserializeState(save).layers.busStop.every((v) => v === 0)).toBe(true);
+  });
+
+  it('persists the modal-shift streak and starts stops, coverage and buses fresh', () => {
+    const state = createSimState(1, SIZE);
+    state.goalProgress.transitTicks = 33;
+    state.layers.stopAge[at(1, 1)] = 500;
+    state.layers.transitCover[at(2, 2)] = 1;
+    const restored = deserializeState(serializeState(state));
+    expect(restored.goalProgress.transitTicks).toBe(33);
+    expect(restored.layers.stopAge[at(1, 1)]).toBe(0);
+    expect(restored.layers.transitCover[at(2, 2)]).toBe(0);
+    expect(restored.buses).toEqual([]);
+    const save = serializeState(state);
+    delete save.transitTicks;
+    expect(deserializeState(save).goalProgress.transitTicks).toBe(0);
+  });
+
+  it('stopStateOfAge buckets by the due and service windows', () => {
+    const day = TICKS_PER_DAY;
+    expect(stopStateOfAge(0)).toBe(StopState.Served);
+    expect(stopStateOfAge(Math.round(0.35 * day))).toBe(StopState.Served);
+    expect(stopStateOfAge(Math.round(0.35 * day) + 1)).toBe(StopState.Due);
+    expect(stopStateOfAge(Math.round(0.5 * day))).toBe(StopState.Due);
+    expect(stopStateOfAge(Math.round(0.5 * day) + 1)).toBe(StopState.Unserved);
+  });
+
+  it('carries busStop, stopState and transitCover in diffs', () => {
+    const state = createSimState(1, 8);
+    state.layers.tileType[10] = TileType.Road;
+    state.layers.busStop[10] = 1;
+    state.layers.stopAge[10] = Math.round(0.5 * TICKS_PER_DAY) + 1;
+    state.layers.transitCover[10] = 1;
+    markDirty(state, 10);
+    state.layers.stopAge[11] = 9999; // no stop here: state stays 0
+    markDirty(state, 11);
+    const diffs = collectDiffs(state);
+    expect(diffs.find((d) => d.index === 10)).toMatchObject({
+      busStop: 1,
+      stopState: StopState.Unserved,
+      transitCover: 1,
+    });
+    expect(diffs.find((d) => d.index === 11)).toMatchObject({ busStop: 0, stopState: 0 });
+  });
+
+  it('a bus depot needs a road neighbour', () => {
+    const state = createSimState(1, SIZE);
+    expect(buildRejection(state, at(5, 5), BuildIntent.Plant, PlantType.BusDepot)).toBe(
+      'needsRoad',
+    );
+    state.layers.tileType[at(5, 6)] = TileType.Road;
+    expect(buildRejection(state, at(5, 5), BuildIntent.Plant, PlantType.BusDepot)).toBeNull();
   });
 });

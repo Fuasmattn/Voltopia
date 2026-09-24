@@ -20,6 +20,10 @@ export interface EconomyBreakdown {
   gridExportRevenue: number;
   /** Upkeep of the avenue tiles (part of gridUpkeep). */
   avenueUpkeep: number;
+  /** Bus stops on the roads. */
+  busStops: number;
+  /** Upkeep of the bus stops (part of gridUpkeep). */
+  busStopUpkeep: number;
 }
 
 /** Zero-initialised map over every plant type. */
@@ -99,6 +103,8 @@ export function economyStep(state: SimState, population: number, jobs: number): 
     gridImportCost,
     gridExportRevenue,
     avenueUpkeep,
+    busStops: 0,
+    busStopUpkeep: 0,
   };
   state.lastEconomy = breakdown;
   return breakdown;
