@@ -14,6 +14,9 @@ const en = {
   'hud.traffic.title': '{label} · {driving} cars on the road · {avenues} % avenues',
   'hud.deliveries': 'deliveries',
   'hud.deliveries.title': '{supplied} of {shops} shops supplied · {vans} vans on the road',
+  'hud.transit': 'transit',
+  'hud.transit.title':
+    '{riders} riders · {buses} buses on the road · {served} of {stops} stops served',
   'traffic.flowing': 'flowing',
   'traffic.slow': 'slow',
   'traffic.jammed': 'jammed',
@@ -36,6 +39,7 @@ const en = {
   'tool.road': 'Road',
   'tool.avenue': 'Avenue',
   'tool.power-line': 'Power line',
+  'tool.bus-stop': 'Bus stop',
   'tool.zone-residential': 'Residential',
   'tool.zone-commercial': 'Commercial',
   'tool.zone-retail': 'Retail',
@@ -67,6 +71,8 @@ const en = {
     'Twice the lane capacity and faster driving. Drag over a street to upgrade it.',
   'tool.power-line.desc':
     'Carries power from plants along roads. Buildings within three tiles of a connected line get supplied.',
+  'tool.bus-stop.desc':
+    'Mark a stop on a road. Commuters near a served stop at home and at work leave the car at home.',
   'tool.zone-residential.desc': 'Homes. Residents move in once the lot has a road and power.',
   'tool.zone-commercial.desc': 'Offices. Provide jobs for your residents.',
   'tool.zone-retail.desc': 'Shops. Keep residents happy and add jobs.',
@@ -147,6 +153,8 @@ const en = {
   'overlay.deliveries': 'Deliveries',
   'overlay.deliveries.title':
     'Shops by delivery state: green = supplied, orange = due, red = unsupplied; depots blue',
+  'overlay.transit': 'Transit',
+  'overlay.transit.title': 'Bus coverage: green = covered, stops by service state',
 
   'rejection.notEnoughMoney': 'Not enough money',
   'rejection.tileOccupied': 'This tile is already occupied',
@@ -193,6 +201,9 @@ const en = {
   'help.deliveries.title': 'Deliveries',
   'help.deliveries.body':
     'Shops need goods. A logistics depot sends three electric vans on tours along the roads; a shop that has not seen a van for a day and a half stops growing. Vans queue in traffic like cars and charge at the depot, so keep it powered and in reach of your retail streets. The deliveries overlay shows who is due.',
+  'help.transit.title': 'Transit',
+  'help.transit.body':
+    'Mark bus stops on your roads and build a bus depot. Three electric buses tour the stops that have waited longest; a stop a bus visited in the last half day counts as served and covers the roads around it. A commuter with a served stop near home and near work leaves the car at home, which eases traffic and the evening charging peak. Too many stops for one depot leave some unserved.',
   'help.services.title': 'City services',
   'help.services.body':
     'Fire and police stations protect every building within their ring, but only while connected to the grid. Buildings need fire cover to reach the highest density; without police cover, happiness and tax income fall once the city has 100 residents. The services overlay shows who is covered.',
@@ -316,6 +327,7 @@ const en = {
   'budget.export': 'Grid export',
   'budget.roads': 'Roads & power lines',
   'budget.avenues': 'Avenues',
+  'budget.busStops': 'Bus stops',
   'budget.biogasFuel': 'Biogas fuel',
   'budget.import': 'Grid import',
   'budget.note': 'Upkeep is a money cost only — it does not consume energy.',
@@ -333,6 +345,7 @@ const en = {
   'inspect.section.services': 'Services',
   'inspect.section.traffic': 'Traffic',
   'inspect.section.deliveries': 'Deliveries',
+  'inspect.section.transit': 'Transit',
   'inspect.roadClass': 'Road',
   'inspect.street': 'Street',
   'inspect.avenue': 'Avenue',
@@ -348,6 +361,17 @@ const en = {
   'inspect.depot.vans': 'Vans',
   'inspect.depot.vansValue': '{driving} on the road · {charging} charging · {total} total',
   'inspect.depot.shopsInReach': 'Shops in reach',
+  'inspect.busStop': 'Bus stop',
+  'inspect.stopState': 'Service',
+  'inspect.stop.served': 'served',
+  'inspect.stop.due': 'due',
+  'inspect.stop.unserved': 'unserved',
+  'inspect.lastBus': 'Last bus',
+  'inspect.lastBus.hoursAgo': '{hours} h ago',
+  'inspect.transitCovered': 'Covered',
+  'inspect.buses': 'Buses',
+  'inspect.buses.value': '{driving} on the road · {charging} charging · {total} total',
+  'inspect.stopsInReach': 'Stops in reach',
   'inspect.upkeep': 'Upkeep',
   'inspect.tax': 'Tax contribution',
   'inspect.net': 'Net',
@@ -406,6 +430,9 @@ const de: Record<TranslationKey, string> = {
   'hud.traffic.title': '{label} · {driving} Autos unterwegs · {avenues} % Alleen',
   'hud.deliveries': 'Lieferungen',
   'hud.deliveries.title': '{supplied} von {shops} Läden beliefert · {vans} Lieferwagen unterwegs',
+  'hud.transit': 'ÖPNV',
+  'hud.transit.title':
+    '{riders} Fahrgäste · {buses} Busse unterwegs · {served} von {stops} Haltestellen bedient',
   'traffic.flowing': 'fließend',
   'traffic.slow': 'zäh',
   'traffic.jammed': 'Stau',
@@ -428,6 +455,7 @@ const de: Record<TranslationKey, string> = {
   'tool.road': 'Straße',
   'tool.avenue': 'Allee',
   'tool.power-line': 'Stromleitung',
+  'tool.bus-stop': 'Haltestelle',
   'tool.zone-residential': 'Wohngebiet',
   'tool.zone-commercial': 'Gewerbe',
   'tool.zone-retail': 'Einzelhandel',
@@ -459,6 +487,8 @@ const de: Record<TranslationKey, string> = {
     'Doppelte Spurkapazität und schnellere Fahrt. Über eine Straße ziehen, um sie auszubauen.',
   'tool.power-line.desc':
     'Führt Strom von Anlagen entlang der Straßen. Gebäude im Umkreis von drei Feldern einer angeschlossenen Leitung werden versorgt.',
+  'tool.bus-stop.desc':
+    'Haltestelle auf einer Straße. Pendler mit bedienter Haltestelle nahe Wohnung und Arbeit lassen das Auto stehen.',
   'tool.zone-residential.desc': 'Wohnhäuser. Bewohner ziehen ein, sobald Straße und Strom da sind.',
   'tool.zone-commercial.desc': 'Büros. Schaffen Arbeitsplätze für deine Bewohner.',
   'tool.zone-retail.desc': 'Läden. Halten Bewohner zufrieden und schaffen Arbeitsplätze.',
@@ -540,6 +570,8 @@ const de: Record<TranslationKey, string> = {
   'overlay.deliveries': 'Lieferungen',
   'overlay.deliveries.title':
     'Läden nach Lieferstatus: grün = beliefert, orange = fällig, rot = unversorgt; Depots blau',
+  'overlay.transit': 'ÖPNV',
+  'overlay.transit.title': 'Busabdeckung: grün = abgedeckt, Haltestellen nach Bedienung',
 
   'rejection.notEnoughMoney': 'Nicht genug Geld',
   'rejection.tileOccupied': 'Dieses Feld ist bereits belegt',
@@ -586,6 +618,9 @@ const de: Record<TranslationKey, string> = {
   'help.deliveries.title': 'Lieferverkehr',
   'help.deliveries.body':
     'Läden brauchen Waren. Ein Logistikdepot schickt drei E-Lieferwagen auf Touren über die Straßen; ein Laden, den anderthalb Tage kein Wagen erreicht hat, wächst nicht weiter. Lieferwagen stehen im Stau wie Autos und laden im Depot – also Strom anschließen und in Reichweite der Einkaufsstraßen bauen. Das Lieferungen-Overlay zeigt, wer fällig ist.',
+  'help.transit.title': 'ÖPNV',
+  'help.transit.body':
+    'Setze Haltestellen auf deine Straßen und baue ein Busdepot. Drei Elektrobusse fahren die Haltestellen ab, die am längsten warten; eine Haltestelle mit Bus im letzten halben Tag gilt als bedient und deckt die Straßen ringsum ab. Pendler mit bedienter Haltestelle nahe Wohnung und Arbeit lassen das Auto stehen, was Verkehr und abendliche Ladespitze entlastet. Zu viele Haltestellen für ein Depot bleiben teils unbedient.',
   'help.services.title': 'Stadtdienste',
   'help.services.body':
     'Feuerwehr und Polizei schützen jedes Gebäude in ihrem Ring, aber nur mit Netzanschluss. Für die höchste Dichte brauchen Gebäude Feuerwehrschutz; ohne Polizeischutz sinken Zufriedenheit und Steuereinnahmen, sobald die Stadt 100 Einwohner hat. Das Dienste-Overlay zeigt, wer abgedeckt ist.',
@@ -711,6 +746,7 @@ const de: Record<TranslationKey, string> = {
   'budget.export': 'Netzeinspeisung',
   'budget.roads': 'Straßen & Leitungen',
   'budget.avenues': 'Alleen',
+  'budget.busStops': 'Haltestellen',
   'budget.biogasFuel': 'Biogas-Brennstoff',
   'budget.import': 'Netzbezug',
   'budget.note': 'Unterhalt kostet nur Geld – er verbraucht keine Energie.',
@@ -728,6 +764,7 @@ const de: Record<TranslationKey, string> = {
   'inspect.section.services': 'Dienste',
   'inspect.section.traffic': 'Verkehr',
   'inspect.section.deliveries': 'Lieferungen',
+  'inspect.section.transit': 'ÖPNV',
   'inspect.roadClass': 'Straßenart',
   'inspect.street': 'Straße',
   'inspect.avenue': 'Allee',
@@ -743,6 +780,17 @@ const de: Record<TranslationKey, string> = {
   'inspect.depot.vans': 'Lieferwagen',
   'inspect.depot.vansValue': '{driving} unterwegs · {charging} laden · {total} gesamt',
   'inspect.depot.shopsInReach': 'Läden in Reichweite',
+  'inspect.busStop': 'Haltestelle',
+  'inspect.stopState': 'Bedienung',
+  'inspect.stop.served': 'bedient',
+  'inspect.stop.due': 'fällig',
+  'inspect.stop.unserved': 'unbedient',
+  'inspect.lastBus': 'Letzter Bus',
+  'inspect.lastBus.hoursAgo': 'vor {hours} h',
+  'inspect.transitCovered': 'Abgedeckt',
+  'inspect.buses': 'Busse',
+  'inspect.buses.value': '{driving} unterwegs · {charging} laden · {total} gesamt',
+  'inspect.stopsInReach': 'Haltestellen in Reichweite',
   'inspect.upkeep': 'Unterhalt',
   'inspect.tax': 'Steuerbeitrag',
   'inspect.net': 'Saldo',

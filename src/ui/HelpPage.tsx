@@ -12,6 +12,7 @@ const SECTIONS: Array<{ title: TranslationKey; body: TranslationKey }> = [
   { title: 'help.ev.title', body: 'help.ev.body' },
   { title: 'help.traffic.title', body: 'help.traffic.body' },
   { title: 'help.deliveries.title', body: 'help.deliveries.body' },
+  { title: 'help.transit.title', body: 'help.transit.body' },
   { title: 'help.services.title', body: 'help.services.body' },
   { title: 'help.icons.title', body: 'help.icons.body' },
   { title: 'help.controls.title', body: 'help.controls.body' },

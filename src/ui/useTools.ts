@@ -11,6 +11,7 @@ export type ToolId =
   | 'road'
   | 'avenue'
   | 'power-line'
+  | 'bus-stop'
   | 'zone-residential'
   | 'zone-commercial'
   | 'zone-retail'
@@ -23,6 +24,7 @@ export type ToolId =
   | 'plant-fire'
   | 'plant-police'
   | 'plant-depot'
+  | 'plant-busdepot'
   | 'plant-hydro'
   | 'plant-pumped'
   | 'bulldoze';
@@ -33,7 +35,7 @@ const ZONE_BY_TOOL: Partial<Record<ToolId, Zone>> = {
   'zone-retail': Zone.Retail,
 };
 
-/** Keyboard shortcuts for tools (digits row plus B, P, H, U, L, F, C and V). */
+/** Keyboard shortcuts for tools (digits row plus B, P, H, U, L, F, C, G, V, T and K). */
 export const TOOL_HOTKEYS: Record<string, ToolId> = {
   '1': 'select',
   '2': 'road',
@@ -54,6 +56,8 @@ export const TOOL_HOTKEYS: Record<string, ToolId> = {
   c: 'plant-police',
   g: 'plant-depot',
   v: 'avenue',
+  t: 'bus-stop',
+  k: 'plant-busdepot',
 };
 
 export interface DragCostPreview {
@@ -71,6 +75,7 @@ export const PLANT_BY_TOOL: Partial<Record<ToolId, PlantType>> = {
   'plant-fire': PlantType.FireStation,
   'plant-police': PlantType.PoliceStation,
   'plant-depot': PlantType.LogisticsDepot,
+  'plant-busdepot': PlantType.BusDepot,
   'plant-hydro': PlantType.RunOfRiver,
   'plant-pumped': PlantType.PumpedStorage,
 };
@@ -129,9 +134,15 @@ export function useTools(
     // Mirrors the sim's per-tile pricing (src/sim/roads.ts, powerLines.ts):
     // river tiles are bridges; lines over river or lake are crossings.
     // Falls back to the land price when the renderer isn't mounted yet.
-    const showPathCost = (tiles: number[], line: boolean, avenue: boolean): void => {
+    const showPathCost = (tiles: number[], line: boolean, avenue: boolean, stop: boolean): void => {
       const renderer = rendererRef.current;
       const cost = tiles.reduce((sum, index) => {
+        if (stop) {
+          // Mirrors src/sim/transit.ts: one flat price per road tile without a stop.
+          const road = (renderer?.roadClassAt(index) ?? -1) >= 0;
+          const marked = renderer?.busStopAt(index) ?? false;
+          return sum + (road && !marked ? BALANCE.costs.busStop : 0);
+        }
         const terrain = renderer?.terrainAt(index);
         const factor = slopeFactorAt(index);
         if (line) {
@@ -178,20 +189,27 @@ export function useTools(
     if (tool === 'select') {
       // Clicking with the select tool inspects the tile.
       callbacks.onBuildStart = (tile) => setSelectedTile(tile.index);
-    } else if (tool === 'road' || tool === 'avenue' || tool === 'power-line') {
+    } else if (
+      tool === 'road' ||
+      tool === 'avenue' ||
+      tool === 'power-line' ||
+      tool === 'bus-stop'
+    ) {
       const line = tool === 'power-line';
       const avenue = tool === 'avenue';
+      const stop = tool === 'bus-stop';
+      if (stop) renderer?.setHoverRadius(BALANCE.transit.stopRadius);
       callbacks.onBuildStart = (tile) => {
         anchor = tile;
         path = [tile.index];
         rendererRef.current?.setPreviewTiles(path);
-        showPathCost(path, line, avenue);
+        showPathCost(path, line, avenue, stop);
       };
       callbacks.onBuildDrag = (tile) => {
         if (!anchor) return;
         path = lShapedPath(anchor.x, anchor.y, tile.x, tile.y, gridSize);
         rendererRef.current?.setPreviewTiles(path);
-        showPathCost(path, line, avenue);
+        showPathCost(path, line, avenue, stop);
       };
       callbacks.onBuildEnd = (tile) => {
         if (anchor && tile) {
@@ -199,9 +217,11 @@ export function useTools(
         }
         if (path.length > 0) {
           send(
-            line
-              ? { type: 'buildPowerLine', tiles: path }
-              : { type: 'buildRoad', tiles: path, avenue },
+            stop
+              ? { type: 'buildBusStop', tiles: path }
+              : line
+                ? { type: 'buildPowerLine', tiles: path }
+                : { type: 'buildRoad', tiles: path, avenue },
           );
           sound.play('build');
         }

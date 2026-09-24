@@ -133,6 +133,10 @@ in balance.
   retail buildings; a shop without a delivery for 1.5 days stops
   densifying. Vans share lanes and traffic load with commuters and charge
   at the depot (added after the MVP; see the deliveries spec)
+- Public transit: bus stops marked on road tiles and a bus depot whose
+  electric buses tour the stops that waited longest; a commuter with a
+  served stop near home and near work leaves the car at home (added
+  after the MVP; see the transit spec)
 
 ### HUD & Overlays
 

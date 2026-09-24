@@ -12,6 +12,7 @@ import {
   MAX_DELIVERY_AGE,
   PlantType,
   RoadClass,
+  StopState,
   SupplyStatus,
   Terrain,
   TileType,
@@ -67,6 +68,12 @@ const SUPPLY_LABEL: Record<SupplyStatus, TranslationKey> = {
   [SupplyStatus.NotConnected]: 'inspect.supply.notConnected',
   [SupplyStatus.Undersupplied]: 'inspect.supply.undersupplied',
   [SupplyStatus.Supplied]: 'inspect.supply.supplied',
+};
+
+const STOP_LABEL: Record<StopState, TranslationKey> = {
+  [StopState.Served]: 'inspect.stop.served',
+  [StopState.Due]: 'inspect.stop.due',
+  [StopState.Unserved]: 'inspect.stop.unserved',
 };
 
 function energy(value: number): string {
@@ -334,6 +341,63 @@ export function TileInspector({ info, onClose }: { info: TileInfo; onClose: () =
             label={t('inspect.depot.shopsInReach')}
             value={String(info.depot.shopsInReach)}
             tone={info.depot.shopsInReach > 0 ? 'positive' : 'negative'}
+          />
+        </section>
+      )}
+
+      {info.tileType === TileType.Road && (
+        <section data-testid="inspect-transit">
+          <h3>{t('inspect.section.transit')}</h3>
+          <Row
+            label={t('inspect.busStop')}
+            value={info.busStop ? t('inspect.yes') : t('inspect.no')}
+          />
+          {info.busStop && (
+            <>
+              <Row
+                label={t('inspect.stopState')}
+                value={t(STOP_LABEL[info.stopState])}
+                tone={
+                  info.stopState === StopState.Served
+                    ? 'positive'
+                    : info.stopState === StopState.Due
+                      ? undefined
+                      : 'negative'
+                }
+                testId="inspect-stop-state"
+              />
+              <Row
+                label={t('inspect.lastBus')}
+                value={t('inspect.lastBus.hoursAgo', {
+                  hours: ((info.stopAgeTicks / TICKS_PER_DAY) * 24).toFixed(1),
+                })}
+                tone="muted"
+              />
+            </>
+          )}
+          <Row
+            label={t('inspect.transitCovered')}
+            value={info.transitCovered ? t('inspect.yes') : t('inspect.no')}
+            tone={info.transitCovered ? 'positive' : undefined}
+          />
+        </section>
+      )}
+
+      {info.busDepot && (
+        <section data-testid="inspect-bus-depot">
+          <h3>{t('inspect.section.transit')}</h3>
+          <Row
+            label={t('inspect.buses')}
+            value={t('inspect.buses.value', {
+              driving: info.busDepot.busesDriving,
+              charging: info.busDepot.busesCharging,
+              total: info.busDepot.busesTotal,
+            })}
+          />
+          <Row
+            label={t('inspect.stopsInReach')}
+            value={String(info.busDepot.stopsInReach)}
+            tone={info.busDepot.stopsInReach > 0 ? 'positive' : 'negative'}
           />
         </section>
       )}

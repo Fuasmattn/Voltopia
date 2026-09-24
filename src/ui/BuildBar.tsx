@@ -43,6 +43,7 @@ const CATEGORIES: Category[] = [
       { id: 'road', icon: '🛣', cost: BALANCE.costs.roadPerTile, perTile: true },
       { id: 'avenue', icon: '⏩', cost: BALANCE.costs.avenuePerTile, perTile: true },
       { id: 'power-line', icon: '⚡', cost: BALANCE.costs.powerLinePerTile, perTile: true },
+      { id: 'bus-stop', icon: '🚏', cost: BALANCE.costs.busStop, perTile: true },
       { id: 'bulldoze', icon: '🚜' },
       { id: 'undo', icon: '↩' },
     ],
@@ -77,6 +78,7 @@ const CATEGORIES: Category[] = [
       { id: 'plant-fire', icon: '🚒', cost: BALANCE.costs.plant[PlantType.FireStation] },
       { id: 'plant-police', icon: '🚓', cost: BALANCE.costs.plant[PlantType.PoliceStation] },
       { id: 'plant-depot', icon: '🚚', cost: BALANCE.costs.plant[PlantType.LogisticsDepot] },
+      { id: 'plant-busdepot', icon: '🚌', cost: BALANCE.costs.plant[PlantType.BusDepot] },
     ],
   },
 ];

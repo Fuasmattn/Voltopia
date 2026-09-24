@@ -77,6 +77,21 @@ export function CityVitals({ stats }: { stats: GlobalStats }) {
           <span className="hud-stat-label">{t('hud.deliveries')}</span>
         </div>
       )}
+      {stats.transit.stops > 0 && (
+        <div
+          className="hud-stat"
+          data-testid="transit"
+          title={t('hud.transit.title', {
+            riders: stats.transit.riders,
+            buses: stats.transit.driving,
+            served: stats.transit.stopsServed,
+            stops: stats.transit.stops,
+          })}
+        >
+          <span className="hud-stat-value">🚌 {Math.round(stats.transit.riderShare * 100)}%</span>
+          <span className="hud-stat-label">{t('hud.transit')}</span>
+        </div>
+      )}
       <DemandBars demand={stats.demand} />
     </div>
   );

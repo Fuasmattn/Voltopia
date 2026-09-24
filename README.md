@@ -57,7 +57,8 @@ _Screenshots coming soon — run `pnpm dev`, build a city, and snap away._
   automatically. Cars commute on the cheapest route; avenues carry more
   traffic faster, and the traffic overlay shows where it jams. A logistics
   depot sends electric vans to the shops; retail without deliveries stops
-  growing.
+  growing. Bus stops and a bus depot put electric buses on the roads;
+  commuters covered at both ends leave the car at home.
 - **Economy**: construction costs, taxes (with a slider), upkeep, biogas
   fuel costs.
 - **Overlays** show supply status (connected, undersupplied, not connected
@@ -70,11 +71,13 @@ Dunkelflaute spells), **rooftop PV** that grows with density, a limited
 **grid interconnector** (expensive imports, modest export revenue),
 **abandonment** of chronically unpowered buildings, **fire and police
 stations** with powered coverage rings, a services overlay,
-**delivery traffic** with a depot, vans and a well-stocked goal, and city
-goals (including a safe-city goal and a free-flow traffic goal), an
-**interactive tutorial**, warning icons in the world, touch gestures,
-tool hotkeys, synthesized sound effects, and a settings panel with save
-slots and JSON save export/import. UI in **English and German**.
+**delivery traffic** with a depot, vans and a well-stocked goal,
+**public transit** with bus stops, a depot, a coverage overlay and a
+modal-shift goal, and city goals (including a safe-city goal and a
+free-flow traffic goal), an **interactive tutorial**, warning icons in
+the world, touch gestures, tool hotkeys, synthesized sound effects, and
+a settings panel with save slots and JSON save export/import. UI in
+**English and German**.
 
 The game saves automatically (IndexedDB) and is playable offline as a PWA.
 

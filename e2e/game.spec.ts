@@ -166,6 +166,8 @@ test('build menu shows every tool in one row when the window is wide', async ({ 
   await expect(page.getByTestId('tool-plant-fire')).toBeVisible();
   await expect(page.getByTestId('tool-plant-police')).toBeVisible();
   await expect(page.getByTestId('tool-plant-depot')).toBeVisible();
+  await expect(page.getByTestId('tool-bus-stop')).toBeVisible();
+  await expect(page.getByTestId('tool-plant-busdepot')).toBeVisible();
 
   // Shrinking the window folds the row into tabs; growing unfolds it.
   await page.setViewportSize({ width: 1024, height: 768 });
@@ -251,6 +253,8 @@ test('overlay toggle switches modes', async ({ page }) => {
   await expect(page.getByTestId('overlay-traffic')).toHaveClass(/active/);
   await page.getByTestId('overlay-deliveries').click();
   await expect(page.getByTestId('overlay-deliveries')).toHaveClass(/active/);
+  await page.getByTestId('overlay-transit').click();
+  await expect(page.getByTestId('overlay-transit')).toHaveClass(/active/);
   await page.getByTestId('overlay-off').click();
   await expect(page.getByTestId('overlay-off')).toHaveClass(/active/);
 });

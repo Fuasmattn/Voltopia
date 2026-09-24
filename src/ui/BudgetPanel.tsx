@@ -34,6 +34,7 @@ const PLANT_LABEL: Record<PlantType, TranslationKey | null> = {
 const EXPENSE_COLORS: Record<string, string> = {
   roads: '#8e9bb3',
   avenues: '#b8c2d4',
+  busStops: '#f2d16b',
   [PlantType.SolarFarm]: '#f2c14e',
   [PlantType.WindTurbine]: '#6fc3df',
   [PlantType.Battery]: '#9d7be0',
@@ -136,7 +137,7 @@ export function BudgetPanel({ budget }: { budget: BudgetStats }) {
     {
       key: 'roads',
       label: t('budget.roads'),
-      value: perDay(budget.gridUpkeep - budget.avenueUpkeep),
+      value: perDay(budget.gridUpkeep - budget.avenueUpkeep - budget.busStopUpkeep),
       color: EXPENSE_COLORS.roads,
       count: budget.roadTiles - budget.avenueTiles,
     },
@@ -146,6 +147,13 @@ export function BudgetPanel({ budget }: { budget: BudgetStats }) {
       value: perDay(budget.avenueUpkeep),
       color: EXPENSE_COLORS.avenues,
       count: budget.avenueTiles,
+    },
+    {
+      key: 'busStops',
+      label: t('budget.busStops'),
+      value: perDay(budget.busStopUpkeep),
+      color: EXPENSE_COLORS.busStops,
+      count: budget.busStops,
     },
     ...Object.entries(budget.plantUpkeepByType)
       .map(([type, upkeep]) => {

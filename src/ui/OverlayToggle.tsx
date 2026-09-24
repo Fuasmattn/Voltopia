@@ -38,6 +38,12 @@ const MODES: Array<{
     label: 'overlay.deliveries',
     title: 'overlay.deliveries.title',
   },
+  {
+    mode: OverlayMode.Transit,
+    id: 'transit',
+    label: 'overlay.transit',
+    title: 'overlay.transit.title',
+  },
 ];
 
 export function OverlayToggle({
