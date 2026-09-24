@@ -91,7 +91,8 @@ const en = {
   'tool.zone-commercial.desc': 'Offices. Provide jobs for your residents.',
   'tool.zone-retail.desc': 'Shops. Keep residents happy and add jobs.',
   'tool.plant-solar.desc': 'Generates with sunlight — peaks at noon, nothing at night.',
-  'tool.plant-wind.desc': 'Generates with wind speed, day and night.',
+  'tool.plant-wind.desc':
+    'Generates with wind speed, day and night. Offshore turbines catch free wind for a bonus, at a construction surcharge.',
   'tool.plant-battery.desc': 'Stores surplus and releases it when generation drops.',
   'tool.plant-biogas.desc': 'Dispatchable generation, but burns fuel that costs money.',
   'tool.plant-hub.desc': 'Charges EVs in its service radius. Pairs with smart charging.',
@@ -120,7 +121,7 @@ const en = {
   'energy.solar': '☀️ Solar',
   'energy.wind': '🌀 Wind',
   'energy.hydro': '💧 Hydro (flow {flow}%)',
-  'energy.tidal': 'Tidal',
+  'energy.tidal': '🌊 Tidal',
   'energy.biogas': '♻️ Biogas',
   'energy.standby': 'standby',
   'energy.rooftop': '🏠 Rooftop PV',
@@ -222,7 +223,7 @@ const en = {
     'Plants only supply buildings connected to them. Draw power lines (⚡, key L) from a plant along your streets — they run over roads and across water. Every energised line tile and every plant connects buildings within three tiles. A line that does not touch a plant carries nothing; the supply overlay shows what is connected. Cities from before power lines got lines along their roads for free.',
   'help.water.title': 'Water and hydro',
   'help.water.body':
-    'Every map has a river and a lake. Roads cross the river as bridges (pricier per tile). A run-of-river plant on the river generates day and night — more after rainy spells, less in a drought. Pumped storage on the lake shore is a large but slower store that fills after your batteries.',
+    'Every map has a river, a lake and a sea along one edge. Roads cross the river as bridges (pricier per tile) but stop at the coast. A run-of-river plant on the river generates day and night — more after rainy spells, less in a drought. Pumped storage on the lake shore is a large but slower store that fills after your batteries.',
   'help.seasons.title': 'Seasons, heating and cooling',
   'help.seasons.body':
     'A year has four seasons of five days each. Summer brings long days and strong sun; winter brings short days, weak PV, more cloud and wind, and cold. Every building heats electrically, so the heating load rises with the cold — the winter evening is the hardest hour of the year. In summer every building cools electrically, so the cooling load peaks in the late afternoon as PV fades. Snow that falls in winter melts into the river in spring. Building insulation is a one-off upgrade that halves the heating and cooling load.',
@@ -378,6 +379,7 @@ const en = {
   'inspect.vacantLot': 'vacant lot',
   'inspect.river': 'River',
   'inspect.lake': 'Lake',
+  'inspect.sea': 'Sea',
   'inspect.empty': 'Open land',
   'inspect.section.money': 'Money',
   'inspect.section.energy': 'Energy',
@@ -549,7 +551,8 @@ const de: Record<TranslationKey, string> = {
   'tool.zone-commercial.desc': 'Büros. Schaffen Arbeitsplätze für deine Bewohner.',
   'tool.zone-retail.desc': 'Läden. Halten Bewohner zufrieden und schaffen Arbeitsplätze.',
   'tool.plant-solar.desc': 'Erzeugt mit Sonnenlicht — Spitze mittags, nachts nichts.',
-  'tool.plant-wind.desc': 'Erzeugt mit Windgeschwindigkeit, Tag und Nacht.',
+  'tool.plant-wind.desc':
+    'Erzeugt mit Windgeschwindigkeit, Tag und Nacht. Offshore-Anlagen fangen freien Wind für einen Bonus ein, gegen einen Aufpreis beim Bau.',
   'tool.plant-battery.desc': 'Speichert Überschuss und gibt ihn ab, wenn die Erzeugung fällt.',
   'tool.plant-biogas.desc': 'Regelbare Erzeugung, verbraucht aber kostenpflichtigen Brennstoff.',
   'tool.plant-hub.desc': 'Lädt E-Autos im Umkreis. Passt zum Smart Charging.',
@@ -579,7 +582,7 @@ const de: Record<TranslationKey, string> = {
   'energy.solar': '☀️ Solar',
   'energy.wind': '🌀 Wind',
   'energy.hydro': '💧 Wasserkraft (Abfluss {flow}%)',
-  'energy.tidal': 'Gezeiten',
+  'energy.tidal': '🌊 Gezeiten',
   'energy.biogas': '♻️ Biogas',
   'energy.standby': 'Bereitschaft',
   'energy.rooftop': '🏠 Dach-PV',
@@ -682,7 +685,7 @@ const de: Record<TranslationKey, string> = {
     'Anlagen versorgen nur Gebäude, die mit ihnen verbunden sind. Ziehe Stromleitungen (⚡, Taste L) von einer Anlage entlang deiner Straßen — sie laufen über Straßen und über Wasser. Jedes angeschlossene Leitungsfeld und jede Anlage versorgt Gebäude im Umkreis von drei Feldern. Eine Leitung ohne Anlage führt keinen Strom; das Versorgungs-Overlay zeigt, was angeschlossen ist. Städte aus der Zeit vor den Leitungen haben ihre Leitungen entlang der Straßen geschenkt bekommen.',
   'help.water.title': 'Wasser und Wasserkraft',
   'help.water.body':
-    'Jede Karte hat einen Fluss und einen See. Straßen überqueren den Fluss als Brücken (teurer pro Feld). Ein Laufwasserkraftwerk auf dem Fluss erzeugt Tag und Nacht Strom — mehr nach Regenphasen, weniger in Trockenzeiten. Ein Pumpspeicher am Seeufer ist ein großer, aber trägerer Speicher, der sich nach den Batterien füllt.',
+    'Jede Karte hat einen Fluss, einen See und ein Meer an einem Rand. Straßen überqueren den Fluss als Brücken (teurer pro Feld), enden aber an der Küste. Ein Laufwasserkraftwerk auf dem Fluss erzeugt Tag und Nacht Strom — mehr nach Regenphasen, weniger in Trockenzeiten. Ein Pumpspeicher am Seeufer ist ein großer, aber trägerer Speicher, der sich nach den Batterien füllt.',
   'help.seasons.title': 'Jahreszeiten, Heizung und Kühlung',
   'help.seasons.body':
     'Ein Jahr hat vier Jahreszeiten zu je fünf Tagen. Der Sommer bringt lange Tage und kräftige Sonne; der Winter kurze Tage, schwache PV, mehr Wolken und Wind — und Kälte. Alle Gebäude heizen elektrisch, die Heizlast steigt mit der Kälte: Der Winterabend ist die schwerste Stunde des Jahres. Im Sommer kühlen alle Gebäude elektrisch: Die Kühllast erreicht ihre Spitze am späten Nachmittag, wenn die PV nachlässt. Schnee aus dem Winter schmilzt im Frühling in den Fluss. Die Gebäudedämmung ist ein einmaliges Upgrade, das die Heiz- und Kühllast halbiert.',
@@ -840,6 +843,7 @@ const de: Record<TranslationKey, string> = {
   'inspect.vacantLot': 'unbebaut',
   'inspect.river': 'Fluss',
   'inspect.lake': 'See',
+  'inspect.sea': 'Meer',
   'inspect.empty': 'Freies Land',
   'inspect.section.money': 'Geld',
   'inspect.section.energy': 'Energie',

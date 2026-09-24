@@ -358,6 +358,7 @@ function overviewGlyph(tiles: TileMirror, i: number): string {
   }
   if (terrain === Terrain.River) return '~';
   if (terrain === Terrain.Lake) return '#';
+  if (terrain === Terrain.Sea) return '%';
   if (tiles.powerLine[i] !== 0 && tiles.zone[i] === Zone.None) return '=';
   const zone = tiles.zone[i];
   const built = tiles.density[i] > 0;
@@ -368,7 +369,7 @@ function overviewGlyph(tiles: TileMirror, i: number): string {
 }
 
 const OVERVIEW_LEGEND =
-  '. empty land, ~ river, # lake, + road (or bridge), o road with a bus stop, ' +
+  '. empty land, ~ river, # lake, % sea, + road (or bridge), o road with a bus stop, ' +
   '= power line on empty land, ' +
   'r/c/s zoned but unbuilt (residential/commercial/retail), R/C/S building, ' +
   'plants: V solar, W wind, B battery, G biogas, H charging hub, P park, ' +
@@ -391,12 +392,14 @@ function layerGlyph(tiles: TileMirror, i: number, layer: MapLayer): string {
     case 'supply': {
       if (terrain === Terrain.River) return '~';
       if (terrain === Terrain.Lake) return '#';
+      if (terrain === Terrain.Sea) return '%';
       if (tiles.density[i] === 0) return '.';
       return String(tiles.supplied[i]);
     }
     case 'density': {
       if (terrain === Terrain.River) return '~';
       if (terrain === Terrain.Lake) return '#';
+      if (terrain === Terrain.Sea) return '%';
       return tiles.density[i] > 0 ? String(tiles.density[i]) : '.';
     }
     case 'power': {
@@ -405,6 +408,7 @@ function layerGlyph(tiles: TileMirror, i: number, layer: MapLayer): string {
       if (tiles.tileType[i] === TileType.Road) return '+';
       if (terrain === Terrain.River) return '~';
       if (terrain === Terrain.Lake) return '#';
+      if (terrain === Terrain.Sea) return '%';
       return '.';
     }
     case 'transit': {
@@ -423,6 +427,7 @@ function layerGlyph(tiles: TileMirror, i: number, layer: MapLayer): string {
       }
       if (terrain === Terrain.River) return '~';
       if (terrain === Terrain.Lake) return '#';
+      if (terrain === Terrain.Sea) return '%';
       return '.';
     }
   }
@@ -433,13 +438,13 @@ const LAYER_LEGEND: Record<MapLayer, string> = {
   terrain: '. land, ~ river, # lake, % sea',
   supply:
     '. no building, 0 building not connected to any plant, 1 building undersupplied, ' +
-    '2 building fully supplied, ~ river, # lake',
-  density: '. no building, 1-3 building density level, ~ river, # lake',
+    '2 building fully supplied, ~ river, # lake, % sea',
+  density: '. no building, 1-3 building density level, ~ river, # lake, % sea',
   power:
-    '. nothing, = power line (over land, road or water), + road without line, P plant, ~ river, # lake',
+    '. nothing, = power line (over land, road or water), + road without line, P plant, ~ river, # lake, % sea',
   transit:
     'o served bus stop, d stop due for a bus, x unserved stop, + road covered by a served stop, ' +
-    '- road not covered, T bus depot, P other plant, ~ river, # lake, . other',
+    '- road not covered, T bus depot, P other plant, ~ river, # lake, % sea, . other',
 };
 
 // ---------------------------------------------------------------------------

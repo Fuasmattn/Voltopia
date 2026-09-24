@@ -489,7 +489,7 @@ export function tideLevel(tick: number): number {
 
 /**
  * Tidal current strength, 0..1 — what a tidal plant's output scales
- * with. The current runs a quarter period ahead of the level: slack at
+ * with. The current runs a quarter period behind the level: slack at
  * high and low water, strongest at mid-tide, so there are four
  * generation peaks per day. (The exact derivative would weight the terms
  * by 1/period as well; the two periods differ by 3 %, which would only

@@ -628,6 +628,26 @@ describe('terrain energy bonuses', () => {
     );
   });
 
+  it('does not gain a drop bonus from a neighbouring sea tile at the river mouth', () => {
+    const state = makeState();
+    const tile = at(3, 3);
+    const downstream = at(3, 4);
+    const seaNeighbor = at(4, 3);
+    state.layers.terrain[tile] = Terrain.River;
+    state.layers.terrain[downstream] = Terrain.River;
+    state.layers.terrain[seaNeighbor] = Terrain.Sea;
+    // Same elevation as the river continuation: no natural drop here.
+    // The sea is pinned to 0, well below — without excluding it from
+    // riverDropAt this would fabricate a drop the river never had.
+    state.layers.elevation[tile] = 2;
+    state.layers.elevation[downstream] = 2;
+    state.layers.elevation[seaNeighbor] = 0;
+    placeDirect(state, tile, PlantType.RunOfRiver);
+    state.weather.riverFlow = 1;
+    energyStep(state, { chargingDemand: 0 });
+    expect(state.lastEnergy.hydro).toBeCloseTo(BALANCE.energy.hydroPeakOutput);
+  });
+
   it('pumped storage capacity grows with the nearby hilltop above the lake', () => {
     const state = makeState();
     const shore = at(3, 3);
@@ -807,6 +827,22 @@ describe('offshore wind', () => {
       BALANCE.costs.plant[PlantType.WindTurbine] * BALANCE.sea.offshoreCostFactor,
     );
     expect(before - state.money).toBe(expected);
+  });
+
+  it('does not charge the offshore surcharge for a tidal plant', () => {
+    const state = generatedState(1, 64);
+    state.money = 1_000_000;
+    const before = state.money;
+    let tile = -1;
+    for (let i = 0; i < state.layers.terrain.length; i++) {
+      if (isCoastalSea(state, i)) {
+        tile = i;
+        break;
+      }
+    }
+    expect(tile).toBeGreaterThanOrEqual(0);
+    expect(placePlant(state, tile, PlantType.TidalPlant).rejected).toBeUndefined();
+    expect(before - state.money).toBe(BALANCE.costs.plant[PlantType.TidalPlant]);
   });
 });
 

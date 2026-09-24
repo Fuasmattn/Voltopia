@@ -68,7 +68,7 @@ game this way (see the e2e test "agent tools drive the game").
   tile); its output follows the tide and rises in narrow water and at
   the river mouth — see `get_build_catalog` for the exact figures.
   `find_tiles` with kind `coastal_sea` lists exactly those buildable
-  sites, and `get_map`'s `terrain` layer marks sea tiles with `%`.
+  sites, and every `get_map` layer marks sea tiles with `%`.
 - Write tools resolve to `{ ok: true, ... }` or
   `{ ok: false, error: '<code>', message: '<English text>' }`. The codes
   are the simulation's own rejection codes (`notEnoughMoney`,

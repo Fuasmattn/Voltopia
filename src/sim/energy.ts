@@ -48,12 +48,19 @@ export function placePlant(state: SimState, tile: number, plant: PlantType): Bui
   if (plant === PlantType.None) return { rejected: 'noPlantSelected' };
   const rejection = buildRejection(state, tile, BuildIntent.Plant, plant);
   if (rejection) return { rejected: rejection };
-  const offshore = state.layers.terrain[tile] === Terrain.Sea;
-  const cost =
-    Math.round(
-      BALANCE.costs.plant[plant] *
-        (offshore ? BALANCE.sea.offshoreCostFactor : slopeCostMultiplier(state, tile)),
-    ) + fellingCost(state, tile);
+  // A tidal plant can only ever stand on a sea tile, so — unlike a wind
+  // turbine — it has no "choice" of going offshore: its marine cost is
+  // already priced into the base cost, so it is exempt from the offshore
+  // surcharge (and from the slope multiplier, since a sea tile has no
+  // buildable slope of its own).
+  const isTidal = plant === PlantType.TidalPlant;
+  const offshore = !isTidal && state.layers.terrain[tile] === Terrain.Sea;
+  const costMultiplier = isTidal
+    ? 1
+    : offshore
+      ? BALANCE.sea.offshoreCostFactor
+      : slopeCostMultiplier(state, tile);
+  const cost = Math.round(BALANCE.costs.plant[plant] * costMultiplier) + fellingCost(state, tile);
   if (cost > state.money) {
     return { rejected: 'notEnoughMoney' };
   }

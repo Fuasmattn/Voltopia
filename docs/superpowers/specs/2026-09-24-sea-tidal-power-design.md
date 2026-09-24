@@ -108,8 +108,10 @@ Properties this yields, all of which become tests:
   terms by `1/P`, which the two periods differ by 3 % in — deliberately
   ignored, it would only rescale `solarWeight`.)
 - Spring and neap tides emerge from the beat between the two periods —
-  no separate envelope constant. Springs recur every ~7.4 in-game days;
-  at neap the amplitude falls to `(1-w)/(1+w)` ≈ 0.55 of spring.
+  no separate envelope constant. Spring and neap tides alternate every
+  ~7.4 in-game days (half the ~14.8-day beat period, so springs recur
+  every ~14.8 days); at neap the amplitude falls to `(1-w)/(1+w)` ≈
+  0.55 of spring.
 - The 24.84-hour lunar day pushes the tide ~50 minutes later each day, so
   a given tidal phase returns to the same time of day after ~14.8 days
   and generation peaks land at every hour of the solar day in turn.
@@ -238,8 +240,9 @@ Unit tests (`src/sim/sea.test.ts` plus additions to existing suites):
   within `depthRange`; the river reaches the sea; the size cap holds;
   identical output for identical seeds, different output across seeds.
 - Tide: value range; slack water exactly at high and low water; four
-  generation peaks per in-game day; spring-neap beat period ~7.4 days
-  with neap ≈ 0.55 of spring; pure function of tick.
+  generation peaks per in-game day; spring and neap tides alternate
+  every ~7.4 days (half the ~14.8-day beat period) with neap ≈ 0.55 of
+  spring; pure function of tick.
 - Site factor: straight coast vs. inlet vs. estuary; cap respected.
 - Build rules: every row of the table above.
 - Energy balance: tidal output enters the renewable total and is

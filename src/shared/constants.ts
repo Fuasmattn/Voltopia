@@ -54,6 +54,10 @@ export const BALANCE = {
        * Priced like run-of-river (2_200) per unit of *effective* peak
        * output (peak x mean site factor), plus a modest premium for
        * marine construction — a probe-measured parity, not a coincidence.
+       * Exempt from sea.offshoreCostFactor (see placePlant): a tidal
+       * plant has no choice of going offshore the way a wind turbine
+       * does, so its marine cost already lives in this base number —
+       * applying the surcharge on top would silently break this parity.
        */
       [PlantType.TidalPlant]: 2_400,
     } as Record<PlantType, number>,

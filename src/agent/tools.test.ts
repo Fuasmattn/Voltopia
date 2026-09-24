@@ -210,6 +210,26 @@ describe('agent tools: reading', () => {
     expect(await call('get_map', { origin: { x: 99, y: 0 } })).toMatchObject({ ok: false });
   });
 
+  it('get_map marks the sea on every layer, not just terrain', async () => {
+    const { call, engine } = createHarness();
+    const size = engine.state.size;
+    const seaTiles: number[] = [];
+    for (let i = 0; i < size * size; i++) {
+      if (engine.state.layers.terrain[i] === Terrain.Sea) seaTiles.push(i);
+    }
+    expect(seaTiles.length).toBeGreaterThan(0);
+
+    for (const layer of ['overview', 'supply', 'density', 'power', 'transit'] as const) {
+      const map = await call('get_map', { layer });
+      const rows = map.rows as string[];
+      for (const i of seaTiles) {
+        const glyph = rows[Math.floor(i / size)][i % size];
+        expect(glyph, `layer ${layer} at tile ${i}`).toBe('%');
+      }
+      expect(map.legend as string, `legend for ${layer}`).toContain('% sea');
+    }
+  });
+
   it('find_tiles finds river, lake shore and empty land, nearest first', async () => {
     const { call, engine } = createHarness();
     const river = await call('find_tiles', { kind: 'river', limit: 5 });

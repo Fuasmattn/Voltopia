@@ -590,12 +590,18 @@ export function stopStateOfAge(age: number): StopState {
   return StopState.Served;
 }
 
-/** Levels of drop from a river tile to its lowest water 4-neighbour. */
+/** Levels of drop from a river tile to its lowest water 4-neighbour.
+ *  The sea is excluded even though it is not land: it is pinned to
+ *  elevation 0, and counting it here would re-price the river mouth
+ *  as a steeper drop than the river itself ever had — the estuary is
+ *  what the tidal plant models, not an extra bonus for run-of-river. */
 export function riverDropAt(state: SimState, index: number): number {
   const { terrain, elevation } = state.layers;
   let lowest = elevation[index];
   for (const n of neighbors4(index, state.size)) {
-    if (terrain[n] !== Terrain.Land) lowest = Math.min(lowest, elevation[n]);
+    if (terrain[n] !== Terrain.Land && terrain[n] !== Terrain.Sea) {
+      lowest = Math.min(lowest, elevation[n]);
+    }
   }
   return elevation[index] - lowest;
 }
@@ -625,9 +631,11 @@ export function pumpedHeadAt(state: SimState, index: number): number {
  * Why a tile cannot be built on with the given intent, or null when it
  * can. Land accepts everything (except run-of-river, which needs the
  * river); river tiles accept bridges and run-of-river plants; lakes
- * accept nothing. Pumped storage additionally needs a lake shore. Power
- * lines are accepted on any terrain and on roads, but not on buildings or
- * plants; zones and plants are rejected on line tiles.
+ * accept nothing. The sea accepts a tidal plant on its coastal shore and
+ * offshore wind turbines anywhere, and nothing else (no roads, bridges,
+ * or run-of-river). Pumped storage additionally needs a lake shore.
+ * Power lines are accepted on any terrain and on roads, but not on
+ * buildings or plants; zones and plants are rejected on line tiles.
  */
 export function buildRejection(
   state: SimState,

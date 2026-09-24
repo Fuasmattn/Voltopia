@@ -136,6 +136,7 @@ function tileTitle(info: TileInfo, t: (key: TranslationKey) => string): string {
   }
   if (info.terrain === Terrain.River) return t('inspect.river');
   if (info.terrain === Terrain.Lake) return t('inspect.lake');
+  if (info.terrain === Terrain.Sea) return t('inspect.sea');
   return t('inspect.empty');
 }
 
