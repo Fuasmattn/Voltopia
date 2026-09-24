@@ -457,17 +457,19 @@ describe('transit state', () => {
   it('stopStateOfAge buckets by the due and service windows', () => {
     const day = TICKS_PER_DAY;
     expect(stopStateOfAge(0)).toBe(StopState.Served);
-    expect(stopStateOfAge(Math.round(0.35 * day))).toBe(StopState.Served);
-    expect(stopStateOfAge(Math.round(0.35 * day) + 1)).toBe(StopState.Due);
-    expect(stopStateOfAge(Math.round(0.5 * day))).toBe(StopState.Due);
-    expect(stopStateOfAge(Math.round(0.5 * day) + 1)).toBe(StopState.Unserved);
+    const due = Math.round(BALANCE.transit.dueAfterDays * day);
+    const window = Math.round(BALANCE.transit.serviceWindowDays * day);
+    expect(stopStateOfAge(due)).toBe(StopState.Served);
+    expect(stopStateOfAge(due + 1)).toBe(StopState.Due);
+    expect(stopStateOfAge(window)).toBe(StopState.Due);
+    expect(stopStateOfAge(window + 1)).toBe(StopState.Unserved);
   });
 
   it('carries busStop, stopState and transitCover in diffs', () => {
     const state = createSimState(1, 8);
     state.layers.tileType[10] = TileType.Road;
     state.layers.busStop[10] = 1;
-    state.layers.stopAge[10] = Math.round(0.5 * TICKS_PER_DAY) + 1;
+    state.layers.stopAge[10] = Math.round(BALANCE.transit.serviceWindowDays * TICKS_PER_DAY) + 1;
     state.layers.transitCover[10] = 1;
     markDirty(state, 10);
     state.layers.stopAge[11] = 9999; // no stop here: state stays 0

@@ -467,7 +467,7 @@ export const BALANCE = {
     /** Buses stationed at one depot. */
     busesPerDepot: 3,
     /** Stops one tour visits at most. */
-    stopsPerTour: 6,
+    stopsPerTour: 5,
     /** Route cost from the depot a stop must be within (tiles on empty streets). */
     maxRouteTiles: 60,
     /** Hours of the in-game day in which tours may start. */
@@ -486,9 +486,9 @@ export const BALANCE = {
     /** State of charge gained per tick while charging (0..1). */
     chargeRatePerTick: 0.0012,
     /** A stop counts as served for this long after a bus halted there. */
-    serviceWindowDays: 0.5,
+    serviceWindowDays: 0.4,
     /** The overlay and inspector call a stop "due" after this long. */
-    dueAfterDays: 0.35,
+    dueAfterDays: 0.28,
     /** Road tiles within this Chebyshev radius of a served stop are covered. */
     stopRadius: 4,
     /** Share of commuters that must ride for the modal-shift goal. */
