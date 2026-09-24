@@ -3,9 +3,10 @@
  * happiness and zone demand. Docked into the top-left corner like the
  * resource bar of an RTS, so it reads as part of the frame, not a card.
  */
+import { BALANCE } from '../shared/constants.ts';
 import type { GlobalStats } from '../shared/types.ts';
 import { DemandBars } from './DemandBars.tsx';
-import { useI18n } from './i18n.tsx';
+import { useI18n, type TranslationKey } from './i18n.tsx';
 
 const CURRENCY = '⌁';
 
@@ -13,6 +14,12 @@ function happinessEmoji(happiness: number): string {
   if (happiness >= 0.7) return '😊';
   if (happiness >= 0.45) return '😐';
   return '😞';
+}
+
+function trafficLabel(congestion: number): TranslationKey {
+  if (congestion <= BALANCE.traffic.flowing) return 'traffic.flowing';
+  if (congestion <= BALANCE.traffic.jammed) return 'traffic.slow';
+  return 'traffic.jammed';
 }
 
 export function CityVitals({ stats }: { stats: GlobalStats }) {
@@ -39,6 +46,14 @@ export function CityVitals({ stats }: { stats: GlobalStats }) {
           {happinessEmoji(stats.happiness)} {Math.round(stats.happiness * 100)}%
         </span>
         <span className="hud-stat-label">{t('hud.happiness')}</span>
+      </div>
+      <div
+        className={`hud-stat ${stats.traffic.congestion > BALANCE.traffic.jammed ? 'negative' : ''}`}
+        data-testid="traffic"
+        title={`${t('hud.traffic')}: ${t(trafficLabel(stats.traffic.congestion))}`}
+      >
+        <span className="hud-stat-value">🚗 {stats.traffic.congestion.toFixed(2)}×</span>
+        <span className="hud-stat-label">{t('hud.traffic')}</span>
       </div>
       <DemandBars demand={stats.demand} />
     </div>

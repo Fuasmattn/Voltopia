@@ -10,6 +10,10 @@ const en = {
   'hud.residents': 'residents',
   'hud.jobs': 'jobs',
   'hud.happiness': 'happiness',
+  'hud.traffic': 'traffic',
+  'traffic.flowing': 'flowing',
+  'traffic.slow': 'slow',
+  'traffic.jammed': 'jammed',
   'hud.day': 'Day {n}',
   'hud.weather.title': 'Season and temperature · cloud cover / wind speed',
   'season.spring': 'Spring',
@@ -27,6 +31,7 @@ const en = {
 
   'tool.select': 'Select / pan',
   'tool.road': 'Road',
+  'tool.avenue': 'Avenue',
   'tool.power-line': 'Power line',
   'tool.zone-residential': 'Residential',
   'tool.zone-commercial': 'Commercial',
@@ -53,6 +58,8 @@ const en = {
   'build.category.services': 'Services',
   'tool.select.desc': 'Click a tile to inspect it, drag to pan the camera.',
   'tool.road.desc': 'Roads connect the city. Drag to build a line.',
+  'tool.avenue.desc':
+    'Twice the lane capacity and faster driving. Drag over a street to upgrade it.',
   'tool.power-line.desc':
     'Carries power from plants along roads. Buildings within three tiles of a connected line get supplied.',
   'tool.zone-residential.desc': 'Homes. Residents move in once the lot has a road and power.',
@@ -126,6 +133,8 @@ const en = {
   'overlay.demand.title': 'Growth demand per zone: red = none, green = high',
   'overlay.services': 'Services',
   'overlay.services.title': 'Fire and police coverage of every building',
+  'overlay.traffic': 'Traffic',
+  'overlay.traffic.title': 'Traffic load per road tile: green = free, red = jammed',
 
   'rejection.notEnoughMoney': 'Not enough money',
   'rejection.tileOccupied': 'This tile is already occupied',
@@ -165,6 +174,9 @@ const en = {
   'help.ev.title': 'E-mobility',
   'help.ev.body':
     'Your citizens drive EVs. Home charging peaks in the evening — right when solar is gone. Charging hubs shift the load into the sunny midday, and the smart-charging upgrade follows the surplus automatically.',
+  'help.traffic.title': 'Traffic',
+  'help.traffic.body':
+    'Every car commutes: home to work in the morning, back in the evening, along the fastest route it can find. A lane holds two cars; queues form behind full tiles and long commutes cost happiness. Avenues carry four cars per lane at higher speed and can be drawn over existing streets. The traffic overlay shows where it jams.',
   'help.services.title': 'City services',
   'help.services.body':
     'Fire and police stations protect every building within their ring, but only while connected to the grid. Buildings need fire cover to reach the highest density; without police cover, happiness and tax income fall once the city has 100 residents. The services overlay shows who is covered.',
@@ -272,6 +284,8 @@ const en = {
   'goal.safeCity.title': 'Safe city',
   'goal.safeCity.body': 'Fire and police cover 90% of buildings (100+ residents).',
   'goal.safeCity.progress': 'Fire {fire} % · Police {police} %',
+  'goal.freeFlow.title': 'Free flow',
+  'goal.freeFlow.body': 'A whole day of commutes under 1.15× free flow (300+ residents).',
 
   // Budget panel and tile inspector.
   'budget.title': 'Budget',
@@ -281,6 +295,7 @@ const en = {
   'budget.tax': 'Taxes',
   'budget.export': 'Grid export',
   'budget.roads': 'Roads & power lines',
+  'budget.avenues': 'Avenues',
   'budget.biogasFuel': 'Biogas fuel',
   'budget.import': 'Grid import',
   'budget.note': 'Upkeep is a money cost only — it does not consume energy.',
@@ -296,6 +311,12 @@ const en = {
   'inspect.section.energy': 'Energy',
   'inspect.section.growth': 'Demand & growth',
   'inspect.section.services': 'Services',
+  'inspect.section.traffic': 'Traffic',
+  'inspect.roadClass': 'Road',
+  'inspect.street': 'Street',
+  'inspect.avenue': 'Avenue',
+  'inspect.trafficLoad': 'Load',
+  'inspect.laneCapacity': 'Cars per lane',
   'inspect.upkeep': 'Upkeep',
   'inspect.tax': 'Tax contribution',
   'inspect.net': 'Net',
@@ -349,6 +370,10 @@ const de: Record<TranslationKey, string> = {
   'hud.residents': 'Einwohner',
   'hud.jobs': 'Jobs',
   'hud.happiness': 'Zufriedenheit',
+  'hud.traffic': 'Verkehr',
+  'traffic.flowing': 'fließend',
+  'traffic.slow': 'zäh',
+  'traffic.jammed': 'Stau',
   'hud.day': 'Tag {n}',
   'hud.weather.title': 'Jahreszeit und Temperatur · Bewölkung / Windgeschwindigkeit',
   'season.spring': 'Frühling',
@@ -366,6 +391,7 @@ const de: Record<TranslationKey, string> = {
 
   'tool.select': 'Auswählen / bewegen',
   'tool.road': 'Straße',
+  'tool.avenue': 'Allee',
   'tool.power-line': 'Stromleitung',
   'tool.zone-residential': 'Wohngebiet',
   'tool.zone-commercial': 'Gewerbe',
@@ -392,6 +418,8 @@ const de: Record<TranslationKey, string> = {
   'build.category.services': 'Service',
   'tool.select.desc': 'Feld anklicken zum Inspizieren, ziehen bewegt die Kamera.',
   'tool.road.desc': 'Straßen verbinden die Stadt. Ziehen baut eine Linie.',
+  'tool.avenue.desc':
+    'Doppelte Spurkapazität und schnellere Fahrt. Über eine Straße ziehen, um sie auszubauen.',
   'tool.power-line.desc':
     'Führt Strom von Anlagen entlang der Straßen. Gebäude im Umkreis von drei Feldern einer angeschlossenen Leitung werden versorgt.',
   'tool.zone-residential.desc': 'Wohnhäuser. Bewohner ziehen ein, sobald Straße und Strom da sind.',
@@ -466,6 +494,8 @@ const de: Record<TranslationKey, string> = {
   'overlay.demand.title': 'Wachstumsnachfrage pro Zone: rot = keine, grün = hoch',
   'overlay.services': 'Dienste',
   'overlay.services.title': 'Feuerwehr- und Polizeiabdeckung jedes Gebäudes',
+  'overlay.traffic': 'Verkehr',
+  'overlay.traffic.title': 'Verkehrslast pro Straßenkachel: grün = frei, rot = Stau',
 
   'rejection.notEnoughMoney': 'Nicht genug Geld',
   'rejection.tileOccupied': 'Dieses Feld ist bereits belegt',
@@ -505,6 +535,9 @@ const de: Record<TranslationKey, string> = {
   'help.ev.title': 'E-Mobilität',
   'help.ev.body':
     'Deine Bürger fahren E-Autos. Das Laden zu Hause hat abends seinen Höhepunkt — genau dann, wenn die Sonne weg ist. Ladeparks verschieben die Last in den sonnigen Mittag, und das Smart-Charging-Upgrade folgt dem Überschuss automatisch.',
+  'help.traffic.title': 'Verkehr',
+  'help.traffic.body':
+    'Jedes Auto pendelt: morgens zur Arbeit, abends zurück, auf der schnellsten Route, die es findet. Eine Spur fasst zwei Autos; hinter vollen Kacheln bilden sich Staus, und lange Pendelzeiten kosten Zufriedenheit. Alleen fassen vier Autos pro Spur bei höherem Tempo und lassen sich über bestehende Straßen ziehen. Das Verkehrs-Overlay zeigt, wo es stockt.',
   'help.services.title': 'Stadtdienste',
   'help.services.body':
     'Feuerwehr und Polizei schützen jedes Gebäude in ihrem Ring, aber nur mit Netzanschluss. Für die höchste Dichte brauchen Gebäude Feuerwehrschutz; ohne Polizeischutz sinken Zufriedenheit und Steuereinnahmen, sobald die Stadt 100 Einwohner hat. Das Dienste-Overlay zeigt, wer abgedeckt ist.',
@@ -613,6 +646,9 @@ const de: Record<TranslationKey, string> = {
   'goal.safeCity.title': 'Sichere Stadt',
   'goal.safeCity.body': 'Feuerwehr und Polizei decken 90 % der Gebäude ab (ab 100 Einwohnern).',
   'goal.safeCity.progress': 'Feuerwehr {fire} % · Polizei {police} %',
+  'goal.freeFlow.title': 'Freie Fahrt',
+  'goal.freeFlow.body':
+    'Ein ganzer Tag mit Pendelzeiten unter dem 1,15-fachen der freien Fahrt (ab 300 Einwohnern).',
 
   // Budget-Panel und Kachel-Inspektor.
   'budget.title': 'Budget',
@@ -622,6 +658,7 @@ const de: Record<TranslationKey, string> = {
   'budget.tax': 'Steuern',
   'budget.export': 'Netzeinspeisung',
   'budget.roads': 'Straßen & Leitungen',
+  'budget.avenues': 'Alleen',
   'budget.biogasFuel': 'Biogas-Brennstoff',
   'budget.import': 'Netzbezug',
   'budget.note': 'Unterhalt kostet nur Geld – er verbraucht keine Energie.',
@@ -637,6 +674,12 @@ const de: Record<TranslationKey, string> = {
   'inspect.section.energy': 'Energie',
   'inspect.section.growth': 'Nachfrage & Wachstum',
   'inspect.section.services': 'Dienste',
+  'inspect.section.traffic': 'Verkehr',
+  'inspect.roadClass': 'Straßenart',
+  'inspect.street': 'Straße',
+  'inspect.avenue': 'Allee',
+  'inspect.trafficLoad': 'Auslastung',
+  'inspect.laneCapacity': 'Autos pro Spur',
   'inspect.upkeep': 'Unterhalt',
   'inspect.tax': 'Steuerbeitrag',
   'inspect.net': 'Saldo',

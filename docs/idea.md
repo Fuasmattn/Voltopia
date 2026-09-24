@@ -116,9 +116,13 @@ in balance.
 ### E-Mobility
 
 - All vehicles are electric
-- In the MVP, vehicles are visual: low-poly cars drive along road tiles using a
-  simple random walk (no pathfinding), count scales with population and jobs,
-  headlights on at night
+- Vehicles commute: each car drives home → workplace in the morning and
+  back in the evening along the cheapest route (Dijkstra over road tiles,
+  weighted by road class and traffic load). A lane holds two cars; queues
+  form behind full tiles, long commutes lower happiness, and a per-tile
+  traffic load feeds a traffic overlay. Avenues (drawn over streets) carry
+  four cars per lane at higher speed (added after the MVP; see the traffic
+  spec)
 - Charging creates consumption: a pronounced evening charging peak in
   residential areas
 - Buildable charging hubs at workplaces shift charging load into the daytime

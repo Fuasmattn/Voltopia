@@ -807,6 +807,10 @@ body,
   color: var(--hud-muted);
 }
 
+.hud-stat.negative .hud-stat-value {
+  color: var(--hud-negative);
+}
+
 .demand-bars {
   display: flex;
   gap: 4px;

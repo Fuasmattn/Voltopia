@@ -160,6 +160,7 @@ test('build menu shows every tool in one row when the window is wide', async ({ 
   await expect(page.getByTestId('toolbar')).toHaveAttribute('data-layout', 'row');
   await expect(page.getByTestId('build-category-energy')).toHaveCount(0);
   await expect(page.getByTestId('tool-road')).toBeVisible();
+  await expect(page.getByTestId('tool-avenue')).toBeVisible();
   await expect(page.getByTestId('tool-plant-wind')).toBeVisible();
   await expect(page.getByTestId('tool-plant-park')).toBeVisible();
   await expect(page.getByTestId('tool-plant-fire')).toBeVisible();
@@ -245,6 +246,8 @@ test('overlay toggle switches modes', async ({ page }) => {
   await expect(page.getByTestId('overlay-supply')).toHaveClass(/active/);
   await page.getByTestId('overlay-services').click();
   await expect(page.getByTestId('overlay-services')).toHaveClass(/active/);
+  await page.getByTestId('overlay-traffic').click();
+  await expect(page.getByTestId('overlay-traffic')).toHaveClass(/active/);
   await page.getByTestId('overlay-off').click();
   await expect(page.getByTestId('overlay-off')).toHaveClass(/active/);
 });
@@ -368,4 +371,5 @@ test('the HUD shows the season and a fresh city starts in spring', async ({ page
   await expect(page.getByTestId('energy-heating')).toBeVisible();
   await expect(page.getByTestId('energy-cooling')).toBeVisible();
   await expect(page.getByTestId('insulation')).toBeVisible();
+  await expect(page.getByTestId('traffic')).toBeVisible();
 });

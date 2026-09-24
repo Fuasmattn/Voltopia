@@ -54,7 +54,8 @@ _Screenshots coming soon — run `pnpm dev`, build a city, and snap away._
 - **E-mobility**: the EV fleet grows with your city. Home charging peaks in
   the evening; charging hubs shift the load into the PV-friendly daytime,
   and the smart-charging upgrade follows the generation surplus
-  automatically.
+  automatically. Cars commute on the cheapest route; avenues carry more
+  traffic faster, and the traffic overlay shows where it jams.
 - **Economy**: construction costs, taxes (with a slider), upkeep, biogas
   fuel costs.
 - **Overlays** show supply status (connected, undersupplied, not connected
@@ -67,7 +68,7 @@ Dunkelflaute spells), **rooftop PV** that grows with density, a limited
 **grid interconnector** (expensive imports, modest export revenue),
 **abandonment** of chronically unpowered buildings, **fire and police
 stations** with powered coverage rings, a services overlay, and city
-goals (including a safe-city goal), an
+goals (including a safe-city goal and a free-flow traffic goal), an
 **interactive tutorial**, warning icons in the world, touch gestures,
 tool hotkeys, synthesized sound effects, and a settings panel with save
 slots and JSON save export/import. UI in **English and German**.

@@ -9,6 +9,7 @@
 import { TICKS_PER_DAY } from '../shared/constants.ts';
 import {
   PlantType,
+  RoadClass,
   SupplyStatus,
   Terrain,
   TileType,
@@ -90,7 +91,11 @@ function Row({
 /** Headline of the panel: what kind of tile this is. */
 function tileTitle(info: TileInfo, t: (key: TranslationKey) => string): string {
   if (info.tileType === TileType.Road) {
-    return info.terrain === Terrain.River ? t('inspect.bridge') : t('tool.road');
+    return info.terrain === Terrain.River
+      ? t('inspect.bridge')
+      : info.roadClass === RoadClass.Avenue
+        ? t('tool.avenue')
+        : t('tool.road');
   }
   if (info.tileType === TileType.Plant) {
     const label = PLANT_LABEL[info.plantType];
@@ -254,6 +259,25 @@ export function TileInspector({ info, onClose }: { info: TileInfo; onClose: () =
           />
         )}
       </section>
+
+      {info.tileType === TileType.Road && (
+        <section data-testid="inspect-traffic">
+          <h3>{t('inspect.section.traffic')}</h3>
+          <Row
+            label={t('inspect.roadClass')}
+            value={info.roadClass === RoadClass.Avenue ? t('inspect.avenue') : t('inspect.street')}
+          />
+          <Row
+            label={t('inspect.trafficLoad')}
+            value={`${Math.round((info.trafficLoad / 255) * 100)}%`}
+            tone={
+              info.trafficLoad > 191 ? 'negative' : info.trafficLoad > 95 ? undefined : 'positive'
+            }
+            testId="inspect-traffic-load"
+          />
+          <Row label={t('inspect.laneCapacity')} value={String(info.laneCapacity)} tone="muted" />
+        </section>
+      )}
 
       {(isBuilding || isStation) && (
         <section data-testid="inspect-services">

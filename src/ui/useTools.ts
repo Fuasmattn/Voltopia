@@ -9,6 +9,7 @@ import type { SimBridge } from './useSimBridge.ts';
 export type ToolId =
   | 'select'
   | 'road'
+  | 'avenue'
   | 'power-line'
   | 'zone-residential'
   | 'zone-commercial'
@@ -31,7 +32,7 @@ const ZONE_BY_TOOL: Partial<Record<ToolId, Zone>> = {
   'zone-retail': Zone.Retail,
 };
 
-/** Keyboard shortcuts for tools (digits row plus B, P, H, U, L, F and C). */
+/** Keyboard shortcuts for tools (digits row plus B, P, H, U, L, F, C and V). */
 export const TOOL_HOTKEYS: Record<string, ToolId> = {
   '1': 'select',
   '2': 'road',
@@ -50,6 +51,7 @@ export const TOOL_HOTKEYS: Record<string, ToolId> = {
   l: 'power-line',
   f: 'plant-fire',
   c: 'plant-police',
+  v: 'avenue',
 };
 
 export interface DragCostPreview {
@@ -124,7 +126,7 @@ export function useTools(
     // Mirrors the sim's per-tile pricing (src/sim/roads.ts, powerLines.ts):
     // river tiles are bridges; lines over river or lake are crossings.
     // Falls back to the land price when the renderer isn't mounted yet.
-    const showPathCost = (tiles: number[], line: boolean): void => {
+    const showPathCost = (tiles: number[], line: boolean, avenue: boolean): void => {
       const renderer = rendererRef.current;
       const cost = tiles.reduce((sum, index) => {
         const terrain = renderer?.terrainAt(index);
@@ -139,13 +141,22 @@ export function useTools(
             )
           );
         }
-        return (
-          sum +
-          Math.round(
-            (terrain === Terrain.River ? BALANCE.costs.bridgePerTile : BALANCE.costs.roadPerTile) *
-              factor,
-          )
-        );
+        const river = terrain === Terrain.River;
+        const existing = renderer?.roadClassAt(index) ?? -1; // -1 none, 0 street, 1 avenue
+        let base: number;
+        if (!avenue) {
+          base =
+            existing >= 0 ? 0 : river ? BALANCE.costs.bridgePerTile : BALANCE.costs.roadPerTile;
+        } else if (existing === 1) {
+          base = 0;
+        } else {
+          const full = river ? BALANCE.costs.avenueBridgePerTile : BALANCE.costs.avenuePerTile;
+          base =
+            existing === 0
+              ? full - (river ? BALANCE.costs.bridgePerTile : BALANCE.costs.roadPerTile)
+              : full;
+        }
+        return sum + Math.round(base * factor);
       }, 0);
       setCostPreview({ tiles: tiles.length, cost });
     };
@@ -164,26 +175,31 @@ export function useTools(
     if (tool === 'select') {
       // Clicking with the select tool inspects the tile.
       callbacks.onBuildStart = (tile) => setSelectedTile(tile.index);
-    } else if (tool === 'road' || tool === 'power-line') {
+    } else if (tool === 'road' || tool === 'avenue' || tool === 'power-line') {
       const line = tool === 'power-line';
+      const avenue = tool === 'avenue';
       callbacks.onBuildStart = (tile) => {
         anchor = tile;
         path = [tile.index];
         rendererRef.current?.setPreviewTiles(path);
-        showPathCost(path, line);
+        showPathCost(path, line, avenue);
       };
       callbacks.onBuildDrag = (tile) => {
         if (!anchor) return;
         path = lShapedPath(anchor.x, anchor.y, tile.x, tile.y, gridSize);
         rendererRef.current?.setPreviewTiles(path);
-        showPathCost(path, line);
+        showPathCost(path, line, avenue);
       };
       callbacks.onBuildEnd = (tile) => {
         if (anchor && tile) {
           path = lShapedPath(anchor.x, anchor.y, tile.x, tile.y, gridSize);
         }
         if (path.length > 0) {
-          send({ type: line ? 'buildPowerLine' : 'buildRoad', tiles: path });
+          send(
+            line
+              ? { type: 'buildPowerLine', tiles: path }
+              : { type: 'buildRoad', tiles: path, avenue },
+          );
           sound.play('build');
         }
         clearPreview();

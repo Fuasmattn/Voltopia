@@ -31,6 +31,7 @@ const PLANT_LABEL: Record<PlantType, TranslationKey | null> = {
 /** Distinct colors per expense slice (also used for the row bullets). */
 const EXPENSE_COLORS: Record<string, string> = {
   roads: '#8e9bb3',
+  avenues: '#b8c2d4',
   [PlantType.SolarFarm]: '#f2c14e',
   [PlantType.WindTurbine]: '#6fc3df',
   [PlantType.Battery]: '#9d7be0',
@@ -131,9 +132,16 @@ export function BudgetPanel({ budget }: { budget: BudgetStats }) {
     {
       key: 'roads',
       label: t('budget.roads'),
-      value: perDay(budget.gridUpkeep),
+      value: perDay(budget.gridUpkeep - budget.avenueUpkeep),
       color: EXPENSE_COLORS.roads,
-      count: budget.roadTiles,
+      count: budget.roadTiles - budget.avenueTiles,
+    },
+    {
+      key: 'avenues',
+      label: t('budget.avenues'),
+      value: perDay(budget.avenueUpkeep),
+      color: EXPENSE_COLORS.avenues,
+      count: budget.avenueTiles,
     },
     ...Object.entries(budget.plantUpkeepByType)
       .map(([type, upkeep]) => {

@@ -41,6 +41,7 @@ const CATEGORIES: Category[] = [
     label: 'build.category.basics',
     buttons: [
       { id: 'road', icon: '🛣', cost: BALANCE.costs.roadPerTile, perTile: true },
+      { id: 'avenue', icon: '⏩', cost: BALANCE.costs.avenuePerTile, perTile: true },
       { id: 'power-line', icon: '⚡', cost: BALANCE.costs.powerLinePerTile, perTile: true },
       { id: 'bulldoze', icon: '🚜' },
       { id: 'undo', icon: '↩' },
