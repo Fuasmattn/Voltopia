@@ -4,6 +4,7 @@ import { tileIndex } from '../shared/grid.ts';
 import type { SimCommand, SimEvent } from '../shared/messages.ts';
 import { PlantType, Terrain, TileType, Zone, type GlobalStats } from '../shared/types.ts';
 import { SimEngine } from '../sim/engine.ts';
+import { slopeCostMultiplier } from '../sim/state.ts';
 import { TileMirror } from './tileMirror.ts';
 import {
   callTool,
@@ -213,8 +214,21 @@ describe('agent tools: building', () => {
   it('builds a road, zones next to it, places a plant and lines, then inspects', async () => {
     const { call, engine } = createHarness();
     const { x, y } = findLand(engine);
+    // Sloped tiles carry the terrain surcharge, so price tiles like the sim does.
+    const priced = (base: number, row: number, count: number) => {
+      let sum = 0;
+      for (let dx = 0; dx < count; dx++) {
+        const index = tileIndex(x + dx, row, SIZE);
+        sum += Math.round(base * slopeCostMultiplier(engine.state, index));
+      }
+      return sum;
+    };
     const road = await call('build_road', { from: { x, y }, to: { x: x + 5, y } });
-    expect(road).toMatchObject({ ok: true, tiles: 6, spent: 6 * BALANCE.costs.roadPerTile });
+    expect(road).toMatchObject({
+      ok: true,
+      tiles: 6,
+      spent: priced(BALANCE.costs.roadPerTile, y, 6),
+    });
     expect(engine.state.layers.tileType[tileIndex(x + 3, y, SIZE)]).toBe(TileType.Road);
 
     const zone = await call('paint_zone', {
@@ -222,11 +236,18 @@ describe('agent tools: building', () => {
       from: { x, y: y + 1 },
       to: { x: x + 5, y: y + 1 },
     });
-    expect(zone).toMatchObject({ ok: true, tiles: 6, spent: 6 * BALANCE.costs.zonePerTile });
+    expect(zone).toMatchObject({
+      ok: true,
+      tiles: 6,
+      spent: priced(BALANCE.costs.zonePerTile, y + 1, 6),
+    });
     expect(engine.state.layers.zone[tileIndex(x + 2, y + 1, SIZE)]).toBe(Zone.Residential);
 
     const plant = await call('place_plant', { plant: 'solar', x, y: y + 2 });
-    expect(plant).toMatchObject({ ok: true, spent: BALANCE.costs.plant[PlantType.SolarFarm] });
+    expect(plant).toMatchObject({
+      ok: true,
+      spent: priced(BALANCE.costs.plant[PlantType.SolarFarm], y + 2, 1),
+    });
     expect(engine.state.layers.plantType[tileIndex(x, y + 2, SIZE)]).toBe(PlantType.SolarFarm);
 
     const line = await call('build_power_line', {

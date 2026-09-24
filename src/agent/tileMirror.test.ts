@@ -37,13 +37,17 @@ describe('TileMirror', () => {
         index: 99,
         tileType: TileType.Road,
         roadMask: 0,
+        roadClass: 0,
+        trafficLoad: 0,
         powerLine: 0,
         zone: Zone.None,
         density: 0,
         variant: 0,
         supplied: SupplyStatus.NotConnected,
+        services: 0,
         plantType: PlantType.None,
         terrain: Terrain.Land,
+        elevation: 0,
       },
     ]);
     expect(Array.from(mirror.tileType)).toEqual(Array.from({ length: 16 }, () => 0));
