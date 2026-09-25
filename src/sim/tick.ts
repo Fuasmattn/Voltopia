@@ -10,6 +10,7 @@ import { computeDemand, decayStep, growthStep } from './growth.ts';
 import { forestShare, forestStep } from './forest.ts';
 import { happinessStep } from './happiness.ts';
 import { countPowerLineTiles } from './powerLines.ts';
+import { tideState } from './sea.ts';
 import { seasonState } from './seasons.ts';
 import { recomputeServices, serviceCoverage } from './services.ts';
 import { updateTrafficLoad } from './traffic.ts';
@@ -74,7 +75,7 @@ const MAX_LIFETIME_SAMPLES = 365;
 function recordLifetime(state: SimState, population: number, jobs: number): void {
   const e = state.lastEnergy;
   const sums = state.lifetime.daySums;
-  sums.generation += e.solar + e.wind + e.rooftop + e.hydro + e.biogas;
+  sums.generation += e.solar + e.wind + e.rooftop + e.hydro + e.tidal + e.biogas;
   sums.consumption +=
     e.buildingConsumption + e.chargingConsumption + e.heatingConsumption + e.coolingConsumption;
   sums.heating += e.heatingConsumption;
@@ -165,6 +166,7 @@ export function buildStats(state: SimState): GlobalStats {
         biogas: e.biogas,
         rooftop: e.rooftop,
         hydro: e.hydro,
+        tidal: e.tidal,
         hydrogen: e.fuelCell,
       },
       consumption: {
@@ -199,6 +201,7 @@ export function buildStats(state: SimState): GlobalStats {
     insulation: state.insulation,
     services: { ...state.lastServices },
     forestShare: forestShare(state),
+    tide: tideState(state.tick),
     traffic: {
       congestion: state.commuteCongestion,
       driving: drivingVehicleCount(state),

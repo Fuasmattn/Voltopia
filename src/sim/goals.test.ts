@@ -5,10 +5,21 @@ import { PlantType, Terrain, Zone } from '../shared/types.ts';
 import { placePlant } from './energy.ts';
 import { goalsStep, goalStates } from './goals.ts';
 import { buildPowerLines } from './powerLines.ts';
-import { createSimState, deserializeState, serializeState } from './state.ts';
+import { isCoastalSea } from './sea.ts';
+import { createSimState, deserializeState, serializeState, type SimState } from './state.ts';
+import { generateTerrain } from './terrain.ts';
+import { generateWater } from './water.ts';
 
 const SIZE = 16;
 const at = (x: number, y: number) => tileIndex(x, y, SIZE);
+
+/** A generated map: elevation and water (river, lake, sea) but no zoning. */
+function generatedState(seed: number, size: number): SimState {
+  const state = createSimState(seed, size);
+  generateTerrain(state);
+  generateWater(state);
+  return state;
+}
 
 describe('goals', () => {
   it('starts with no goals achieved', () => {
@@ -85,6 +96,25 @@ describe('goals', () => {
     placePlant(state, tileIndex(3, 3, 16), PlantType.RunOfRiver);
     goalsStep(state);
     expect(state.goalsAchieved.has('hydroPower')).toBe(true);
+  });
+
+  it('tidalPower is achieved by the first tidal plant', () => {
+    const state = generatedState(1, 64);
+    state.money = 1_000_000;
+    goalsStep(state);
+    expect(state.goalsAchieved.has('tidalPower')).toBe(false);
+
+    let placed = false;
+    for (let i = 0; i < state.layers.terrain.length; i++) {
+      if (isCoastalSea(state, i)) {
+        placePlant(state, i, PlantType.TidalPlant);
+        placed = true;
+        break;
+      }
+    }
+    expect(placed).toBe(true);
+    goalsStep(state);
+    expect(state.goalsAchieved.has('tidalPower')).toBe(true);
   });
 
   it('gridBuilder is achieved by the first power line', () => {

@@ -14,6 +14,7 @@ import {
 } from './energy.ts';
 import { buildPowerLines } from './powerLines.ts';
 import { buildRoads, bulldozeTiles, undoLastAction } from './roads.ts';
+import { isCoastalSea, tideFactor, tidalSiteFactor } from './sea.ts';
 import { pendingHistoryPoint } from './tick.ts';
 import {
   createSimState,
@@ -26,6 +27,8 @@ import {
   Zone,
   type SimState,
 } from './state.ts';
+import { generateTerrain } from './terrain.ts';
+import { generateWater } from './water.ts';
 import { timeOfDay } from './tick.ts';
 import { SUNRISE, SUNSET } from './weather.ts';
 
@@ -625,6 +628,26 @@ describe('terrain energy bonuses', () => {
     );
   });
 
+  it('does not gain a drop bonus from a neighbouring sea tile at the river mouth', () => {
+    const state = makeState();
+    const tile = at(3, 3);
+    const downstream = at(3, 4);
+    const seaNeighbor = at(4, 3);
+    state.layers.terrain[tile] = Terrain.River;
+    state.layers.terrain[downstream] = Terrain.River;
+    state.layers.terrain[seaNeighbor] = Terrain.Sea;
+    // Same elevation as the river continuation: no natural drop here.
+    // The sea is pinned to 0, well below — without excluding it from
+    // riverDropAt this would fabricate a drop the river never had.
+    state.layers.elevation[tile] = 2;
+    state.layers.elevation[downstream] = 2;
+    state.layers.elevation[seaNeighbor] = 0;
+    placeDirect(state, tile, PlantType.RunOfRiver);
+    state.weather.riverFlow = 1;
+    energyStep(state, { chargingDemand: 0 });
+    expect(state.lastEnergy.hydro).toBeCloseTo(BALANCE.energy.hydroPeakOutput);
+  });
+
   it('pumped storage capacity grows with the nearby hilltop above the lake', () => {
     const state = makeState();
     const shore = at(3, 3);
@@ -668,6 +691,158 @@ describe('terrain energy bonuses', () => {
     placeDirect(state, shore, PlantType.PumpedStorage);
     expect(pumpedHeadAt(state, shore)).toBe(0);
     expect(totalPumpedStorageCapacity(state)).toBeCloseTo(BALANCE.energy.pumpedStorageCapacity);
+  });
+});
+
+describe('tidal plants', () => {
+  /** A generated map: elevation and water (river, lake, sea) but no zoning. */
+  function generatedState(seed: number, size: number): SimState {
+    const state = createSimState(seed, size);
+    generateTerrain(state);
+    generateWater(state);
+    return state;
+  }
+
+  /** First coastal sea tile on the map — where a tidal plant may stand. */
+  function firstCoastalSeaTile(state: SimState): number {
+    for (let i = 0; i < state.layers.terrain.length; i++) {
+      if (isCoastalSea(state, i)) return i;
+    }
+    throw new Error('no coastal sea tile on this map');
+  }
+
+  it('generates from tidal plants and follows the tide', () => {
+    const state = generatedState(1, 64);
+    const tile = firstCoastalSeaTile(state);
+    state.money = 1_000_000;
+    expect(placePlant(state, tile, PlantType.TidalPlant).rejected).toBeUndefined();
+
+    // Slack water at tick 0, strong current a quarter period later.
+    state.tick = 0;
+    energyStep(state, { chargingDemand: 0 });
+    expect(state.lastEnergy.tidal).toBeCloseTo(0, 5);
+
+    state.tick = Math.round(TICKS_PER_DAY * (12.42 / 24) * 0.25);
+    energyStep(state, { chargingDemand: 0 });
+    expect(state.lastEnergy.tidal).toBeGreaterThan(BALANCE.energy.tidalPeakOutput * 0.7);
+  });
+
+  it('scales tidal output with the site factor', () => {
+    const state = generatedState(2, 64);
+    const tile = firstCoastalSeaTile(state);
+    state.money = 1_000_000;
+    placePlant(state, tile, PlantType.TidalPlant);
+    state.tick = Math.round(TICKS_PER_DAY * (12.42 / 24) * 0.25);
+    energyStep(state, { chargingDemand: 0 });
+    const expected =
+      BALANCE.energy.tidalPeakOutput * tidalSiteFactor(state, tile) * tideFactor(state.tick);
+    expect(state.lastEnergy.tidal).toBeCloseTo(expected, 5);
+  });
+
+  it('census counts tidal plants and sums their site factors', () => {
+    const state = generatedState(3, 64);
+    const tile = firstCoastalSeaTile(state);
+    state.money = 1_000_000;
+    placePlant(state, tile, PlantType.TidalPlant);
+    const census = censusPlants(state);
+    expect(census.tidalPlants).toBe(1);
+    expect(census.tidalCapacity).toBeCloseTo(tidalSiteFactor(state, tile), 6);
+  });
+
+  it("tidalCapacity sums each plant's own site factor, not count times one factor", () => {
+    const state = makeState();
+    state.money = 1_000_000;
+
+    // Tile A: fully enclosed by land (all 8 neighbours land) — maximum
+    // narrowness, the strongest possible current.
+    const tileA = at(5, 5);
+    state.layers.terrain[tileA] = Terrain.Sea;
+
+    // Tile B: open water except for one land neighbour — just enough to
+    // be coastal, but the weakest possible current.
+    const tileB = at(20, 20);
+    state.layers.terrain[tileB] = Terrain.Sea;
+    for (const [dx, dy] of [
+      [-1, -1],
+      [0, -1],
+      [1, -1],
+      [-1, 0],
+      [-1, 1],
+      [0, 1],
+      [1, 1],
+    ]) {
+      state.layers.terrain[at(20 + dx, 20 + dy)] = Terrain.Sea;
+    }
+    // (21, 20) is left as land, so tileB stays coastal.
+
+    const factorA = tidalSiteFactor(state, tileA);
+    const factorB = tidalSiteFactor(state, tileB);
+    expect(factorA).not.toBeCloseTo(factorB, 2); // the sites must genuinely differ
+
+    expect(placePlant(state, tileA, PlantType.TidalPlant).rejected).toBeUndefined();
+    expect(placePlant(state, tileB, PlantType.TidalPlant).rejected).toBeUndefined();
+
+    const census = censusPlants(state);
+    expect(census.tidalPlants).toBe(2);
+    // Sum of the two distinct factors — not 2 * either one.
+    expect(census.tidalCapacity).toBeCloseTo(factorA + factorB, 6);
+    expect(census.tidalCapacity).not.toBeCloseTo(2 * factorA, 2);
+    expect(census.tidalCapacity).not.toBeCloseTo(2 * factorB, 2);
+  });
+});
+
+describe('offshore wind', () => {
+  /** A generated map: elevation and water (river, lake, sea) but no zoning. */
+  function generatedState(seed: number, size: number): SimState {
+    const state = createSimState(seed, size);
+    generateTerrain(state);
+    generateWater(state);
+    return state;
+  }
+
+  /** First sea tile on this map. */
+  function firstSeaTile(state: SimState): number {
+    for (let i = 0; i < state.layers.terrain.length; i++) {
+      if (state.layers.terrain[i] === Terrain.Sea) return i;
+    }
+    throw new Error('no sea tile on this map');
+  }
+
+  it('gives offshore turbines their bonus instead of the elevation bonus', () => {
+    const state = generatedState(1, 64);
+    state.money = 1_000_000;
+    const sea = firstSeaTile(state);
+    expect(placePlant(state, sea, PlantType.WindTurbine).rejected).toBeUndefined();
+    const census = censusPlants(state);
+    expect(census.windCapacity).toBeCloseTo(1 + BALANCE.sea.offshoreWindBonus, 5);
+  });
+
+  it('charges the offshore surcharge for building at sea', () => {
+    const state = generatedState(1, 64);
+    state.money = 1_000_000;
+    const before = state.money;
+    const sea = firstSeaTile(state);
+    expect(placePlant(state, sea, PlantType.WindTurbine).rejected).toBeUndefined();
+    const expected = Math.round(
+      BALANCE.costs.plant[PlantType.WindTurbine] * BALANCE.sea.offshoreCostFactor,
+    );
+    expect(before - state.money).toBe(expected);
+  });
+
+  it('does not charge the offshore surcharge for a tidal plant', () => {
+    const state = generatedState(1, 64);
+    state.money = 1_000_000;
+    const before = state.money;
+    let tile = -1;
+    for (let i = 0; i < state.layers.terrain.length; i++) {
+      if (isCoastalSea(state, i)) {
+        tile = i;
+        break;
+      }
+    }
+    expect(tile).toBeGreaterThanOrEqual(0);
+    expect(placePlant(state, tile, PlantType.TidalPlant).rejected).toBeUndefined();
+    expect(before - state.money).toBe(BALANCE.costs.plant[PlantType.TidalPlant]);
   });
 });
 

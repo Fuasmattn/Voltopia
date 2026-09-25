@@ -22,6 +22,7 @@ import {
 } from './energy.ts';
 import { demandFor, energySystemActive, hasRoadAccess } from './growth.ts';
 import { isSupplySource } from './powerGrid.ts';
+import { tideFactor, tidalSiteFactor, windTurbineFactor } from './sea.ts';
 import { SERVICE_FIRE, SERVICE_POLICE } from './services.ts';
 import {
   countPopulationAndJobs,
@@ -45,7 +46,11 @@ function plantGeneration(
     case PlantType.SolarFarm:
       return { generation: e.solarPeakOutput * currentSolarFactor(state), peak: e.solarPeakOutput };
     case PlantType.WindTurbine: {
-      const bonus = 1 + BALANCE.terrain.windBonusPerLevel * state.layers.elevation[index];
+      const bonus = windTurbineFactor(
+        state,
+        index,
+        1 + BALANCE.terrain.windBonusPerLevel * state.layers.elevation[index],
+      );
       return {
         generation: e.windPeakOutput * currentWindFactor(state) * bonus,
         peak: e.windPeakOutput * bonus,
@@ -72,6 +77,13 @@ function plantGeneration(
       return {
         generation: plants > 0 ? state.lastEnergy.fuelCell / plants : 0,
         peak: BALANCE.hydrogen.fuelCellPowerLimit,
+      };
+    }
+    case PlantType.TidalPlant: {
+      const bonus = tidalSiteFactor(state, index);
+      return {
+        generation: e.tidalPeakOutput * tideFactor(state.tick) * bonus,
+        peak: e.tidalPeakOutput * bonus,
       };
     }
     default:
@@ -234,12 +246,14 @@ export function inspectTile(state: SimState, index: number): TileInfo | null {
   const terrainBonus =
     tileType === TileType.Plant
       ? plant === PlantType.WindTurbine
-        ? 1 + BALANCE.terrain.windBonusPerLevel * elevation
+        ? windTurbineFactor(state, index, 1 + BALANCE.terrain.windBonusPerLevel * elevation)
         : plant === PlantType.RunOfRiver
           ? 1 + BALANCE.terrain.hydroDropBonus * riverDropAt(state, index)
           : plant === PlantType.PumpedStorage
             ? 1 + BALANCE.terrain.headBonusPerLevel * pumpedHeadAt(state, index)
-            : 1
+            : plant === PlantType.TidalPlant
+              ? tidalSiteFactor(state, index)
+              : 1
       : 1;
 
   return {

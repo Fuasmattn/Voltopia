@@ -2,6 +2,7 @@ import { BALANCE } from '../shared/constants.ts';
 import { inBounds, neighbors4, tileIndex } from '../shared/grid.ts';
 import { Rng } from '../shared/rng.ts';
 import { Terrain } from '../shared/types.ts';
+import { carveSea } from './sea.ts';
 import { markDirty, type SimState } from './state.ts';
 
 /** Keeps map generation independent from the gameplay random stream. */
@@ -79,6 +80,10 @@ export function generateWater(state: SimState): void {
     const y = axis.vertical ? along : lateral;
     return inBounds(x, y, size) ? elevation[tileIndex(x, y, size)] : Number.POSITIVE_INFINITY;
   };
+  // The sea claims the edge the river flows toward, so the channel ends
+  // in an estuary. Carved before rasterising: the river stops at the coast.
+  carveSea(state, axis.vertical, reversed, centreLine(reversed ? 0 : 1));
+
   /** River tiles painted per along-row, for the carving pass below. */
   const riverRows: number[][] = Array.from({ length: size }, () => []);
 
@@ -87,6 +92,8 @@ export function generateWater(state: SimState): void {
     const y = axis.vertical ? along : lateral;
     if (!inBounds(x, y, size)) return;
     const index = tileIndex(x, y, size);
+    // The river and the lake stop at the coast; the sea stays sea.
+    if (terrain[index] === Terrain.Sea) return;
     terrain[index] = value;
     if (value === Terrain.River) riverRows[along].push(index);
   };

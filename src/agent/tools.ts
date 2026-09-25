@@ -85,6 +85,7 @@ export const PLANT_NAMES = {
   run_of_river: PlantType.RunOfRiver,
   pumped_storage: PlantType.PumpedStorage,
   hydrogen: PlantType.HydrogenPlant,
+  tidal: PlantType.TidalPlant,
   logistics_depot: PlantType.LogisticsDepot,
   bus_depot: PlantType.BusDepot,
 } as const;
@@ -106,6 +107,7 @@ const TERRAIN_NAME: Record<Terrain, string> = {
   [Terrain.Land]: 'land',
   [Terrain.River]: 'river',
   [Terrain.Lake]: 'lake',
+  [Terrain.Sea]: 'sea',
 };
 const TILE_TYPE_NAME: Record<TileType, string> = {
   [TileType.Empty]: 'empty',
@@ -133,6 +135,7 @@ const PLANT_TOOL_KEY: Record<PlantName, TranslationKey> = {
   run_of_river: 'tool.plant-hydro',
   pumped_storage: 'tool.plant-pumped',
   hydrogen: 'tool.plant-hydrogen',
+  tidal: 'tool.plant-tidal',
   logistics_depot: 'tool.plant-depot',
   bus_depot: 'tool.plant-busdepot',
 };
@@ -148,6 +151,8 @@ const PLANT_PLACEMENT: Record<PlantName, string> = {
   pumped_storage: 'an empty land tile with a lake tile as direct (4-)neighbour',
   hydrogen:
     'any empty land tile; electrolyses surplus beyond the export link, re-electrifies in a lull, sells overflow',
+  tidal:
+    'an empty sea tile touching land; output follows the tide and rises in narrow water and at the river mouth',
   logistics_depot:
     'an empty land tile with a road as direct (4-)neighbour; vans serve shops within route reach',
   bus_depot:
@@ -161,6 +166,7 @@ export const FIND_KINDS = [
   'empty_land',
   'river',
   'lake_shore',
+  'coastal_sea',
   'road',
   'power_line',
   'plant',
@@ -323,6 +329,12 @@ function isLakeShore(tiles: TileMirror, index: number): boolean {
   return neighbors4(index, tiles.size).some((n) => tiles.terrain[n] === Terrain.Lake);
 }
 
+/** True on a sea tile that touches land — where a tidal plant may stand. */
+function isCoastalSeaTile(tiles: TileMirror, index: number): boolean {
+  if (tiles.terrain[index] !== Terrain.Sea) return false;
+  return neighbors4(index, tiles.size).some((n) => tiles.terrain[n] === Terrain.Land);
+}
+
 function overviewGlyph(tiles: TileMirror, i: number): string {
   const terrain = tiles.terrain[i];
   if (tiles.tileType[i] === TileType.Road) return tiles.busStop[i] !== 0 ? 'o' : '+';
@@ -339,12 +351,14 @@ function overviewGlyph(tiles: TileMirror, i: number): string {
       hydrogen: 'Y',
       logistics_depot: 'D',
       bus_depot: 'T',
+      tidal: 'X',
     };
     const name = PLANT_NAME_BY_TYPE.get(tiles.plantType[i] as PlantType);
     return name && name !== 'none' ? glyph[name] : '?';
   }
   if (terrain === Terrain.River) return '~';
   if (terrain === Terrain.Lake) return '#';
+  if (terrain === Terrain.Sea) return '%';
   if (tiles.powerLine[i] !== 0 && tiles.zone[i] === Zone.None) return '=';
   const zone = tiles.zone[i];
   const built = tiles.density[i] > 0;
@@ -355,11 +369,11 @@ function overviewGlyph(tiles: TileMirror, i: number): string {
 }
 
 const OVERVIEW_LEGEND =
-  '. empty land, ~ river, # lake, + road (or bridge), o road with a bus stop, ' +
+  '. empty land, ~ river, # lake, % sea, + road (or bridge), o road with a bus stop, ' +
   '= power line on empty land, ' +
   'r/c/s zoned but unbuilt (residential/commercial/retail), R/C/S building, ' +
   'plants: V solar, W wind, B battery, G biogas, H charging hub, P park, ' +
-  'F run-of-river, U pumped storage, D logistics depot, T bus depot. ' +
+  'F run-of-river, U pumped storage, X tidal, D logistics depot, T bus depot. ' +
   'Roads may also carry a power line (see the power layer).';
 
 function layerGlyph(tiles: TileMirror, i: number, layer: MapLayer): string {
@@ -368,16 +382,24 @@ function layerGlyph(tiles: TileMirror, i: number, layer: MapLayer): string {
     case 'overview':
       return overviewGlyph(tiles, i);
     case 'terrain':
-      return terrain === Terrain.River ? '~' : terrain === Terrain.Lake ? '#' : '.';
+      return terrain === Terrain.River
+        ? '~'
+        : terrain === Terrain.Lake
+          ? '#'
+          : terrain === Terrain.Sea
+            ? '%'
+            : '.';
     case 'supply': {
       if (terrain === Terrain.River) return '~';
       if (terrain === Terrain.Lake) return '#';
+      if (terrain === Terrain.Sea) return '%';
       if (tiles.density[i] === 0) return '.';
       return String(tiles.supplied[i]);
     }
     case 'density': {
       if (terrain === Terrain.River) return '~';
       if (terrain === Terrain.Lake) return '#';
+      if (terrain === Terrain.Sea) return '%';
       return tiles.density[i] > 0 ? String(tiles.density[i]) : '.';
     }
     case 'power': {
@@ -386,6 +408,7 @@ function layerGlyph(tiles: TileMirror, i: number, layer: MapLayer): string {
       if (tiles.tileType[i] === TileType.Road) return '+';
       if (terrain === Terrain.River) return '~';
       if (terrain === Terrain.Lake) return '#';
+      if (terrain === Terrain.Sea) return '%';
       return '.';
     }
     case 'transit': {
@@ -404,6 +427,7 @@ function layerGlyph(tiles: TileMirror, i: number, layer: MapLayer): string {
       }
       if (terrain === Terrain.River) return '~';
       if (terrain === Terrain.Lake) return '#';
+      if (terrain === Terrain.Sea) return '%';
       return '.';
     }
   }
@@ -411,16 +435,16 @@ function layerGlyph(tiles: TileMirror, i: number, layer: MapLayer): string {
 
 const LAYER_LEGEND: Record<MapLayer, string> = {
   overview: OVERVIEW_LEGEND,
-  terrain: '. land, ~ river, # lake',
+  terrain: '. land, ~ river, # lake, % sea',
   supply:
     '. no building, 0 building not connected to any plant, 1 building undersupplied, ' +
-    '2 building fully supplied, ~ river, # lake',
-  density: '. no building, 1-3 building density level, ~ river, # lake',
+    '2 building fully supplied, ~ river, # lake, % sea',
+  density: '. no building, 1-3 building density level, ~ river, # lake, % sea',
   power:
-    '. nothing, = power line (over land, road or water), + road without line, P plant, ~ river, # lake',
+    '. nothing, = power line (over land, road or water), + road without line, P plant, ~ river, # lake, % sea',
   transit:
     'o served bus stop, d stop due for a bus, x unserved stop, + road covered by a served stop, ' +
-    '- road not covered, T bus depot, P other plant, ~ river, # lake, . other',
+    '- road not covered, T bus depot, P other plant, ~ river, # lake, % sea, . other',
 };
 
 // ---------------------------------------------------------------------------
@@ -472,6 +496,11 @@ export function createAgentTools(ctx: AgentContext): AgentTool[] {
             windSpeed: round(s.weather.windSpeed, 2),
             riverFlow: round(s.weather.riverFlow, 2),
             snowpack: round(s.weather.snowpack, 2),
+          },
+          tide: {
+            level: round(s.tide.level, 2),
+            factor: round(s.tide.factor, 2),
+            rising: s.tide.rising,
           },
           energyPerTick: {
             generation: {
@@ -702,8 +731,9 @@ export function createAgentTools(ctx: AgentContext): AgentTool[] {
       name: 'find_tiles',
       description:
         'Coordinates of tiles matching a kind: empty_land, river, lake_shore (land next to the ' +
-        'lake, for pumped storage), road, power_line, plant, zoned_empty, building, ' +
-        'not_connected_building, undersupplied_building, bus_stop. Optionally nearest to a point first.',
+        'lake, for pumped storage), coastal_sea (empty sea tile touching land, for tidal plants), ' +
+        'road, power_line, plant, zoned_empty, building, not_connected_building, ' +
+        'undersupplied_building, bus_stop. Optionally nearest to a point first.',
       inputSchema: {
         type: 'object',
         properties: {
@@ -831,7 +861,7 @@ export function createAgentTools(ctx: AgentContext): AgentTool[] {
       description:
         'Place a plant on one tile: solar, wind, battery, biogas, charging_hub, park, ' +
         'run_of_river (river tile), pumped_storage (land tile next to the lake), hydrogen, ' +
-        'logistics_depot, bus_depot. See get_build_catalog for costs and roles.',
+        'tidal (coastal sea tile), logistics_depot, bus_depot. See get_build_catalog for costs and roles.',
       inputSchema: {
         type: 'object',
         properties: {
@@ -1083,6 +1113,8 @@ function plantFigures(type: PlantType): Record<string, number> {
       return { maxOutputPerTick: e.biogasMaxOutput };
     case PlantType.RunOfRiver:
       return { peakOutputPerTick: e.hydroPeakOutput };
+    case PlantType.TidalPlant:
+      return { peakOutputPerTick: e.tidalPeakOutput };
     case PlantType.Battery:
       return { capacity: e.batteryCapacity, powerLimitPerTick: e.batteryPowerLimit };
     case PlantType.PumpedStorage:
@@ -1148,6 +1180,8 @@ function matchesKind(tiles: TileMirror, i: number, kind: FindKind): boolean {
       return terrain === Terrain.River && tiles.tileType[i] === TileType.Empty;
     case 'lake_shore':
       return terrain === Terrain.Land && empty && isLakeShore(tiles, i);
+    case 'coastal_sea':
+      return tiles.tileType[i] === TileType.Empty && isCoastalSeaTile(tiles, i);
     case 'road':
       return tiles.tileType[i] === TileType.Road;
     case 'power_line':

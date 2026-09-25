@@ -202,6 +202,19 @@ describe('inspectTile', () => {
     expect(info.slope).toBe(0);
     expect(info.terrainBonus).toBeCloseTo(1 + BALANCE.terrain.windBonusPerLevel * 4);
   });
+
+  it('reports the offshore turbine bonus matching its generation', () => {
+    const state = createSimState(1, SIZE);
+    const tile = at(3, 3);
+    state.layers.terrain[tile] = Terrain.Sea;
+    expect(placePlant(state, tile, PlantType.WindTurbine).rejected).toBeUndefined();
+    const info = inspectTile(state, tile)!;
+    const expectedBonus = 1 + BALANCE.sea.offshoreWindBonus;
+    // The panel's terrain-bonus row and its generation numbers must agree
+    // — both come from the same offshore factor, not two different ones.
+    expect(info.terrainBonus).toBeCloseTo(expectedBonus, 5);
+    expect(info.peakGeneration).toBeCloseTo(BALANCE.energy.windPeakOutput * expectedBonus, 5);
+  });
 });
 
 describe('economyStep breakdown by plant type', () => {

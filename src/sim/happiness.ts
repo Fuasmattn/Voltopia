@@ -1,6 +1,7 @@
 import { BALANCE } from '../shared/constants.ts';
 import { tileX, tileY } from '../shared/grid.ts';
 import { PlantType, SupplyStatus, TileType } from '../shared/types.ts';
+import { seaCoverage } from './sea.ts';
 import { forestCoverage } from './forest.ts';
 import type { SimState } from './state.ts';
 
@@ -60,6 +61,8 @@ export function happinessStep(state: SimState, population: number): void {
   const parkBonus = parkCoverage(state) * config.parksAndLightsBonus;
   // Woods in reach are worth their own bonus on top of parks.
   const forestBonus = forestCoverage(state) * BALANCE.forest.coverBonus;
+  // A sea view is worth its own bonus, like woods and parks.
+  const coastBonus = seaCoverage(state) * BALANCE.sea.coastBonus;
   const commutePenalty = Math.min(
     config.commuteMaxPenalty,
     Math.max(0, state.commuteCongestion - config.commuteCongestionThreshold) *
@@ -77,7 +80,8 @@ export function happinessStep(state: SimState, population: number): void {
       0,
       config.base +
         parkBonus +
-        forestBonus -
+        forestBonus +
+        coastBonus -
         taxPenalty -
         supplyPenalty -
         commutePenalty -

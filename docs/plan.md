@@ -38,6 +38,7 @@ src/
     state.ts       # SimState: typed-array layers, placement rules (incl. tooSteep)
     terrain.ts     # seeded relief 0..maxLevel with cliff stretch, buildable guarantee
     water.ts       # river carved downhill, lake, bridges, shore rules
+    sea.ts         # sea edge, tide clock, tidal site factor, coast happiness
     forest.ts      # woodland: generation, planting, growth, felling fee, wind shelter
     roads.ts       # road placement, street/avenue classes, bitmask auto-tiling
     routing.ts     # BFS/heap pathfinding on the road graph

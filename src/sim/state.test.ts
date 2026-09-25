@@ -2,8 +2,10 @@ import { describe, expect, it } from 'vitest';
 import { BALANCE, TICKS_PER_DAY } from '../shared/constants.ts';
 import { LINE_PRESENT, tileIndex } from '../shared/grid.ts';
 import { DeliveryState, RoadClass, StopState, Terrain } from '../shared/types.ts';
+import { placePlant } from './energy.ts';
 import { recomputeGrid } from './powerGrid.ts';
 import { buildRoads } from './roads.ts';
+import { isCoastalSea } from './sea.ts';
 import { generateTerrain } from './terrain.ts';
 import { generateWater } from './water.ts';
 import {
@@ -25,6 +27,22 @@ import {
   Zone,
   type SimState,
 } from './state.ts';
+
+/** A generated map: elevation and water (river, lake, sea) but no zoning. */
+function generatedState(seed: number, size: number): SimState {
+  const state = createSimState(seed, size);
+  generateTerrain(state);
+  generateWater(state);
+  return state;
+}
+
+/** First tile index matching the predicate; fails loudly when there is none. */
+function findTile(state: SimState, predicate: (index: number) => boolean): number {
+  for (let i = 0; i < state.layers.terrain.length; i++) {
+    if (predicate(i)) return i;
+  }
+  throw new Error('no matching tile on this map');
+}
 
 const SIZE = 16;
 const at = (x: number, y: number) => tileIndex(x, y, SIZE);
@@ -115,6 +133,50 @@ describe('buildRejection', () => {
     expect(buildRejection(state, at(1, 1), BuildIntent.Plant, PlantType.SolarFarm)).toBe(
       'tileOccupied',
     );
+  });
+});
+
+describe('sea build rules', () => {
+  it('accepts a tidal plant on a coastal sea tile', () => {
+    const state = generatedState(1, 64);
+    const coastal = findTile(state, (index) => isCoastalSea(state, index));
+    expect(buildRejection(state, coastal, BuildIntent.Plant, PlantType.TidalPlant)).toBeNull();
+  });
+
+  it('rejects a tidal plant on open water and on land', () => {
+    const state = generatedState(1, 64);
+    const open = findTile(
+      state,
+      (index) => state.layers.terrain[index] === Terrain.Sea && !isCoastalSea(state, index),
+    );
+    expect(buildRejection(state, open, BuildIntent.Plant, PlantType.TidalPlant)).toBe('needsCoast');
+    const land = findTile(state, (index) => state.layers.terrain[index] === Terrain.Land);
+    expect(buildRejection(state, land, BuildIntent.Plant, PlantType.TidalPlant)).toBe(
+      'needsSeaTile',
+    );
+  });
+
+  it('accepts wind turbines at sea but no roads, zones or other plants', () => {
+    const state = generatedState(1, 64);
+    const sea = findTile(state, (index) => state.layers.terrain[index] === Terrain.Sea);
+    expect(buildRejection(state, sea, BuildIntent.Plant, PlantType.WindTurbine)).toBeNull();
+    expect(buildRejection(state, sea, BuildIntent.Road)).toBe('cannotBuildOnWater');
+    expect(buildRejection(state, sea, BuildIntent.Zone)).toBe('cannotBuildOnWater');
+    expect(buildRejection(state, sea, BuildIntent.Plant, PlantType.SolarFarm)).toBe(
+      'cannotBuildOnWater',
+    );
+  });
+
+  it('still allows power lines across the sea', () => {
+    const state = generatedState(1, 64);
+    // Open water, not a coastal tile: coastal sea can sit at the foot of a
+    // cliff, which would fail on slope alone and defeat the point of this
+    // check (power lines ignore terrain, only occupancy and slope matter).
+    const sea = findTile(
+      state,
+      (index) => state.layers.terrain[index] === Terrain.Sea && !isCoastalSea(state, index),
+    );
+    expect(buildRejection(state, sea, BuildIntent.PowerLine)).toBeNull();
   });
 });
 
@@ -358,6 +420,17 @@ describe('save round trip', () => {
     const save = serializeState(state);
     delete save.layers.roadClass;
     expect(deserializeState(save).layers.roadClass.every((v) => v === 0)).toBe(true);
+  });
+
+  it('round-trips sea tiles and tidal plants', () => {
+    const state = generatedState(1, 64);
+    state.money = 1_000_000;
+    const tile = findTile(state, (index) => isCoastalSea(state, index));
+    placePlant(state, tile, PlantType.TidalPlant);
+
+    const restored = deserializeState(serializeState(state));
+    expect([...restored.layers.terrain]).toEqual([...state.layers.terrain]);
+    expect(restored.layers.plantType[tile]).toBe(PlantType.TidalPlant);
   });
 });
 

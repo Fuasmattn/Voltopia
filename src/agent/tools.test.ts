@@ -1,9 +1,10 @@
 import { describe, expect, it } from 'vitest';
 import { BALANCE, TICKS_PER_DAY } from '../shared/constants.ts';
-import { tileIndex } from '../shared/grid.ts';
+import { tileIndex, tileX, tileY } from '../shared/grid.ts';
 import type { SimCommand, SimEvent } from '../shared/messages.ts';
 import { PlantType, Terrain, TileType, Zone, type GlobalStats } from '../shared/types.ts';
 import { SimEngine } from '../sim/engine.ts';
+import { isCoastalSea } from '../sim/sea.ts';
 import { slopeCostMultiplier } from '../sim/state.ts';
 import { TileMirror } from './tileMirror.ts';
 import {
@@ -100,6 +101,15 @@ function findLand(engine: SimEngine, minX = 2): { x: number; y: number } {
   throw new Error('no land block');
 }
 
+/** Any sea tile with a land 4-neighbour — where a tidal plant may stand. */
+function findCoastalSeaTile(engine: SimEngine): { x: number; y: number } {
+  const { size } = engine.state;
+  for (let i = 0; i < size * size; i++) {
+    if (isCoastalSea(engine.state, i)) return { x: tileX(i, size), y: tileY(i, size) };
+  }
+  throw new Error('no coastal sea tile');
+}
+
 describe('agent tools: reading', () => {
   it('lists every tool with a schema and description', () => {
     const { tools } = createHarness();
@@ -183,8 +193,12 @@ describe('agent tools: reading', () => {
     for (let i = 0; i < SIZE * SIZE; i++) {
       const glyph = terrainRows[Math.floor(i / SIZE)][i % SIZE];
       const t = engine.state.layers.terrain[i];
-      expect(glyph).toBe(t === Terrain.River ? '~' : t === Terrain.Lake ? '#' : '.');
+      const expected =
+        t === Terrain.River ? '~' : t === Terrain.Lake ? '#' : t === Terrain.Sea ? '%' : '.';
+      expect(glyph).toBe(expected);
     }
+    // The map always carves a sea band, so the fix-up above is exercised for real.
+    expect(engine.state.layers.terrain.some((t) => t === Terrain.Sea)).toBe(true);
     const window = await call('get_map', { origin: { x: 20, y: 21 }, width: 10, height: 10 });
     expect(window.width).toBe(4);
     expect(window.height).toBe(3);
@@ -194,6 +208,26 @@ describe('agent tools: reading', () => {
       error: 'invalidInput',
     });
     expect(await call('get_map', { origin: { x: 99, y: 0 } })).toMatchObject({ ok: false });
+  });
+
+  it('get_map marks the sea on every layer, not just terrain', async () => {
+    const { call, engine } = createHarness();
+    const size = engine.state.size;
+    const seaTiles: number[] = [];
+    for (let i = 0; i < size * size; i++) {
+      if (engine.state.layers.terrain[i] === Terrain.Sea) seaTiles.push(i);
+    }
+    expect(seaTiles.length).toBeGreaterThan(0);
+
+    for (const layer of ['overview', 'supply', 'density', 'power', 'transit'] as const) {
+      const map = await call('get_map', { layer });
+      const rows = map.rows as string[];
+      for (const i of seaTiles) {
+        const glyph = rows[Math.floor(i / size)][i % size];
+        expect(glyph, `layer ${layer} at tile ${i}`).toBe('%');
+      }
+      expect(map.legend as string, `legend for ${layer}`).toContain('% sea');
+    }
   });
 
   it('find_tiles finds river, lake shore and empty land, nearest first', async () => {
@@ -206,6 +240,11 @@ describe('agent tools: reading', () => {
     }
     const shore = await call('find_tiles', { kind: 'lake_shore' });
     expect(shore.total).toBeGreaterThan(0);
+    const coastalSea = await call('find_tiles', { kind: 'coastal_sea' });
+    expect(coastalSea.total).toBeGreaterThan(0);
+    for (const { x, y } of coastalSea.tiles as Array<{ x: number; y: number }>) {
+      expect(isCoastalSea(engine.state, tileIndex(x, y, SIZE))).toBe(true);
+    }
     const land = await call('find_tiles', { kind: 'empty_land', near: { x: 5, y: 5 }, limit: 3 });
     const tiles = land.tiles as Array<{ x: number; y: number }>;
     expect(tiles).toHaveLength(3);
@@ -432,5 +471,15 @@ describe('agent tools: building', () => {
       stopState: null,
       stopAgeHours: null,
     });
+  });
+
+  it('places a tidal plant on the coast', async () => {
+    const { call, engine } = createHarness();
+    const tile = findCoastalSeaTile(engine);
+    const result = await call('place_plant', { plant: 'tidal', x: tile.x, y: tile.y });
+    expect(result).toMatchObject({ ok: true });
+    expect(engine.state.layers.plantType[tileIndex(tile.x, tile.y, SIZE)]).toBe(
+      PlantType.TidalPlant,
+    );
   });
 });

@@ -1,8 +1,9 @@
 import { BALANCE, TICKS_PER_HISTORY_SAMPLE } from '../shared/constants.ts';
-import { PlantType, Zone } from '../shared/types.ts';
+import { PlantType, Terrain, Zone } from '../shared/types.ts';
 import { clearForest, fellingCost, windForestFactor } from './forest.ts';
 import { isSupplySource, recomputeGrid } from './powerGrid.ts';
 import type { BuildResult } from './roads.ts';
+import { tideFactor, tidalSiteFactor, windTurbineFactor } from './sea.ts';
 import { coolingDegree, heatingDegree } from './seasons.ts';
 import {
   BuildIntent,
@@ -47,9 +48,19 @@ export function placePlant(state: SimState, tile: number, plant: PlantType): Bui
   if (plant === PlantType.None) return { rejected: 'noPlantSelected' };
   const rejection = buildRejection(state, tile, BuildIntent.Plant, plant);
   if (rejection) return { rejected: rejection };
-  const cost =
-    Math.round(BALANCE.costs.plant[plant] * slopeCostMultiplier(state, tile)) +
-    fellingCost(state, tile);
+  // A tidal plant can only ever stand on a sea tile, so — unlike a wind
+  // turbine — it has no "choice" of going offshore: its marine cost is
+  // already priced into the base cost, so it is exempt from the offshore
+  // surcharge (and from the slope multiplier, since a sea tile has no
+  // buildable slope of its own).
+  const isTidal = plant === PlantType.TidalPlant;
+  const offshore = !isTidal && state.layers.terrain[tile] === Terrain.Sea;
+  const costMultiplier = isTidal
+    ? 1
+    : offshore
+      ? BALANCE.sea.offshoreCostFactor
+      : slopeCostMultiplier(state, tile);
+  const cost = Math.round(BALANCE.costs.plant[plant] * costMultiplier) + fellingCost(state, tile);
   if (cost > state.money) {
     return { rejected: 'notEnoughMoney' };
   }
@@ -81,12 +92,15 @@ interface PlantCensus {
   logisticsDepots: number;
   busDepots: number;
   hydrogenPlants: number;
+  tidalPlants: number;
   /** Sum of wind turbines' elevation bonus factors (== count on flat maps). */
   windCapacity: number;
   /** Sum of run-of-river plants' drop bonus factors (== count on flat maps). */
   hydroCapacity: number;
   /** Sum of pumped-storage plants' head bonus factors (== count on flat maps). */
   pumpedCapacity: number;
+  /** Sum of tidal plants' site factors (narrowness and estuary bonus). */
+  tidalCapacity: number;
 }
 
 export function censusPlants(state: SimState): PlantCensus {
@@ -105,9 +119,11 @@ export function censusPlants(state: SimState): PlantCensus {
     logisticsDepots: 0,
     busDepots: 0,
     hydrogenPlants: 0,
+    tidalPlants: 0,
     windCapacity: 0,
     hydroCapacity: 0,
     pumpedCapacity: 0,
+    tidalCapacity: 0,
   };
   for (let i = 0; i < tileType.length; i++) {
     if (tileType[i] !== TileType.Plant) continue;
@@ -118,10 +134,14 @@ export function censusPlants(state: SimState): PlantCensus {
         break;
       case PlantType.WindTurbine:
         census.windTurbines++;
-        // Height helps, sheltering woods hurt (turbulence and lower wind).
-        census.windCapacity +=
+        // Offshore: free wind, no shelter, no height to gain. On land:
+        // height helps, sheltering woods hurt (turbulence and lower wind).
+        census.windCapacity += windTurbineFactor(
+          state,
+          i,
           (1 + BALANCE.terrain.windBonusPerLevel * state.layers.elevation[i]) *
-          windForestFactor(state, i);
+            windForestFactor(state, i),
+        );
         break;
       case PlantType.Battery:
         census.batteries++;
@@ -157,6 +177,10 @@ export function censusPlants(state: SimState): PlantCensus {
         break;
       case PlantType.HydrogenPlant:
         census.hydrogenPlants++;
+        break;
+      case PlantType.TidalPlant:
+        census.tidalPlants++;
+        census.tidalCapacity += tidalSiteFactor(state, i);
         break;
       case PlantType.None:
         break;
@@ -255,7 +279,7 @@ function dischargePool(
 
 /**
  * One tick of the energy balance:
- * 1. renewable generation (solar + wind + rooftop + hydro) covers
+ * 1. renewable generation (solar + wind + rooftop + hydro + tidal) covers
  *    consumption (buildings, heating, cooling, charging),
  * 2. surplus charges batteries, then pumped storage, anything beyond is
  *    exported over the transmission link; electrolysers absorb what the
@@ -276,6 +300,7 @@ export function energyStep(state: SimState, input: EnergyTickInput): void {
   const solar = census.solarFarms * BALANCE.energy.solarPeakOutput * currentSolarFactor(state);
   const wind = census.windCapacity * BALANCE.energy.windPeakOutput * currentWindFactor(state);
   const hydro = census.hydroCapacity * BALANCE.energy.hydroPeakOutput * riverFlowFactor(state);
+  const tidal = census.tidalCapacity * BALANCE.energy.tidalPeakOutput * tideFactor(state.tick);
 
   // Consumption of all connected buildings, plus their rooftop PV
   // feed-in (rooftop capacity grows automatically with density).
@@ -312,7 +337,7 @@ export function energyStep(state: SimState, input: EnergyTickInput): void {
 
   const chargingDemand = Math.max(0, input.chargingDemand);
   const totalDemand = buildingDemand + heatingDemand + coolingDemand + chargingDemand;
-  const generation = solar + wind + rooftop + hydro;
+  const generation = solar + wind + rooftop + hydro + tidal;
 
   const storageCapacity = census.batteries * BALANCE.energy.batteryCapacity;
   const powerLimit = census.batteries * BALANCE.energy.batteryPowerLimit;
@@ -470,6 +495,7 @@ export function energyStep(state: SimState, input: EnergyTickInput): void {
     wind,
     biogas,
     hydro,
+    tidal,
     rooftop,
     buildingConsumption: buildingDemand,
     chargingConsumption: chargingDemand,

@@ -20,6 +20,7 @@ export const PALETTE = {
   roadMarking: 0xd8d8d0,
   river: 0x4d8fc4,
   lake: 0x3f7fb5,
+  sea: 0x2f6ea8,
 } as const;
 
 export function createScene(): { scene: THREE.Scene; lights: SceneLights } {

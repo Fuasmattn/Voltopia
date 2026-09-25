@@ -27,6 +27,26 @@ function floodWater(state: SimState, start: number): Set<number> {
   return seen;
 }
 
+/**
+ * The river's axis, found from River tiles alone. Generic "any water at
+ * this edge" is unreliable once the sea is in play: the sea band spans
+ * the full lateral range of the map edge it claims, so it spills a few
+ * tiles into the two perpendicular edges at the corners — both north AND
+ * south (or west AND east) always end up with some water once a sea
+ * exists, regardless of axis. River tiles never do that (their lateral
+ * position stays within `edgeMargin` of every edge), so they identify the
+ * axis unambiguously. The sole axis-detection helper; `edgeWaterTiles`
+ * below reuses it instead of guessing from water presence.
+ */
+function riverAxisVertical(state: SimState): boolean {
+  const { size, layers } = state;
+  for (let i = 0; i < size; i++) {
+    if (layers.terrain[tileIndex(i, 0, size)] === Terrain.River) return true;
+    if (layers.terrain[tileIndex(i, size - 1, size)] === Terrain.River) return true;
+  }
+  return false;
+}
+
 function edgeWaterTiles(state: SimState): { a: number[]; b: number[] } {
   const { size } = state;
   const north: number[] = [];
@@ -39,7 +59,12 @@ function edgeWaterTiles(state: SimState): { a: number[]; b: number[] } {
     if (isWater(state, tileIndex(0, i, size))) west.push(tileIndex(0, i, size));
     if (isWater(state, tileIndex(size - 1, i, size))) east.push(tileIndex(size - 1, i, size));
   }
-  return north.length > 0 ? { a: north, b: south } : { a: west, b: east };
+  // Pick the pair on the river's real axis — NOT "whichever pair has any
+  // water", which is always both once the sea exists (see riverAxisVertical
+  // above). One side of the true pair is the genuine upstream river edge
+  // (a few tiles), the other is the downstream edge the sea fully claims;
+  // together they still verify the whole channel is connected end to end.
+  return riverAxisVertical(state) ? { a: north, b: south } : { a: west, b: east };
 }
 
 const SEEDS = Array.from({ length: 25 }, (_, i) => i * 7919 + 1);
@@ -118,11 +143,7 @@ describe('generateWater', () => {
         for (const seed of SEEDS) {
           const state = createSimState(seed, size);
           generateWater(state);
-          const { a } = edgeWaterTiles(state);
-          // Same axis determination as edgeWaterTiles: water on the north
-          // edge means the river runs north/south (iterate rows), else it
-          // runs west/east (iterate columns).
-          const vertical = a.some((tile) => tileY(tile, size) === 0);
+          const vertical = riverAxisVertical(state);
           for (let along = 0; along < size; along++) {
             let count = 0;
             let hasLake = false;
@@ -159,25 +180,36 @@ describe('generateWater', () => {
             `seed ${seed} lake bbox centre`,
           ).toBe(Terrain.Lake);
 
-          const { a } = edgeWaterTiles(state);
-          const vertical = a.some((tile) => tileY(tile, size) === 0);
+          const vertical = riverAxisVertical(state);
           const along = (index: number): number =>
             vertical ? tileY(index, size) : tileX(index, size);
           const alongs = lake.map(along);
           const minAlong = Math.min(...alongs);
           const maxAlong = Math.max(...alongs);
           const mid = (minAlong + maxAlong) / 2;
-          const touchesRiver = (tile: number): boolean =>
-            neighbors4(tile, size).some((n) => state.layers.terrain[n] === Terrain.River);
           // The river enters and exits the lake through opposite sides: the
           // half of the lake nearer the entry, and the half nearer the
-          // exit, each border a river tile.
+          // exit, each border flowing water — normally a river tile, but a
+          // lake close enough to the coast can have its downstream river
+          // segment entirely absorbed into the sea band, so it borders the
+          // sea directly instead. Both halves accept Sea here deliberately,
+          // for simplicity: this test doesn't track which half is actually
+          // upstream vs downstream (only "nearer along = 0" vs "nearer
+          // along = size - 1"), and in practice only the downstream half
+          // can ever border Sea — the sea sits on a single edge, far from
+          // the upstream half on the opposite side of the lake.
+          const touchesFlow = (tile: number): boolean =>
+            neighbors4(tile, size).some(
+              (n) =>
+                state.layers.terrain[n] === Terrain.River ||
+                state.layers.terrain[n] === Terrain.Sea,
+            );
           expect(
-            lake.filter((t) => along(t) <= mid).some(touchesRiver),
+            lake.filter((t) => along(t) <= mid).some(touchesFlow),
             `seed ${seed} lake entry touches river`,
           ).toBe(true);
           expect(
-            lake.filter((t) => along(t) > mid).some(touchesRiver),
+            lake.filter((t) => along(t) > mid).some(touchesFlow),
             `seed ${seed} lake exit touches river`,
           ).toBe(true);
         }
@@ -200,7 +232,11 @@ describe('water on terrain', () => {
       const { size } = state;
       const { terrain, elevation } = state.layers;
       // Row levels along both axes: the min water level per row must be
-      // monotonic in one direction (entry high, exit low).
+      // monotonic in one direction (entry high, exit low). Sea tiles are
+      // excluded: they sit flat at elevation 0 by construction (checked in
+      // sea.test.ts) and, unlike the river, span the full lateral range of
+      // their edge — including every row of the OTHER axis too, which
+      // would otherwise defeat the "wrong axis" detection below.
       for (const vertical of [true, false]) {
         const rowMin: number[] = [];
         const rowMax: number[] = [];
@@ -211,7 +247,7 @@ describe('water on terrain', () => {
             const x = vertical ? lateral : along;
             const y = vertical ? along : lateral;
             const i = y * size + x;
-            if (terrain[i] !== Terrain.Land) {
+            if (terrain[i] === Terrain.River || terrain[i] === Terrain.Lake) {
               min = Math.min(min, elevation[i]);
               max = Math.max(max, elevation[i]);
             }

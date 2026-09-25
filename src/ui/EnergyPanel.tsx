@@ -80,7 +80,8 @@ export function EnergyPanel({ energy, riverFlow }: { energy: EnergyStats; riverF
     energy.generation.biogas +
     energy.generation.rooftop +
     energy.generation.hydro +
-    energy.generation.hydrogen;
+    energy.generation.hydrogen +
+    energy.generation.tidal;
   const totalConsumption =
     energy.consumption.buildings +
     energy.consumption.charging +
@@ -103,6 +104,11 @@ export function EnergyPanel({ energy, riverFlow }: { energy: EnergyStats; riverF
           label={t('energy.hydro', { flow: Math.round(riverFlow * 100) })}
           value={energy.generation.hydro}
           testId="detail-energy-hydro"
+        />
+        <Row
+          label={t('energy.tidal')}
+          value={energy.generation.tidal}
+          testId="detail-energy-tidal"
         />
         {/* Biogas is dispatchable backup: an installed but idle plant is
             on standby, not broken. */}

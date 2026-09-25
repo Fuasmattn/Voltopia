@@ -61,6 +61,9 @@ const COLORS = {
   busRoof: 0xe4e7ea,
   busDoor: 0x3a4048,
   busApron: 0x6f7a86,
+  tidalHousing: 0x4d6b73,
+  tidalPylon: 0x9aa3ad,
+  tidalBuoy: 0xe8a23a,
 } as const;
 
 /** Where a plant stands: which neighbours are water (for hydro shapes). */
@@ -246,6 +249,13 @@ function plantBoxParts(plant: PlantType, site: PlantSite): BoxPart[] {
         { sx: 0.7, sy: 0.34, sz: 0.44, ox: 0, oy: 0, oz: -0.2, color: COLORS.hydrogenHall },
         { sx: 0.74, sy: 0.04, sz: 0.48, ox: 0, oy: 0.34, oz: -0.2, color: COLORS.depotRoof },
         { sx: 0.07, sy: 0.56, sz: 0.07, ox: 0.28, oy: 0, oz: -0.3, color: COLORS.batteryFrame },
+      ];
+    case PlantType.TidalPlant:
+      return [
+        // Submerged turbine housing with a slim pylon and a surface buoy.
+        { sx: 0.5, sy: 0.14, sz: 0.34, ox: 0, oy: 0.02, oz: 0, color: COLORS.tidalHousing },
+        { sx: 0.08, sy: 0.4, sz: 0.08, ox: 0, oy: 0.14, oz: 0, color: COLORS.tidalPylon },
+        { sx: 0.22, sy: 0.12, sz: 0.22, ox: 0, oy: 0.5, oz: 0, color: COLORS.tidalBuoy },
       ];
     default:
       return [];

@@ -27,6 +27,12 @@ const en = {
   'season.autumn': 'Autumn',
   'season.winter': 'Winter',
   'hud.season': '{season} {day}/{days} · {temperature} °C',
+  'hud.tide': 'tide',
+  'hud.tide.title': 'Tide: {state} · current {percent} %',
+  'tide.rising': 'rising',
+  'tide.falling': 'falling',
+  'tide.high': 'high water',
+  'tide.low': 'low water',
   'hud.demand.title': 'Demand: residential / commercial / retail',
   'hud.details': 'Details',
   'hud.section.city': 'City',
@@ -56,6 +62,7 @@ const en = {
   'tool.plant-hydro': 'Run-of-river plant',
   'tool.plant-pumped': 'Pumped storage',
   'tool.plant-hydrogen': 'Hydrogen plant',
+  'tool.plant-tidal': 'Tidal plant',
   'tool.plant-forest': 'Plant woods',
   'inspector.forest': 'Woods',
   'inspector.forest.mature': 'mature · felling {fee} ⌁',
@@ -84,7 +91,8 @@ const en = {
   'tool.zone-commercial.desc': 'Offices. Provide jobs for your residents.',
   'tool.zone-retail.desc': 'Shops. Keep residents happy and add jobs.',
   'tool.plant-solar.desc': 'Generates with sunlight — peaks at noon, nothing at night.',
-  'tool.plant-wind.desc': 'Generates with wind speed, day and night.',
+  'tool.plant-wind.desc':
+    'Generates with wind speed, day and night. Offshore turbines catch free wind for a bonus, at a construction surcharge.',
   'tool.plant-battery.desc': 'Stores surplus and releases it when generation drops.',
   'tool.plant-biogas.desc': 'Dispatchable generation, but burns fuel that costs money.',
   'tool.plant-hub.desc': 'Charges EVs in its service radius. Pairs with smart charging.',
@@ -100,6 +108,10 @@ const en = {
   'tool.plant-pumped.desc': 'Large storage on a lake shore. Pumps up on surplus.',
   'tool.plant-hydrogen.desc':
     'Electrolyses surplus the grid cannot take into hydrogen, re-electrifies it in a lull and sells the overflow once the tank is full.',
+  'tool.plant-tidal.desc':
+    'Built on the coast, generating from the tidal current: two high waters a day, four generation ' +
+    'peaks and four slack-water gaps in between. Fully predictable, but drifts against the clock. ' +
+    'Narrow water and the river mouth run faster.',
   'tool.plant-forest.desc':
     'Plant saplings by the patch. They grow over a few days, raise happiness nearby — and slow the wind for turbines standing in them.',
   'tool.bulldoze.desc': 'Clears roads, zones and plants. Drag to clear an area.',
@@ -109,6 +121,7 @@ const en = {
   'energy.solar': '☀️ Solar',
   'energy.wind': '🌀 Wind',
   'energy.hydro': '💧 Hydro (flow {flow}%)',
+  'energy.tidal': '🌊 Tidal',
   'energy.biogas': '♻️ Biogas',
   'energy.standby': 'standby',
   'energy.rooftop': '🏠 Rooftop PV',
@@ -182,6 +195,8 @@ const en = {
   'rejection.noPlantSelected': 'No plant selected',
   'rejection.needsRiverTile': 'Run-of-river plants must stand on a river tile',
   'rejection.needsLakeShore': 'Pumped storage must stand on the lake shore',
+  'rejection.needsSeaTile': 'Tidal plants must stand on a sea tile',
+  'rejection.needsCoast': 'Tidal plants need the shore: pick a sea tile touching land',
   'rejection.cannotBuildOnWater': 'Cannot build on water',
   'rejection.needsLineSite': 'Power lines need free land, a road or water',
   'rejection.needsRoad': 'Needs a road next to it',
@@ -202,13 +217,13 @@ const en = {
     'Drag roads, then paint residential, commercial and retail zones next to them. Buildings appear on their own when there is demand (see the R/C/S bars) and densify over time — but only while they are fully supplied with energy.',
   'help.energy.title': 'Energy',
   'help.energy.body':
-    'Plants supply only what power lines connect to them (see Grid and power lines). Solar peaks at noon and suffers under clouds; wind follows the weather day and night. Batteries store the midday surplus for the evening; the biogas plant is dispatchable backup — reliable but expensive to run, and it only fires when sun, wind, water and storage cannot cover the load, so it usually sits on standby. Dense buildings add rooftop PV automatically. The hydrogen plant electrolyses surplus that batteries, pumped storage and the export link cannot absorb: it fills a large tank, re-electrifies through its fuel cell in a lull, and sells hydrogen for profit once the tank is full — curtailed energy becomes income. The transmission link trades at a spot price that follows the region: sunny, windy hours are cheap, calm overcast evenings dear — the dashed line in the energy graph. With market trading on, your storage sells its top charge at scarcity prices and buys cheap regional surplus.',
+    'Plants supply only what power lines connect to them (see Grid and power lines). Solar peaks at noon and suffers under clouds; wind follows the weather day and night. Batteries store the midday surplus for the evening; the biogas plant is dispatchable backup — reliable but expensive to run, and it only fires when sun, wind, water and storage cannot cover the load, so it usually sits on standby. Dense buildings add rooftop PV automatically. The hydrogen plant electrolyses surplus that batteries, pumped storage and the export link cannot absorb: it fills a large tank, re-electrifies through its fuel cell in a lull, and sells hydrogen for profit once the tank is full — curtailed energy becomes income. The transmission link trades at a spot price that follows the region: sunny, windy hours are cheap, calm overcast evenings dear — the dashed line in the energy graph. With market trading on, your storage sells its top charge at scarcity prices and buys cheap regional surplus. A tidal plant on the coast is fully predictable — four generation peaks and four slack-water gaps a day, drifting slowly against the clock — so storage is what bridges the slack. The same coast also carries offshore wind turbines and raises the happiness of buildings with a sea view.',
   'help.grid.title': 'Grid and power lines',
   'help.grid.body':
     'Plants only supply buildings connected to them. Draw power lines (⚡, key L) from a plant along your streets — they run over roads and across water. Every energised line tile and every plant connects buildings within three tiles. A line that does not touch a plant carries nothing; the supply overlay shows what is connected. Cities from before power lines got lines along their roads for free.',
   'help.water.title': 'Water and hydro',
   'help.water.body':
-    'Every map has a river and a lake. Roads cross the river as bridges (pricier per tile). A run-of-river plant on the river generates day and night — more after rainy spells, less in a drought. Pumped storage on the lake shore is a large but slower store that fills after your batteries.',
+    'Every map has a river, a lake and a sea along one edge. Roads cross the river as bridges (pricier per tile) but stop at the coast. A run-of-river plant on the river generates day and night — more after rainy spells, less in a drought. Pumped storage on the lake shore is a large but slower store that fills after your batteries.',
   'help.seasons.title': 'Seasons, heating and cooling',
   'help.seasons.body':
     'A year has four seasons of five days each. Summer brings long days and strong sun; winter brings short days, weak PV, more cloud and wind, and cold. Every building heats electrically, so the heating load rises with the cold — the winter evening is the hardest hour of the year. In summer every building cools electrically, so the cooling load peaks in the late afternoon as PV fades. Snow that falls in winter melts into the river in spring. Building insulation is a one-off upgrade that halves the heating and cooling load.',
@@ -323,6 +338,8 @@ const en = {
   'goal.exporter.body': 'Export 20,000 energy units to the grid.',
   'goal.hydroPower.title': 'Blue power',
   'goal.hydroPower.body': 'Build a run-of-river plant on the river.',
+  'goal.tidalPower.title': 'Tidal power',
+  'goal.tidalPower.body': 'Build a tidal plant on the coast.',
   'goal.gridBuilder.title': 'Grid builder',
   'goal.gridBuilder.body': 'Build your first power line.',
   'goal.winterResilience.title': 'Winter-proof',
@@ -362,6 +379,7 @@ const en = {
   'inspect.vacantLot': 'vacant lot',
   'inspect.river': 'River',
   'inspect.lake': 'Lake',
+  'inspect.sea': 'Sea',
   'inspect.empty': 'Open land',
   'inspect.section.money': 'Money',
   'inspect.section.energy': 'Energy',
@@ -404,6 +422,8 @@ const en = {
   'inspect.loadFactor': 'Load profile now',
   'inspect.generation': 'Generation',
   'inspect.nowNameplate': 'now / nameplate output',
+  'inspect.tideFactor': 'Tidal current',
+  'inspect.siteFactor': 'Site factor',
   'inspect.storedEnergy': 'State of charge',
   'inspect.supplyStatus': 'Supply',
   'inspect.connected': 'Grid connection',
@@ -467,6 +487,12 @@ const de: Record<TranslationKey, string> = {
   'season.autumn': 'Herbst',
   'season.winter': 'Winter',
   'hud.season': '{season} {day}/{days} · {temperature} °C',
+  'hud.tide': 'Tide',
+  'hud.tide.title': 'Tide: {state} · Strömung {percent} %',
+  'tide.rising': 'auflaufend',
+  'tide.falling': 'ablaufend',
+  'tide.high': 'Hochwasser',
+  'tide.low': 'Niedrigwasser',
   'hud.demand.title': 'Nachfrage: Wohnen / Gewerbe / Handel',
   'hud.details': 'Details',
   'hud.section.city': 'Stadt',
@@ -496,6 +522,7 @@ const de: Record<TranslationKey, string> = {
   'tool.plant-hydro': 'Laufwasserkraftwerk',
   'tool.plant-pumped': 'Pumpspeicher',
   'tool.plant-hydrogen': 'Wasserstoffanlage',
+  'tool.plant-tidal': 'Gezeitenkraftwerk',
   'tool.plant-forest': 'Wald pflanzen',
   'inspector.forest': 'Wald',
   'inspector.forest.mature': 'ausgewachsen · Rodung {fee} ⌁',
@@ -524,7 +551,8 @@ const de: Record<TranslationKey, string> = {
   'tool.zone-commercial.desc': 'Büros. Schaffen Arbeitsplätze für deine Bewohner.',
   'tool.zone-retail.desc': 'Läden. Halten Bewohner zufrieden und schaffen Arbeitsplätze.',
   'tool.plant-solar.desc': 'Erzeugt mit Sonnenlicht — Spitze mittags, nachts nichts.',
-  'tool.plant-wind.desc': 'Erzeugt mit Windgeschwindigkeit, Tag und Nacht.',
+  'tool.plant-wind.desc':
+    'Erzeugt mit Windgeschwindigkeit, Tag und Nacht. Offshore-Anlagen fangen freien Wind für einen Bonus ein, gegen einen Aufpreis beim Bau.',
   'tool.plant-battery.desc': 'Speichert Überschuss und gibt ihn ab, wenn die Erzeugung fällt.',
   'tool.plant-biogas.desc': 'Regelbare Erzeugung, verbraucht aber kostenpflichtigen Brennstoff.',
   'tool.plant-hub.desc': 'Lädt E-Autos im Umkreis. Passt zum Smart Charging.',
@@ -541,6 +569,10 @@ const de: Record<TranslationKey, string> = {
   'tool.plant-pumped.desc': 'Großer Speicher am Seeufer. Pumpt bei Überschuss hoch.',
   'tool.plant-hydrogen.desc':
     'Elektrolysiert Überschuss, den das Netz nicht aufnimmt, zu Wasserstoff, verstromt ihn in der Flaute und verkauft den Überlauf bei vollem Tank.',
+  'tool.plant-tidal.desc':
+    'An der Küste gebaut, erzeugt Strom aus der Gezeitenströmung: zwei Hochwasser am Tag ergeben ' +
+    'vier Erzeugungsspitzen und vier Flauten dazwischen. Genau vorhersehbar, wandert aber gegen die ' +
+    'Uhr. Enge Fahrwasser und die Flussmündung strömen schneller.',
   'tool.plant-forest.desc':
     'Pflanzt Setzlinge flächenweise. Sie wachsen über einige Tage, heben die Zufriedenheit in der Nähe — und bremsen den Wind für Turbinen, die darin stehen.',
   'tool.bulldoze.desc': 'Entfernt Straßen, Gebiete und Anlagen. Ziehen räumt eine Fläche.',
@@ -550,6 +582,7 @@ const de: Record<TranslationKey, string> = {
   'energy.solar': '☀️ Solar',
   'energy.wind': '🌀 Wind',
   'energy.hydro': '💧 Wasserkraft (Abfluss {flow}%)',
+  'energy.tidal': '🌊 Gezeiten',
   'energy.biogas': '♻️ Biogas',
   'energy.standby': 'Bereitschaft',
   'energy.rooftop': '🏠 Dach-PV',
@@ -623,6 +656,9 @@ const de: Record<TranslationKey, string> = {
   'rejection.noPlantSelected': 'Keine Anlage ausgewählt',
   'rejection.needsRiverTile': 'Laufwasserkraftwerke müssen auf einem Flussfeld stehen',
   'rejection.needsLakeShore': 'Pumpspeicher müssen am Seeufer stehen',
+  'rejection.needsSeaTile': 'Gezeitenkraftwerke müssen auf einem Meeresfeld stehen',
+  'rejection.needsCoast':
+    'Gezeitenkraftwerke brauchen die Küste: ein Meeresfeld mit Landkontakt wählen',
   'rejection.cannotBuildOnWater': 'Auf Wasser kann nicht gebaut werden',
   'rejection.needsLineSite': 'Leitungen brauchen freies Land, eine Straße oder Wasser',
   'rejection.needsRoad': 'Braucht eine Straße daneben',
@@ -643,13 +679,13 @@ const de: Record<TranslationKey, string> = {
     'Ziehe Straßen und male daneben Wohn-, Gewerbe- und Einzelhandelszonen. Gebäude entstehen von selbst, wenn Nachfrage besteht (siehe die R/C/S-Balken), und verdichten sich mit der Zeit — aber nur, solange sie vollständig mit Energie versorgt sind.',
   'help.energy.title': 'Energie',
   'help.energy.body':
-    'Anlagen versorgen nur, was Stromleitungen mit ihnen verbinden (siehe Netz und Leitungen). Solar liefert mittags am meisten und leidet unter Wolken; Wind folgt dem Wetter, Tag und Nacht. Batterien speichern den Mittagsüberschuss für den Abend; die Biogasanlage ist regelbare Reserve — zuverlässig, aber teuer im Betrieb, und sie springt nur an, wenn Sonne, Wind, Wasser und Speicher die Last nicht decken; meist steht sie in Bereitschaft. Dichte Gebäude bekommen automatisch Dach-PV. Die Wasserstoffanlage elektrolysiert Überschuss, den Batterien, Pumpspeicher und die Netzeinspeisung nicht aufnehmen können: Sie füllt einen großen Tank, verstromt in der Flaute über ihre Brennstoffzelle und verkauft bei vollem Tank Wasserstoff mit Gewinn — abgeregelte Energie wird zu Einnahmen. Die Netzleitung handelt zum Spotpreis, der der Region folgt: sonnige, windige Stunden sind billig, windstille bedeckte Abende teuer — die gestrichelte Linie im Energie-Graphen. Mit aktiviertem Stromhandel verkaufen deine Speicher ihre oberste Ladung zu Knappheitspreisen und kaufen billigen regionalen Überschuss.',
+    'Anlagen versorgen nur, was Stromleitungen mit ihnen verbinden (siehe Netz und Leitungen). Solar liefert mittags am meisten und leidet unter Wolken; Wind folgt dem Wetter, Tag und Nacht. Batterien speichern den Mittagsüberschuss für den Abend; die Biogasanlage ist regelbare Reserve — zuverlässig, aber teuer im Betrieb, und sie springt nur an, wenn Sonne, Wind, Wasser und Speicher die Last nicht decken; meist steht sie in Bereitschaft. Dichte Gebäude bekommen automatisch Dach-PV. Die Wasserstoffanlage elektrolysiert Überschuss, den Batterien, Pumpspeicher und die Netzeinspeisung nicht aufnehmen können: Sie füllt einen großen Tank, verstromt in der Flaute über ihre Brennstoffzelle und verkauft bei vollem Tank Wasserstoff mit Gewinn — abgeregelte Energie wird zu Einnahmen. Die Netzleitung handelt zum Spotpreis, der der Region folgt: sonnige, windige Stunden sind billig, windstille bedeckte Abende teuer — die gestrichelte Linie im Energie-Graphen. Mit aktiviertem Stromhandel verkaufen deine Speicher ihre oberste Ladung zu Knappheitspreisen und kaufen billigen regionalen Überschuss. Ein Gezeitenkraftwerk an der Küste ist vollständig vorhersagbar — vier Erzeugungsspitzen und vier Stillwasserphasen am Tag, die langsam gegen die Uhr wandern — deshalb überbrückt der Speicher die Flaute. Dieselbe Küste trägt auch Offshore-Windräder und steigert die Zufriedenheit von Gebäuden mit Meerblick.',
   'help.grid.title': 'Netz und Leitungen',
   'help.grid.body':
     'Anlagen versorgen nur Gebäude, die mit ihnen verbunden sind. Ziehe Stromleitungen (⚡, Taste L) von einer Anlage entlang deiner Straßen — sie laufen über Straßen und über Wasser. Jedes angeschlossene Leitungsfeld und jede Anlage versorgt Gebäude im Umkreis von drei Feldern. Eine Leitung ohne Anlage führt keinen Strom; das Versorgungs-Overlay zeigt, was angeschlossen ist. Städte aus der Zeit vor den Leitungen haben ihre Leitungen entlang der Straßen geschenkt bekommen.',
   'help.water.title': 'Wasser und Wasserkraft',
   'help.water.body':
-    'Jede Karte hat einen Fluss und einen See. Straßen überqueren den Fluss als Brücken (teurer pro Feld). Ein Laufwasserkraftwerk auf dem Fluss erzeugt Tag und Nacht Strom — mehr nach Regenphasen, weniger in Trockenzeiten. Ein Pumpspeicher am Seeufer ist ein großer, aber trägerer Speicher, der sich nach den Batterien füllt.',
+    'Jede Karte hat einen Fluss, einen See und ein Meer an einem Rand. Straßen überqueren den Fluss als Brücken (teurer pro Feld), enden aber an der Küste. Ein Laufwasserkraftwerk auf dem Fluss erzeugt Tag und Nacht Strom — mehr nach Regenphasen, weniger in Trockenzeiten. Ein Pumpspeicher am Seeufer ist ein großer, aber trägerer Speicher, der sich nach den Batterien füllt.',
   'help.seasons.title': 'Jahreszeiten, Heizung und Kühlung',
   'help.seasons.body':
     'Ein Jahr hat vier Jahreszeiten zu je fünf Tagen. Der Sommer bringt lange Tage und kräftige Sonne; der Winter kurze Tage, schwache PV, mehr Wolken und Wind — und Kälte. Alle Gebäude heizen elektrisch, die Heizlast steigt mit der Kälte: Der Winterabend ist die schwerste Stunde des Jahres. Im Sommer kühlen alle Gebäude elektrisch: Die Kühllast erreicht ihre Spitze am späten Nachmittag, wenn die PV nachlässt. Schnee aus dem Winter schmilzt im Frühling in den Fluss. Die Gebäudedämmung ist ein einmaliges Upgrade, das die Heiz- und Kühllast halbiert.',
@@ -765,6 +801,8 @@ const de: Record<TranslationKey, string> = {
   'goal.exporter.body': 'Speise 20.000 Energieeinheiten ins Netz ein.',
   'goal.hydroPower.title': 'Wasserkraft',
   'goal.hydroPower.body': 'Baue ein Laufwasserkraftwerk am Fluss.',
+  'goal.tidalPower.title': 'Gezeitenkraft',
+  'goal.tidalPower.body': 'Baue ein Gezeitenkraftwerk an der Küste.',
   'goal.gridBuilder.title': 'Unter Strom',
   'goal.gridBuilder.body': 'Baue deine erste Stromleitung.',
   'goal.winterResilience.title': 'Winterfest',
@@ -805,6 +843,7 @@ const de: Record<TranslationKey, string> = {
   'inspect.vacantLot': 'unbebaut',
   'inspect.river': 'Fluss',
   'inspect.lake': 'See',
+  'inspect.sea': 'Meer',
   'inspect.empty': 'Freies Land',
   'inspect.section.money': 'Geld',
   'inspect.section.energy': 'Energie',
@@ -847,6 +886,8 @@ const de: Record<TranslationKey, string> = {
   'inspect.loadFactor': 'Lastprofil jetzt',
   'inspect.generation': 'Erzeugung',
   'inspect.nowNameplate': 'jetzt / Nennleistung',
+  'inspect.tideFactor': 'Gezeitenströmung',
+  'inspect.siteFactor': 'Standortfaktor',
   'inspect.storedEnergy': 'Ladezustand',
   'inspect.supplyStatus': 'Versorgung',
   'inspect.connected': 'Netzanschluss',
